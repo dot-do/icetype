@@ -2,12 +2,78 @@
  * ice generate command
  *
  * Generates TypeScript types from IceType schemas.
+ * Supports watch mode for automatic regeneration on file changes.
  */
 
 import { writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import type { IceTypeSchema, FieldDefinition } from '@icetype/core';
 import { loadSchemaFile } from '../utils/schema-loader.js';
+import { watchGenerate } from '../utils/watcher.js';
+import { createLogger, LogLevel } from '../utils/logger.js';
+
+/**
+ * Options for the generate command.
+ */
+export interface GenerateOptions {
+  /** Path to the schema file. */
+  schema: string;
+  /** Path to the output file. */
+  output?: string;
+  /** Enable watch mode for automatic regeneration. */
+  watch?: boolean;
+  /** Suppress non-error output. */
+  quiet?: boolean;
+  /** Enable verbose logging. */
+  verbose?: boolean;
+}
+
+/**
+ * Run the generation process once.
+ *
+ * @param options - Generation options
+ * @throws Error if generation fails
+ */
+export async function runGeneration(options: GenerateOptions): Promise<void> {
+  const { schema: schemaPath, output, quiet = false, verbose = false } = options;
+
+  const logger = createLogger({
+    quiet,
+    level: verbose ? LogLevel.DEBUG : LogLevel.INFO,
+  });
+
+  const outputPath = output ?? schemaPath.replace(/\.(ts|js|mjs|json)$/, '.generated.ts');
+
+  logger.debug('Starting generation', { schemaPath, outputPath });
+
+  // Load schemas from the file
+  const loadResult = await loadSchemaFile(schemaPath);
+
+  // Check for loading errors
+  if (loadResult.errors.length > 0) {
+    for (const error of loadResult.errors) {
+      logger.error(error);
+    }
+    throw new Error('Schema loading failed');
+  }
+
+  if (loadResult.schemas.length === 0) {
+    throw new Error('No schemas found in the file');
+  }
+
+  logger.debug(`Found ${loadResult.schemas.length} schema(s)`);
+
+  // Generate types for all schemas
+  const types = generateTypesFromSchemas(loadResult.schemas.map(s => s.schema));
+
+  try {
+    writeFileSync(outputPath, types);
+    logger.success(`Generated types: ${outputPath}`);
+  } catch (writeError) {
+    const message = writeError instanceof Error ? writeError.message : String(writeError);
+    throw new Error(`Failed to write output file '${outputPath}': ${message}`);
+  }
+}
 
 export async function generate(args: string[]) {
   const { values } = parseArgs({
@@ -15,12 +81,15 @@ export async function generate(args: string[]) {
     options: {
       schema: { type: 'string', short: 's' },
       output: { type: 'string', short: 'o' },
+      watch: { type: 'boolean', short: 'w' },
+      quiet: { type: 'boolean', short: 'q' },
+      verbose: { type: 'boolean', short: 'v' },
     },
   });
 
   if (!values.schema) {
     console.error('Error: --schema is required');
-    console.log('Usage: ice generate --schema ./schema.ts --output ./types.ts');
+    console.log('Usage: ice generate --schema ./schema.ts --output ./types.ts [--watch]');
     process.exit(1);
   }
 
@@ -28,42 +97,41 @@ export async function generate(args: string[]) {
   const schemaPath = values.schema;
   const outputPath = typeof values.output === 'string' ? values.output : schemaPath.replace(/\.(ts|js|mjs|json)$/, '.generated.ts');
 
-  console.log(`Generating types from: ${schemaPath}`);
+  const options: GenerateOptions = {
+    schema: schemaPath,
+    output: outputPath,
+    watch: values.watch ?? false,
+    quiet: values.quiet ?? false,
+    verbose: values.verbose ?? false,
+  };
 
-  try {
-    // Load schemas from the file
-    const loadResult = await loadSchemaFile(schemaPath);
+  const logger = createLogger({
+    quiet: options.quiet,
+    level: options.verbose ? LogLevel.DEBUG : LogLevel.INFO,
+  });
 
-    // Check for loading errors
-    if (loadResult.errors.length > 0) {
-      for (const error of loadResult.errors) {
-        console.error(error);
-      }
-      process.exit(1);
-    }
-
-    if (loadResult.schemas.length === 0) {
-      console.error('No schemas found in the file');
-      process.exit(1);
-    }
-
-    console.log(`Found ${loadResult.schemas.length} schema(s)`);
-
-    // Generate types for all schemas
-    const types = generateTypesFromSchemas(loadResult.schemas.map(s => s.schema));
-
+  if (options.watch) {
+    // Watch mode - run initial generation and watch for changes
+    logger.info('Starting watch mode...');
+    await watchGenerate({
+      schemaPath,
+      runGeneration: async () => {
+        await runGeneration(options);
+      },
+      quiet: options.quiet,
+      verbose: options.verbose,
+    });
+  } else {
+    // Single generation
+    logger.info(`Generating types from: ${schemaPath}`);
     try {
-      writeFileSync(outputPath, types);
-      console.log(`Generated types: ${outputPath}`);
-    } catch (writeError) {
-      const message = writeError instanceof Error ? writeError.message : String(writeError);
-      console.error(`Error: Failed to write output file '${outputPath}': ${message}`);
-      console.error('Check that the directory exists and you have write permissions.');
+      await runGeneration(options);
+    } catch (error) {
+      logger.error('Error generating types', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       process.exit(1);
     }
-  } catch (error) {
-    console.error('Error generating types:', error instanceof Error ? error.message : String(error));
-    process.exit(1);
   }
 }
 

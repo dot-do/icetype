@@ -135,3 +135,35 @@ export {
   isValidParametricType,
   isValidGenericType,
 } from './parser.js';
+
+// Re-export type mappings
+export {
+  // Type mapping table
+  TYPE_MAPPINGS,
+
+  // Helper functions
+  getIcebergType,
+  getDuckDBType,
+  getClickHouseType,
+  getPostgresType,
+  getParquetType,
+  getTypeMapping,
+  isKnownType,
+  getSupportedTypes,
+} from './type-mappings.js';
+
+// Re-export type mapping types
+export type { TypeMapping } from './type-mappings.js';
+
+// Re-export migration functions
+export { diffSchemas, generateMigrationPlan } from './migrations.js';
+
+// Re-export migration types
+export type {
+  FieldChange,
+  FieldChangeType,
+  SchemaDiff,
+  MigrationPlan,
+  MigrationPlanOptions,
+  SqlDialect,
+} from './migrations.js';

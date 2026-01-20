@@ -218,9 +218,15 @@ importers:
 
   packages/cli:
     dependencies:
+      '@icetype/clickhouse':
+        specifier: workspace:*
+        version: link:../clickhouse
       '@icetype/core':
         specifier: workspace:*
         version: link:../core
+      '@icetype/duckdb':
+        specifier: workspace:*
+        version: link:../duckdb
       '@icetype/iceberg':
         specifier: workspace:*
         version: link:../iceberg
@@ -309,6 +315,22 @@ importers:
       '@icetype/iceberg':
         specifier: workspace:*
         version: link:../iceberg
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@24.10.9)(lightningcss@1.30.2)
+
+  packages/postgres:
+    dependencies:
+      '@icetype/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@icetype/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       typescript:
         specifier: ^5.7.0

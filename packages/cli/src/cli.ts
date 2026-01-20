@@ -16,7 +16,11 @@ import { isIceTypeError, getErrorMessage } from '@icetype/core';
 import { init } from './commands/init.js';
 import { generate } from './commands/generate.js';
 import { validate } from './commands/validate.js';
+import { clickhouseExport } from './commands/clickhouse.js';
+import { duckdbExport } from './commands/duckdb.js';
 import { icebergExport } from './commands/iceberg.js';
+import { postgresExport } from './commands/postgres.js';
+import { diff } from './commands/diff.js';
 
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json') as { version: string };
@@ -28,10 +32,14 @@ IceType CLI v${VERSION}
 Usage: ice <command> [options]
 
 Commands:
-  init              Initialize an IceType project
-  generate          Generate TypeScript types from schema
-  validate          Validate schema syntax
-  iceberg export    Export to Iceberg metadata format
+  init               Initialize an IceType project
+  generate           Generate TypeScript types from schema
+  validate           Validate schema syntax
+  diff               Compare schemas and generate migration SQL
+  clickhouse export  Export to ClickHouse DDL format
+  duckdb export      Export to DuckDB DDL format
+  iceberg export     Export to Iceberg metadata format
+  postgres export    Export to PostgreSQL DDL format
 
 Options:
   -h, --help        Show this help message
@@ -40,8 +48,13 @@ Options:
 Examples:
   ice init
   ice generate --schema ./schema.ts --output ./types.ts
+  ice generate --schema ./schema.ts --output ./types.ts --watch
   ice validate --schema ./schema.ts
+  ice diff --old ./schema-v1.ts --new ./schema-v2.ts --dialect postgres
+  ice clickhouse export --schema ./schema.ts --output ./tables.sql
+  ice duckdb export --schema ./schema.ts --output ./tables.sql
   ice iceberg export --schema ./schema.ts --output ./metadata.json
+  ice postgres export --schema ./schema.ts --output ./create-tables.sql
 `;
 
 async function main() {
@@ -74,12 +87,46 @@ async function main() {
         await validate(commandArgs);
         break;
 
+      case 'diff':
+        await diff(commandArgs);
+        break;
+
+      case 'clickhouse':
+        if (commandArgs[0] === 'export') {
+          await clickhouseExport(commandArgs.slice(1));
+        } else {
+          console.error(`Unknown clickhouse subcommand: ${commandArgs[0]}`);
+          console.log('Available: ice clickhouse export');
+          process.exit(1);
+        }
+        break;
+
+      case 'duckdb':
+        if (commandArgs[0] === 'export') {
+          await duckdbExport(commandArgs.slice(1));
+        } else {
+          console.error(`Unknown duckdb subcommand: ${commandArgs[0]}`);
+          console.log('Available: ice duckdb export');
+          process.exit(1);
+        }
+        break;
+
       case 'iceberg':
         if (commandArgs[0] === 'export') {
           await icebergExport(commandArgs.slice(1));
         } else {
           console.error(`Unknown iceberg subcommand: ${commandArgs[0]}`);
           console.log('Available: ice iceberg export');
+          process.exit(1);
+        }
+        break;
+
+      case 'postgres':
+        if (commandArgs[0] === 'export') {
+          await postgresExport(commandArgs.slice(1));
+        } else {
+          console.error(`Unknown postgres subcommand: ${commandArgs[0]}`);
+          console.log('Available: ice postgres export');
           process.exit(1);
         }
         break;
