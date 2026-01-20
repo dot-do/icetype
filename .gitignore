@@ -25,3 +25,7 @@ coverage/
 
 # pnpm
 pnpm-debug.log
+
+# Example outputs (generated)
+examples/*/output/
+examples/*/generated/

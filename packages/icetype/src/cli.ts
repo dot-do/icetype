@@ -5,4 +5,4 @@
  * This file re-exports the CLI from @icetype/cli
  */
 
-import '@icetype/cli/dist/cli.js';
+import '@icetype/cli/cli';

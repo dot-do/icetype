@@ -1,34 +1,29 @@
 {
-  "name": "@icetype/cli",
+  "name": "@icetype/adapters",
   "version": "0.1.0",
-  "description": "IceType CLI - schema management and code generation",
+  "description": "IceType adapter abstraction layer for schema transformations",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": {
-    "ice": "./dist/cli.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./cli": {
-      "types": "./dist/cli.d.ts",
-      "import": "./dist/cli.js"
     }
   },
   "files": ["dist"],
   "scripts": {
     "build": "tsc",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "clean": "rm -rf dist"
   },
   "keywords": [
     "icetype",
-    "cli",
+    "adapter",
     "schema",
-    "codegen"
+    "iceberg",
+    "parquet",
+    "typescript"
   ],
   "author": "Nathan Clevenger",
   "license": "MIT",
@@ -37,7 +32,6 @@
     "@icetype/iceberg": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
   }
