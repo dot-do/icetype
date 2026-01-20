@@ -462,7 +462,8 @@ describe('DDL Helpers', () => {
       };
 
       const sql = serializeDDL(ddl);
-      expect(sql).toContain('public.users');
+      // 'public' is a SQL reserved keyword, so it gets quoted
+      expect(sql).toContain('"public".users');
     });
 
     it('should include PRIMARY KEY constraint', () => {
@@ -518,7 +519,8 @@ describe('DDL Helpers', () => {
       ];
 
       const statements = generateIndexStatements('users', 'public', columns);
-      expect(statements[0]).toContain('public.users');
+      // 'public' is a SQL reserved keyword, so it gets quoted
+      expect(statements[0]).toContain('"public".users');
     });
   });
 });
@@ -850,13 +852,13 @@ describe('PostgresAdapter Integration', () => {
   it('should generate valid SQL for different table configurations', () => {
     const schema = createSimpleSchema();
 
-    // Standard table
+    // Standard table - 'User' is a SQL reserved keyword, so it gets quoted
     const standardSql = transformToPostgresDDL(schema);
-    expect(standardSql).toMatch(/^CREATE TABLE User/);
+    expect(standardSql).toMatch(/^CREATE TABLE "User"/);
 
     // With schema
     const schemaQualifiedSql = transformToPostgresDDL(schema, { schema: 'myschema' });
-    expect(schemaQualifiedSql).toContain('myschema.User');
+    expect(schemaQualifiedSql).toContain('myschema."User"');
   });
 
   it('should handle serializeWithIndexes', () => {

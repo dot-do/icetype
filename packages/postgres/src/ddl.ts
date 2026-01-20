@@ -18,6 +18,38 @@ import type {
 import { ICETYPE_TO_POSTGRES } from './types.js';
 
 // =============================================================================
+// SQL Reserved Keywords
+// =============================================================================
+
+/**
+ * Common SQL reserved keywords that should always be quoted when used as identifiers.
+ * This is a subset of PostgreSQL reserved keywords that are most commonly used
+ * and could cause issues if not quoted.
+ */
+const SQL_RESERVED_KEYWORDS = new Set([
+  'select', 'from', 'where', 'insert', 'update', 'delete', 'drop', 'create',
+  'alter', 'table', 'index', 'view', 'database', 'schema', 'column', 'constraint',
+  'primary', 'foreign', 'key', 'references', 'unique', 'check', 'default',
+  'null', 'not', 'and', 'or', 'in', 'is', 'like', 'between', 'exists',
+  'case', 'when', 'then', 'else', 'end', 'as', 'on', 'join', 'left', 'right',
+  'inner', 'outer', 'cross', 'full', 'group', 'by', 'having', 'order', 'asc',
+  'desc', 'limit', 'offset', 'union', 'intersect', 'except', 'all', 'distinct',
+  'into', 'values', 'set', 'grant', 'revoke', 'begin', 'commit', 'rollback',
+  'transaction', 'true', 'false', 'user', 'role', 'public', 'current_user',
+  'current_date', 'current_time', 'current_timestamp', 'localtime', 'localtimestamp',
+]);
+
+/**
+ * Check if an identifier is a SQL reserved keyword.
+ *
+ * @param identifier - The identifier to check
+ * @returns True if the identifier is a reserved keyword
+ */
+function isReservedKeyword(identifier: string): boolean {
+  return SQL_RESERVED_KEYWORDS.has(identifier.toLowerCase());
+}
+
+// =============================================================================
 // Type Mapping
 // =============================================================================
 
@@ -224,14 +256,27 @@ export function generateSystemColumns(): PostgresColumn[] {
 /**
  * Escape an identifier for PostgreSQL SQL.
  *
+ * Identifiers are escaped (wrapped in double quotes) if they:
+ * - Contain special characters (anything besides letters, digits, underscore)
+ * - Start with a digit
+ * - Start with $ (system fields)
+ * - Are SQL reserved keywords
+ *
  * @param identifier - The identifier to escape
  * @returns The escaped identifier
  */
 export function escapeIdentifier(identifier: string): string {
-  // PostgreSQL uses double quotes for identifiers with special characters
-  if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(identifier) && !identifier.startsWith('$')) {
+  // Check if it's a valid simple identifier and not a reserved keyword
+  const isSimpleIdentifier = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(identifier);
+  const startsWithDollar = identifier.startsWith('$');
+  const isKeyword = isReservedKeyword(identifier);
+
+  // PostgreSQL uses double quotes for identifiers with special characters,
+  // starting with $, or SQL reserved keywords
+  if (isSimpleIdentifier && !startsWithDollar && !isKeyword) {
     return identifier;
   }
+
   // Escape double quotes within the identifier
   const escaped = identifier.replace(/"/g, '""');
   return `"${escaped}"`;

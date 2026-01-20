@@ -275,7 +275,8 @@ describe('generatePostgresDDL', () => {
 
     const ddl = generatePostgresDDL(schema, { schemaName: 'public' });
 
-    expect(ddl).toContain('public.User');
+    // Both 'public' and 'User' are SQL reserved keywords, so they get quoted
+    expect(ddl).toContain('"public"."User"');
   });
 
   it('should skip system fields starting with $', async () => {
@@ -677,7 +678,8 @@ describe('generatePostgresDDLForAllSchemas', () => {
 
     const ddl = generatePostgresDDLForAllSchemas(schemas, { schemaName: 'app' });
 
-    expect(ddl).toContain('app.User');
+    // 'User' is a SQL reserved keyword, so it gets quoted
+    expect(ddl).toContain('app."User"');
     expect(ddl).toContain('app.Post');
   });
 

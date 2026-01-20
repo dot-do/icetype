@@ -9,6 +9,7 @@
 import { writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { getPostgresType } from '@icetype/core';
+import { escapeIdentifier } from '@icetype/postgres';
 import { loadSchemaFile } from '../utils/schema-loader.js';
 import type { IceTypeSchema } from '@icetype/core';
 
@@ -43,7 +44,10 @@ export function generatePostgresDDL(
   options?: PostgresDDLOptions
 ): string {
   const schemaName = options?.schemaName;
-  const tableName = schemaName ? `${schemaName}.${schema.name}` : schema.name;
+  const escapedTableName = escapeIdentifier(schema.name);
+  const tableName = schemaName
+    ? `${escapeIdentifier(schemaName)}.${escapedTableName}`
+    : escapedTableName;
 
   const columns: string[] = [];
   const indexes: string[] = [];
@@ -67,12 +71,15 @@ export function generatePostgresDDL(
     }
 
     const constraintStr = constraints.length > 0 ? ' ' + constraints.join(' ') : '';
-    columns.push(`  ${fieldName} ${pgType}${constraintStr}`);
+    const escapedFieldName = escapeIdentifier(fieldName);
+    columns.push(`  ${escapedFieldName} ${pgType}${constraintStr}`);
 
     // Create index for indexed fields
     if (field.isIndexed || field.modifier === '#') {
+      // Sanitize the index name by replacing special characters
+      const safeIndexName = `idx_${schema.name}_${fieldName}`.replace(/[^a-zA-Z0-9_]/g, '_');
       indexes.push(
-        `CREATE INDEX idx_${schema.name}_${fieldName} ON ${tableName} (${fieldName});`
+        `CREATE INDEX ${escapeIdentifier(safeIndexName)} ON ${tableName} (${escapedFieldName});`
       );
     }
   }

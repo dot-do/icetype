@@ -230,6 +230,9 @@ importers:
       '@icetype/iceberg':
         specifier: workspace:*
         version: link:../iceberg
+      '@icetype/postgres':
+        specifier: workspace:*
+        version: link:../postgres
     devDependencies:
       '@types/node':
         specifier: ^22.0.0

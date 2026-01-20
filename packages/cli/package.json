@@ -44,7 +44,8 @@
     "@icetype/clickhouse": "workspace:*",
     "@icetype/core": "workspace:*",
     "@icetype/duckdb": "workspace:*",
-    "@icetype/iceberg": "workspace:*"
+    "@icetype/iceberg": "workspace:*",
+    "@icetype/postgres": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
