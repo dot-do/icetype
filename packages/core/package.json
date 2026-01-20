@@ -1,0 +1,33 @@
+{
+  "name": "@icetype/core",
+  "version": "0.1.0",
+  "description": "IceType schema language - parser, types, and validation",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "icetype",
+    "schema",
+    "parser",
+    "typescript",
+    "type-safe"
+  ],
+  "author": "Nathan Clevenger",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

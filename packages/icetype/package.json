@@ -1,0 +1,56 @@
+{
+  "name": "icetype",
+  "version": "0.1.0",
+  "description": "IceType - Type-safe schema language for data lakes and databases",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "ice": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./node_modules/@icetype/core/dist/index.d.ts",
+      "import": "@icetype/core"
+    },
+    "./iceberg": {
+      "types": "./node_modules/@icetype/iceberg/dist/index.d.ts",
+      "import": "@icetype/iceberg"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "icetype",
+    "schema",
+    "typescript",
+    "iceberg",
+    "parquet",
+    "data-lake",
+    "type-safe"
+  ],
+  "author": "Nathan Clevenger",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dot-do/icetype.git"
+  },
+  "homepage": "https://icetype.dev",
+  "dependencies": {
+    "@icetype/core": "workspace:*",
+    "@icetype/iceberg": "workspace:*",
+    "@icetype/cli": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

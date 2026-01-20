@@ -1,0 +1,40 @@
+{
+  "name": "@icetype/cli",
+  "version": "0.1.0",
+  "description": "IceType CLI - schema management and code generation",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "ice": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "icetype",
+    "cli",
+    "schema",
+    "codegen"
+  ],
+  "author": "Nathan Clevenger",
+  "license": "MIT",
+  "dependencies": {
+    "@icetype/core": "workspace:*",
+    "@icetype/iceberg": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

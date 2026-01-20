@@ -1,0 +1,73 @@
+/**
+ * @icetype/iceberg
+ *
+ * IceType to Apache Iceberg metadata and Parquet schema generation.
+ *
+ * @example
+ * ```typescript
+ * import { parseSchema } from '@icetype/core';
+ * import { generateIcebergMetadata, generateParquetSchema } from '@icetype/iceberg';
+ *
+ * // Parse an IceType schema
+ * const schema = parseSchema({
+ *   $type: 'User',
+ *   $partitionBy: ['tenantId'],
+ *   id: 'uuid!',
+ *   email: 'string#',
+ *   name: 'string',
+ *   tenantId: 'string!',
+ * });
+ *
+ * // Generate Iceberg table metadata
+ * const icebergMetadata = generateIcebergMetadata(
+ *   schema,
+ *   's3://my-bucket/tables/users'
+ * );
+ *
+ * // Generate Parquet schema
+ * const parquetSchema = generateParquetSchema(schema);
+ * ```
+ *
+ * @packageDocumentation
+ */
+
+// Re-export Iceberg types
+export type {
+  IcebergPrimitiveType,
+  IcebergType,
+  IcebergField,
+  IcebergSchema,
+  IcebergPartitionField,
+  IcebergPartitionSpec,
+  IcebergSortField,
+  IcebergSortOrder,
+  IcebergTableMetadata,
+  IcebergSnapshot,
+  IcebergSnapshotRef,
+} from './types.js';
+
+// Re-export Parquet types
+export type {
+  ParquetPrimitiveType,
+  ParquetConvertedType,
+  ParquetRepetition,
+  ParquetLogicalType,
+  ParquetField,
+  ParquetSchema,
+} from './types.js';
+
+// Re-export Iceberg metadata generation
+export {
+  IcebergMetadataGenerator,
+  createIcebergMetadataGenerator,
+  generateIcebergMetadata,
+} from './metadata.js';
+
+// Re-export Parquet schema generation
+export {
+  ParquetSchemaGenerator,
+  createParquetSchemaGenerator,
+  generateParquetSchema,
+  generateParquetSchemaString,
+  documentToParquetRow,
+} from './parquet.js';
