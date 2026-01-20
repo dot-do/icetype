@@ -114,13 +114,19 @@ export async function init(args: string[]) {
     },
   });
 
-  const dir = values.dir as string;
-  const force = values.force as boolean;
+  const dir = typeof values.dir === 'string' ? values.dir : '.';
+  const force = values.force === true;
 
   // Create directory if needed
   if (dir !== '.' && !existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-    console.log(`Created directory: ${dir}`);
+    try {
+      mkdirSync(dir, { recursive: true });
+      console.log(`Created directory: ${dir}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Error: Failed to create directory '${dir}': ${message}`);
+      process.exit(1);
+    }
   }
 
   // Create schema file
@@ -129,8 +135,15 @@ export async function init(args: string[]) {
     console.log(`Schema file already exists: ${schemaPath}`);
     console.log('Use --force to overwrite');
   } else {
-    writeFileSync(schemaPath, SCHEMA_TEMPLATE);
-    console.log(`Created schema file: ${schemaPath}`);
+    try {
+      writeFileSync(schemaPath, SCHEMA_TEMPLATE);
+      console.log(`Created schema file: ${schemaPath}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Error: Failed to write schema file '${schemaPath}': ${message}`);
+      console.error('Check that the directory exists and you have write permissions.');
+      process.exit(1);
+    }
   }
 
   console.log(`

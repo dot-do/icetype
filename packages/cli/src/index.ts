@@ -10,3 +10,12 @@ export { init } from './commands/init.js';
 export { generate, generateTypeScriptInterface } from './commands/generate.js';
 export { validate } from './commands/validate.js';
 export { icebergExport } from './commands/iceberg.js';
+
+// Schema loader utilities
+export {
+  loadSchemaFile,
+  loadSingleSchema,
+  loadAllSchemas,
+  type LoadedSchema,
+  type LoadResult,
+} from './utils/schema-loader.js';

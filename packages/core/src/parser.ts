@@ -11,21 +11,22 @@
  * @packageDocumentation
  */
 
-import type {
-  FieldDefinition,
-  FieldModifier,
-  RelationDefinition,
-  RelationOperator,
-  SchemaDirectives,
-  IndexDirective,
-  VectorDirective,
-  IceTypeSchema,
-  ParsedType,
-  Token,
-  TokenType,
-  ValidationResult,
-  ValidationError,
-  SchemaDefinition,
+import {
+  ParseError,
+  type FieldDefinition,
+  type FieldModifier,
+  type RelationDefinition,
+  type RelationOperator,
+  type SchemaDirectives,
+  type IndexDirective,
+  type VectorDirective,
+  type IceTypeSchema,
+  type ParsedType,
+  type Token,
+  type TokenType,
+  type ValidationResult,
+  type ValidationError,
+  type SchemaDefinition,
 } from './types.js';
 
 // =============================================================================
@@ -65,6 +66,63 @@ const TYPE_ALIASES: Record<string, string> = {
 
 /** Relation operators */
 const RELATION_OPERATORS: RelationOperator[] = ['->', '~>', '<-', '<~'];
+
+/** Valid field modifiers */
+const VALID_MODIFIERS: FieldModifier[] = ['!', '#', '?', ''];
+
+// =============================================================================
+// Type Guards
+// =============================================================================
+
+/**
+ * Type guard to check if a string is a valid primitive type.
+ *
+ * @param type - The type string to check
+ * @returns True if the type is a valid primitive type
+ */
+export function isValidPrimitiveType(type: string): boolean {
+  return PRIMITIVE_TYPES.has(type.toLowerCase());
+}
+
+/**
+ * Type guard to check if a character is a valid field modifier.
+ *
+ * @param char - The character to check
+ * @returns True if the character is a valid modifier (!, #, ?, or empty string)
+ */
+export function isValidModifier(char: string): char is FieldModifier {
+  return VALID_MODIFIERS.includes(char as FieldModifier);
+}
+
+/**
+ * Type guard to check if a string is a valid relation operator.
+ *
+ * @param op - The string to check
+ * @returns True if the string is a valid relation operator (->, ~>, <-, <~)
+ */
+export function isValidRelationOperator(op: string): op is RelationOperator {
+  return RELATION_OPERATORS.includes(op as RelationOperator);
+}
+
+/**
+ * Type guard to check if a string is a valid parametric type.
+ *
+ * @param type - The type string to check
+ * @returns True if the type is a valid parametric type
+ */
+export function isValidParametricType(type: string): boolean {
+  return PARAMETRIC_TYPES.has(type.toLowerCase());
+}
+
+/**
+ * Type guard to check if a string is a valid generic type.
+ *
+ * @param type - The type string to check
+ * @returns True if the type is a valid generic type
+ */
+export function isValidGenericType(type: string): boolean {
+  return GENERIC_TYPES.has(type.toLowerCase());
+}
 
 /** Known directives */
 const KNOWN_DIRECTIVES = new Set<string>([
@@ -304,30 +362,36 @@ export function inferType(value: unknown): string {
 
   switch (jsType) {
     case 'string': {
-      const strValue = value as string;
+      // Type narrowing: jsType === 'string' guarantees value is string
+      if (typeof value !== 'string') {
+        return 'string'; // Safety fallback
+      }
       // UUID pattern
-      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(strValue)) {
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
         return 'uuid';
       }
       // ISO timestamp
-      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(strValue)) {
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
         return 'timestamp';
       }
       // Date
-      if (/^\d{4}-\d{2}-\d{2}$/.test(strValue)) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
         return 'date';
       }
       // Time
-      if (/^\d{2}:\d{2}:\d{2}$/.test(strValue)) {
+      if (/^\d{2}:\d{2}:\d{2}$/.test(value)) {
         return 'time';
       }
       return 'string';
     }
 
     case 'number': {
-      const numValue = value as number;
-      if (Number.isInteger(numValue)) {
-        if (numValue > 2147483647 || numValue < -2147483648) {
+      // Type narrowing: jsType === 'number' guarantees value is number
+      if (typeof value !== 'number') {
+        return 'float'; // Safety fallback
+      }
+      if (Number.isInteger(value)) {
+        if (value > 2147483647 || value < -2147483648) {
           return 'bigint';
         }
         return 'int';
@@ -420,6 +484,12 @@ function parseDefaultValue(value: string): unknown {
 
 interface ParseTypeOptions {
   throwOnUnknownType?: boolean;
+  /** Field name for better error context */
+  fieldName?: string;
+  /** Line number for error reporting */
+  line?: number;
+  /** Column number for error reporting */
+  column?: number;
 }
 
 /**
@@ -432,15 +502,25 @@ interface ParseTypeOptions {
  * @returns The parsed type
  */
 function parseTypeString(input: string, options: ParseTypeOptions = {}): ParsedType {
-  const { throwOnUnknownType = true } = options;
+  const { throwOnUnknownType = true, fieldName, line = 1, column = 1 } = options;
   let str = input.trim();
 
   if (!str) {
-    throw new Error('Empty type string');
+    throw new ParseError('Empty type string', {
+      path: fieldName,
+      line,
+      column,
+      code: 'EMPTY_TYPE',
+    });
   }
 
   if (/^[?!#]/.test(str)) {
-    throw new Error('Invalid modifier position: modifiers must come after the type name');
+    throw new ParseError('Invalid modifier position: modifiers must come after the type name', {
+      path: fieldName,
+      line,
+      column,
+      code: 'INVALID_MODIFIER_POSITION',
+    });
   }
 
   // 1. Extract default value (after ' = ')
@@ -489,7 +569,12 @@ function parseTypeString(input: string, options: ParseTypeOptions = {}): ParsedT
     const innerContent = genericMatch[2].trim();
 
     if (!GENERIC_TYPES.has(genericType)) {
-      throw new Error(`Unknown generic type: ${genericType}`);
+      throw new ParseError(`Unknown generic type: ${genericType}`, {
+        path: fieldName,
+        line,
+        column,
+        code: 'UNKNOWN_GENERIC_TYPE',
+      });
     }
 
     const result: ParsedType = {
@@ -505,7 +590,12 @@ function parseTypeString(input: string, options: ParseTypeOptions = {}): ParsedT
     if (genericType === 'map') {
       const parts = splitGenericParams(innerContent);
       if (parts.length !== 2 || !parts[0] || !parts[1]) {
-        throw new Error(`Map type requires exactly 2 type parameters: ${input}`);
+        throw new ParseError(`Map type requires exactly 2 type parameters (got ${parts.length})`, {
+          path: fieldName,
+          line,
+          column,
+          code: 'INVALID_MAP_PARAMS',
+        });
       }
       result.keyType = parts[0].trim().toLowerCase();
       result.valueType = parts[1].trim().toLowerCase();
@@ -531,14 +621,24 @@ function parseTypeString(input: string, options: ParseTypeOptions = {}): ParsedT
     const paramsStr = parametricMatch[2].trim();
 
     if (!PARAMETRIC_TYPES.has(typeName)) {
-      throw new Error(`Unknown parametric type: ${typeName}`);
+      throw new ParseError(`Unknown parametric type: ${typeName}`, {
+        path: fieldName,
+        line,
+        column,
+        code: 'UNKNOWN_PARAMETRIC_TYPE',
+      });
     }
 
     const params = paramsStr.split(',').map((p) => {
       const trimmed = p.trim();
       const num = parseInt(trimmed, 10);
       if (isNaN(num)) {
-        throw new Error(`Invalid parameter value: ${trimmed}`);
+        throw new ParseError(`Invalid parameter value: '${trimmed}' (expected a number)`, {
+          path: fieldName,
+          line,
+          column,
+          code: 'INVALID_PARAM_VALUE',
+        });
       }
       return num;
     });
@@ -574,7 +674,12 @@ function parseTypeString(input: string, options: ParseTypeOptions = {}): ParsedT
   }
 
   if (throwOnUnknownType && !PRIMITIVE_TYPES.has(typeName) && !PARAMETRIC_TYPES.has(typeName)) {
-    throw new Error(`Unknown type: ${str}`);
+    throw new ParseError(`Unknown type: '${str}'`, {
+      path: fieldName,
+      line,
+      column,
+      code: 'UNKNOWN_TYPE',
+    });
   }
 
   const result: ParsedType = {
@@ -647,6 +752,15 @@ function findOperator(input: string): { operator: RelationOperator; index: numbe
   return bestMatch;
 }
 
+interface ParseRelationOptions {
+  /** Field name for better error context */
+  fieldName?: string;
+  /** Line number for error reporting */
+  line?: number;
+  /** Column number for error reporting */
+  column?: number;
+}
+
 /**
  * Parse a relation string into a RelationDefinition.
  *
@@ -657,28 +771,54 @@ function findOperator(input: string): { operator: RelationOperator; index: numbe
  * - `<~` - Fuzzy backward (AI-powered reverse lookup)
  *
  * @param input - The relation string to parse
+ * @param options - Parsing options for error context
  * @returns The parsed relation definition
  */
-function parseRelationString(input: string): RelationDefinition & { array?: boolean; optional?: boolean } {
+function parseRelationString(
+  input: string,
+  options: ParseRelationOptions = {}
+): RelationDefinition & { array?: boolean; optional?: boolean } {
+  const { fieldName, line = 1, column = 1 } = options;
+
   if (!input || typeof input !== 'string') {
-    throw new Error('Input must be a non-empty string');
+    throw new ParseError('Relation definition must be a non-empty string', {
+      path: fieldName,
+      line,
+      column,
+      code: 'EMPTY_RELATION',
+    });
   }
 
   const trimmed = input.trim();
   if (!trimmed) {
-    throw new Error('Input must be a non-empty string');
+    throw new ParseError('Relation definition must be a non-empty string', {
+      path: fieldName,
+      line,
+      column,
+      code: 'EMPTY_RELATION',
+    });
   }
 
   const opMatch = findOperator(trimmed);
   if (!opMatch) {
-    throw new Error('No valid relation operator found');
+    throw new ParseError(`No valid relation operator found. Use ->, ~>, <-, or <~`, {
+      path: fieldName,
+      line,
+      column,
+      code: 'MISSING_RELATION_OPERATOR',
+    });
   }
 
   const { operator, index } = opMatch;
   let targetPart = trimmed.slice(index + operator.length).trim();
 
   if (!targetPart) {
-    throw new Error('Relation operator requires a target type');
+    throw new ParseError(`Relation operator '${operator}' requires a target type (e.g., '${operator} User')`, {
+      path: fieldName,
+      line,
+      column,
+      code: 'MISSING_TARGET_TYPE',
+    });
   }
 
   let isArray = false;
@@ -748,7 +888,7 @@ export class IceTypeParser {
    * @returns The parsed IceType schema
    */
   parse(definition: SchemaDefinition): IceTypeSchema {
-    const name = (definition.$type as string) || 'Unknown';
+    const name = typeof definition.$type === 'string' ? definition.$type : 'Unknown';
     const fields = new Map<string, FieldDefinition>();
     const relations = new Map<string, RelationDefinition>();
     const directives = this.parseDirectives(definition);
@@ -757,7 +897,7 @@ export class IceTypeParser {
       if (key.startsWith('$')) continue;
 
       if (typeof value === 'string') {
-        const fieldDef = this.parseField(value, { throwOnUnknownType: false });
+        const fieldDef = this.parseField(value, { throwOnUnknownType: false, fieldName: key });
         fieldDef.name = key;
 
         if (fieldDef.relation) {
@@ -801,9 +941,10 @@ export class IceTypeParser {
    */
   parseField(fieldDef: string, options: ParseTypeOptions = {}): FieldDefinition {
     const trimmed = fieldDef.trim();
+    const { fieldName, line, column } = options;
 
     if (isRelationString(trimmed)) {
-      const relation = parseRelationString(trimmed);
+      const relation = parseRelationString(trimmed, { fieldName, line, column });
       return {
         name: '',
         type: relation.targetType,
@@ -873,14 +1014,16 @@ export class IceTypeParser {
 
       switch (key) {
         case '$partitionBy':
-          if (Array.isArray(value)) {
-            directives.partitionBy = value as string[];
+          if (Array.isArray(value) && value.every((v): v is string => typeof v === 'string')) {
+            directives.partitionBy = value;
           }
           break;
 
         case '$index':
-          if (Array.isArray(value)) {
-            directives.index = (value as string[][]).map((fields) => ({
+          if (Array.isArray(value) && value.every((v): v is string[] =>
+            Array.isArray(v) && v.every((s): s is string => typeof s === 'string')
+          )) {
+            directives.index = value.map((fields) => ({
               fields,
               unique: false,
             }));
@@ -888,19 +1031,21 @@ export class IceTypeParser {
           break;
 
         case '$fts':
-          if (Array.isArray(value)) {
-            directives.fts = value as string[];
+          if (Array.isArray(value) && value.every((v): v is string => typeof v === 'string')) {
+            directives.fts = value;
           }
           break;
 
         case '$vector':
-          if (typeof value === 'object' && value !== null) {
+          if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
             const vectorDirs: VectorDirective[] = [];
             for (const [field, dims] of Object.entries(value)) {
-              vectorDirs.push({
-                field,
-                dimensions: dims as number,
-              });
+              if (typeof dims === 'number') {
+                vectorDirs.push({
+                  field,
+                  dimensions: dims,
+                });
+              }
             }
             directives.vector = vectorDirs;
           }

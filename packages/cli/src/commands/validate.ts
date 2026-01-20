@@ -4,9 +4,9 @@
  * Validates IceType schema syntax.
  */
 
-import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
-import { parseSchema, validateSchema } from '@icetype/core';
+import { validateSchema } from '@icetype/core';
+import { loadSchemaFile } from '../utils/schema-loader.js';
 
 export async function validate(args: string[]) {
   const { values } = parseArgs({
@@ -22,51 +22,70 @@ export async function validate(args: string[]) {
     process.exit(1);
   }
 
-  const schemaPath = values.schema as string;
+  // values.schema is guaranteed to be string after the check above
+  const schemaPath = values.schema;
   console.log(`Validating schema: ${schemaPath}`);
 
-  // Read and parse the schema file
-  // In a full implementation, this would dynamically import the TypeScript file
-  // For now, we'll demonstrate with inline parsing
-
   try {
-    // Example: validate a schema definition
-    const exampleSchema = parseSchema({
-      $type: 'Example',
-      id: 'uuid!',
-      name: 'string',
-      count: 'int?',
-    });
+    // Load schemas from the file
+    const loadResult = await loadSchemaFile(schemaPath);
 
-    const result = validateSchema(exampleSchema);
-
-    if (result.valid) {
-      console.log('Schema is valid');
-
-      if (result.warnings.length > 0) {
-        console.log('\nWarnings:');
-        for (const warning of result.warnings) {
-          console.log(`  - [${warning.code}] ${warning.path}: ${warning.message}`);
-        }
+    // Check for loading errors
+    if (loadResult.errors.length > 0) {
+      for (const error of loadResult.errors) {
+        console.error(error);
       }
-    } else {
-      console.error('Schema validation failed:');
-
-      for (const error of result.errors) {
-        console.error(`  - [${error.code}] ${error.path}: ${error.message}`);
-      }
-
-      if (result.warnings.length > 0) {
-        console.log('\nWarnings:');
-        for (const warning of result.warnings) {
-          console.log(`  - [${warning.code}] ${warning.path}: ${warning.message}`);
-        }
-      }
-
       process.exit(1);
     }
+
+    if (loadResult.schemas.length === 0) {
+      console.error('No schemas found in the file');
+      process.exit(1);
+    }
+
+    console.log(`Found ${loadResult.schemas.length} schema(s)\n`);
+
+    let hasErrors = false;
+
+    // Validate each schema
+    for (const { name, schema } of loadResult.schemas) {
+      console.log(`Validating: ${name}`);
+      const result = validateSchema(schema);
+
+      if (result.valid) {
+        console.log(`  [OK] ${name} is valid`);
+
+        if (result.warnings.length > 0) {
+          console.log('  Warnings:');
+          for (const warning of result.warnings) {
+            console.log(`    - [${warning.code}] ${warning.path}: ${warning.message}`);
+          }
+        }
+      } else {
+        hasErrors = true;
+        console.error(`  [FAIL] ${name} validation failed:`);
+
+        for (const error of result.errors) {
+          console.error(`    - [${error.code}] ${error.path}: ${error.message}`);
+        }
+
+        if (result.warnings.length > 0) {
+          console.log('  Warnings:');
+          for (const warning of result.warnings) {
+            console.log(`    - [${warning.code}] ${warning.path}: ${warning.message}`);
+          }
+        }
+      }
+      console.log('');
+    }
+
+    if (hasErrors) {
+      process.exit(1);
+    }
+
+    console.log('All schemas are valid');
   } catch (error) {
-    console.error('Error parsing schema:', error instanceof Error ? error.message : String(error));
+    console.error('Error loading schema:', error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }

@@ -11,6 +11,34 @@
  */
 
 // =============================================================================
+// Branded Types for Type-Safe IDs
+// =============================================================================
+
+/** Branded type for schema identifiers */
+export type SchemaId = string & { readonly __brand: 'SchemaId' };
+
+/** Branded type for field identifiers (index position) */
+export type FieldId = number & { readonly __brand: 'FieldId' };
+
+/** Branded type for relation identifiers */
+export type RelationId = string & { readonly __brand: 'RelationId' };
+
+/** Create a SchemaId from a string */
+export function createSchemaId(id: string): SchemaId {
+  return id as SchemaId;
+}
+
+/** Create a FieldId from a number */
+export function createFieldId(id: number): FieldId {
+  return id as FieldId;
+}
+
+/** Create a RelationId from a string */
+export function createRelationId(id: string): RelationId {
+  return id as RelationId;
+}
+
+// =============================================================================
 // Field Modifiers and Operators
 // =============================================================================
 
@@ -273,3 +301,78 @@ export type SchemaDefinition = {
   $vector?: Record<string, number>;
   [key: string]: unknown;
 };
+
+// =============================================================================
+// Parse Error
+// =============================================================================
+
+/**
+ * Custom error class for parse errors with location information.
+ *
+ * Provides helpful error messages with line/column info when parsing fails.
+ */
+export class ParseError extends Error {
+  /** Line number where the error occurred (1-indexed) */
+  public readonly line: number;
+  /** Column number where the error occurred (1-indexed) */
+  public readonly column: number;
+  /** The field or path that caused the error */
+  public readonly path?: string;
+  /** Error code for programmatic handling */
+  public readonly code: string;
+
+  constructor(
+    message: string,
+    options: {
+      line?: number;
+      column?: number;
+      path?: string;
+      code?: string;
+    } = {}
+  ) {
+    const { line = 1, column = 1, path, code = 'PARSE_ERROR' } = options;
+
+    // Build a helpful error message with location info
+    let fullMessage = message;
+    if (path) {
+      fullMessage = `${path}: ${message}`;
+    }
+    fullMessage = `Parse error at line ${line}, column ${column}: ${fullMessage}`;
+
+    super(fullMessage);
+    this.name = 'ParseError';
+    this.line = line;
+    this.column = column;
+    this.path = path;
+    this.code = code;
+
+    // Maintain proper prototype chain for instanceof checks
+    Object.setPrototypeOf(this, ParseError.prototype);
+  }
+
+  /**
+   * Format the error for display with context.
+   *
+   * @param source - The original source string (optional)
+   * @returns Formatted error message with source context
+   */
+  format(source?: string): string {
+    let output = this.message;
+
+    if (source && this.line > 0) {
+      const lines = source.split('\n');
+      const lineIndex = this.line - 1;
+
+      if (lineIndex >= 0 && lineIndex < lines.length) {
+        const sourceLine = lines[lineIndex];
+        const pointer = ' '.repeat(Math.max(0, this.column - 1)) + '^';
+
+        output += '\n\n';
+        output += `  ${this.line} | ${sourceLine}\n`;
+        output += `    | ${pointer}`;
+      }
+    }
+
+    return output;
+  }
+}

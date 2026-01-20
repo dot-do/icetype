@@ -44,6 +44,11 @@
 
 // Re-export all types
 export type {
+  // Branded types
+  SchemaId,
+  FieldId,
+  RelationId,
+
   // Field and schema types
   FieldModifier,
   RelationOperator,
@@ -68,6 +73,14 @@ export type {
   SchemaDefinition,
 } from './types.js';
 
+// Re-export ParseError class and branded type creators
+export {
+  ParseError,
+  createSchemaId,
+  createFieldId,
+  createRelationId,
+} from './types.js';
+
 // Re-export parser functions
 export {
   // Parser class
@@ -84,4 +97,11 @@ export {
   // Utilities
   tokenize,
   inferType,
+
+  // Type guards
+  isValidPrimitiveType,
+  isValidModifier,
+  isValidRelationOperator,
+  isValidParametricType,
+  isValidGenericType,
 } from './parser.js';
