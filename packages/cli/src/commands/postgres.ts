@@ -12,6 +12,30 @@ import { getPostgresType } from '@icetype/core';
 import { escapeIdentifier } from '@icetype/postgres';
 import { loadSchemaFile } from '../utils/schema-loader.js';
 import type { IceTypeSchema } from '@icetype/core';
+import { generateHelpText, hasHelpFlag, type HelpCommand } from '../utils/help.js';
+import { createLogger, LogLevel } from '../utils/logger.js';
+import {
+  requireOption,
+  checkSchemaLoadErrors,
+  checkSchemasExist,
+} from '../utils/cli-error.js';
+
+const POSTGRES_EXPORT_HELP: HelpCommand = {
+  name: 'postgres export',
+  description: 'Export IceType schema to PostgreSQL DDL',
+  usage: 'ice postgres export --schema <file> [--output <file>] [--schemaName <name>]',
+  options: [
+    { name: 'schema', short: 's', description: 'Path to the schema file', required: true },
+    { name: 'output', short: 'o', description: 'Output file path (default: stdout)' },
+    { name: 'schemaName', description: 'PostgreSQL schema name (e.g., public, app)' },
+    { name: 'quiet', short: 'q', description: 'Suppress informational output' },
+    { name: 'verbose', short: 'v', description: 'Show detailed output' },
+  ],
+  examples: [
+    'ice postgres export --schema ./schema.ts --output ./tables.sql',
+    'ice postgres export -s ./schema.ts --schemaName public',
+  ],
+};
 
 /**
  * Options for PostgreSQL DDL generation
@@ -132,6 +156,12 @@ export function generatePostgresDDLForAllSchemas(
  * ```
  */
 export async function postgresExport(args: string[]): Promise<void> {
+  // Check for help flag first
+  if (hasHelpFlag(args)) {
+    console.log(generateHelpText(POSTGRES_EXPORT_HELP));
+    process.exit(0);
+  }
+
   const { values } = parseArgs({
     args,
     options: {
@@ -143,72 +173,73 @@ export async function postgresExport(args: string[]): Promise<void> {
     },
   });
 
-  // Validate required options
-  if (!values.schema) {
-    console.error('Error: --schema is required');
-    console.log(
-      'Usage: ice postgres export --schema ./schema.ts --output ./create-tables.sql --schema-name public'
-    );
-    process.exit(1);
-  }
+  // Validate required options - throws if missing
+  requireOption(
+    values.schema,
+    'schema',
+    'postgres export',
+    'ice postgres export --schema ./schema.ts --output ./create-tables.sql --schema-name public'
+  );
 
   const schemaPath = values.schema;
   const outputPath = typeof values.output === 'string' ? values.output : undefined;
   const schemaName = typeof values.schemaName === 'string' ? values.schemaName : undefined;
   const quiet = values.quiet === true;
+  const verbose = values.verbose === true;
 
-  if (!quiet) {
-    console.log(`Exporting PostgreSQL DDL from: ${schemaPath}`);
+  // Create logger based on verbosity
+  const logLevel = verbose
+    ? LogLevel.DEBUG
+    : quiet
+      ? LogLevel.ERROR
+      : LogLevel.INFO;
+
+  const logger = createLogger({
+    level: logLevel,
+    quiet,
+  });
+
+  logger.info(`Exporting PostgreSQL DDL from: ${schemaPath}`);
+  logger.debug('Options:', {
+    schemaName: schemaName || '(default)',
+    output: outputPath || '(stdout)',
+  });
+
+  // Load schemas from the file - throws on errors
+  logger.debug('Loading schema file', { path: schemaPath });
+  const loadResult = await loadSchemaFile(schemaPath);
+  checkSchemaLoadErrors(loadResult.errors, schemaPath);
+  checkSchemasExist(loadResult.schemas, schemaPath);
+
+  logger.info(`Found ${loadResult.schemas.length} schema(s)`);
+  logger.debug('Schemas found:', {
+    names: loadResult.schemas.map((s) => s.name),
+  });
+
+  // Generate DDL for all schemas
+  const schemas = loadResult.schemas.map((s) => s.schema);
+
+  for (const { name } of loadResult.schemas) {
+    logger.debug(`Processing schema: ${name}`);
   }
 
-  try {
-    // Load schemas from the file
-    const loadResult = await loadSchemaFile(schemaPath);
+  const ddl = generatePostgresDDLForAllSchemas(schemas, { schemaName });
 
-    // Check for loading errors
-    if (loadResult.errors.length > 0) {
-      for (const error of loadResult.errors) {
-        console.error(error);
-      }
-      process.exit(1);
+  // Output DDL
+  if (outputPath) {
+    try {
+      writeFileSync(outputPath, ddl);
+      logger.success(`Exported PostgreSQL DDL: ${outputPath}`);
+      logger.info(`Generated ${loadResult.schemas.length} table(s)`);
+    } catch (writeError) {
+      const message = writeError instanceof Error ? writeError.message : String(writeError);
+      throw new Error(
+        `Failed to write output file '${outputPath}': ${message}\n` +
+        'Check that the directory exists and you have write permissions.'
+      );
     }
-
-    if (loadResult.schemas.length === 0) {
-      console.error('No schemas found in the file');
-      process.exit(1);
-    }
-
-    if (!quiet) {
-      console.log(`Found ${loadResult.schemas.length} schema(s)`);
-    }
-
-    // Generate DDL for all schemas
-    const schemas = loadResult.schemas.map((s) => s.schema);
-    const ddl = generatePostgresDDLForAllSchemas(schemas, { schemaName });
-
-    // Output DDL
-    if (outputPath) {
-      try {
-        writeFileSync(outputPath, ddl);
-        if (!quiet) {
-          console.log(`Exported PostgreSQL DDL: ${outputPath}`);
-          console.log(`Generated ${loadResult.schemas.length} table(s)`);
-        }
-      } catch (writeError) {
-        const message = writeError instanceof Error ? writeError.message : String(writeError);
-        console.error(`Error: Failed to write output file '${outputPath}': ${message}`);
-        console.error('Check that the directory exists and you have write permissions.');
-        process.exit(1);
-      }
-    } else {
-      // Output to stdout
-      console.log(ddl);
-    }
-  } catch (error) {
-    console.error(
-      'Error exporting PostgreSQL DDL:',
-      error instanceof Error ? error.message : String(error)
-    );
-    process.exit(1);
+  } else {
+    // Output to stdout
+    console.log(ddl);
   }
 }

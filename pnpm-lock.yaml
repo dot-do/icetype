@@ -280,7 +280,13 @@ importers:
       '@icetype/core':
         specifier: workspace:*
         version: link:../core
+      '@icetype/sql-common':
+        specifier: workspace:*
+        version: link:../sql-common
     devDependencies:
+      '@icetype/test-utils':
+        specifier: workspace:*
+        version: link:../test-utils
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -337,6 +343,31 @@ importers:
       '@icetype/adapters':
         specifier: workspace:*
         version: link:../adapters
+      '@icetype/core':
+        specifier: workspace:*
+        version: link:../core
+      '@icetype/sql-common':
+        specifier: workspace:*
+        version: link:../sql-common
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@24.10.9)(lightningcss@1.30.2)
+
+  packages/sql-common:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@24.10.9)(lightningcss@1.30.2)
+
+  packages/test-utils:
+    dependencies:
       '@icetype/core':
         specifier: workspace:*
         version: link:../core

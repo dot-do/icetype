@@ -355,23 +355,8 @@ describe('ice postgres export command', () => {
     it('should error when --schema is missing', async () => {
       const { postgresExport } = await import('../commands/postgres.js');
 
-      // Mock process.exit to prevent actual exit
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
-      try {
-        await postgresExport([]);
-      } catch {
-        // Expected to throw due to mocked process.exit
-      }
-
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        expect.stringContaining('--schema is required')
-      );
-      expect(mockExit).toHaveBeenCalledWith(1);
-
-      mockExit.mockRestore();
+      // Commands now throw errors (main CLI catches and exits)
+      await expect(postgresExport([])).rejects.toThrow('--schema is required');
     });
 
     it('should accept -s as short form of --schema', async () => {
@@ -470,25 +455,13 @@ describe('ice postgres export command', () => {
   });
 
   describe('error handling', () => {
-    it('should handle file not found error', async () => {
+    it('should throw error when file not found', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
-
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
 
       const { postgresExport } = await import('../commands/postgres.js');
 
-      try {
-        await postgresExport(['--schema', './nonexistent.ts']);
-      } catch {
-        // Expected
-      }
-
-      // Should report error for nonexistent file
-      expect(mockExit).toHaveBeenCalledWith(1);
-
-      mockExit.mockRestore();
+      // Commands now throw errors (main CLI catches and exits)
+      await expect(postgresExport(['--schema', './nonexistent.ts'])).rejects.toThrow();
     });
   });
 });

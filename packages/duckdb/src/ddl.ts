@@ -9,6 +9,15 @@
 
 import type { FieldDefinition } from '@icetype/core';
 
+import {
+  escapeIdentifier as escapeIdentifierBase,
+  formatDefaultValue as formatDefaultValueBase,
+  serializeColumn as serializeColumnBase,
+  generateSystemColumns as generateSystemColumnsBase,
+  generateIndexStatements as generateIndexStatementsBase,
+  type SqlColumn,
+} from '@icetype/sql-common';
+
 import type {
   DuckDBColumn,
   DuckDBDDL,
@@ -136,38 +145,7 @@ export function fieldToDuckDBColumn(
  * @returns The SQL expression string
  */
 export function formatDefaultValue(value: unknown, type: string): string {
-  if (value === null) {
-    return 'NULL';
-  }
-
-  if (typeof value === 'string') {
-    // Escape single quotes
-    const escaped = value.replace(/'/g, "''");
-    return `'${escaped}'`;
-  }
-
-  if (typeof value === 'number') {
-    return String(value);
-  }
-
-  if (typeof value === 'boolean') {
-    return value ? 'TRUE' : 'FALSE';
-  }
-
-  if (value instanceof Date) {
-    if (type.includes('DATE')) {
-      return `'${value.toISOString().split('T')[0]}'`;
-    }
-    return `'${value.toISOString()}'`;
-  }
-
-  if (Array.isArray(value) || typeof value === 'object') {
-    // JSON serialize for complex types
-    const escaped = JSON.stringify(value).replace(/'/g, "''");
-    return `'${escaped}'`;
-  }
-
-  return String(value);
+  return formatDefaultValueBase(value, type);
 }
 
 // =============================================================================
@@ -183,35 +161,9 @@ export function formatDefaultValue(value: unknown, type: string): string {
  * @returns Array of system column definitions
  */
 export function generateSystemColumns(): DuckDBColumn[] {
-  return [
-    {
-      name: '$id',
-      type: 'VARCHAR',
-      nullable: false,
-      primaryKey: true,
-    },
-    {
-      name: '$type',
-      type: 'VARCHAR',
-      nullable: false,
-    },
-    {
-      name: '$version',
-      type: 'INTEGER',
-      nullable: false,
-      default: '1',
-    },
-    {
-      name: '$createdAt',
-      type: 'BIGINT',
-      nullable: false,
-    },
-    {
-      name: '$updatedAt',
-      type: 'BIGINT',
-      nullable: false,
-    },
-  ];
+  // Use shared implementation and cast to DuckDBColumn[]
+  // The types are compatible since DuckDBColumn extends SqlColumn's shape
+  return generateSystemColumnsBase('duckdb') as DuckDBColumn[];
 }
 
 // =============================================================================
@@ -225,13 +177,7 @@ export function generateSystemColumns(): DuckDBColumn[] {
  * @returns The escaped identifier
  */
 export function escapeIdentifier(identifier: string): string {
-  // DuckDB uses double quotes for identifiers with special characters
-  if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(identifier) && !identifier.startsWith('$')) {
-    return identifier;
-  }
-  // Escape double quotes within the identifier
-  const escaped = identifier.replace(/"/g, '""');
-  return `"${escaped}"`;
+  return escapeIdentifierBase(identifier, 'duckdb');
 }
 
 /**
@@ -241,24 +187,7 @@ export function escapeIdentifier(identifier: string): string {
  * @returns The DDL column fragment
  */
 export function serializeColumn(column: DuckDBColumn): string {
-  const parts: string[] = [
-    escapeIdentifier(column.name),
-    column.type,
-  ];
-
-  if (!column.nullable) {
-    parts.push('NOT NULL');
-  }
-
-  if (column.unique) {
-    parts.push('UNIQUE');
-  }
-
-  if (column.default !== undefined) {
-    parts.push(`DEFAULT ${column.default}`);
-  }
-
-  return parts.join(' ');
+  return serializeColumnBase(column as SqlColumn, 'duckdb');
 }
 
 /**
@@ -324,22 +253,5 @@ export function generateIndexStatements(
   schemaName: string | undefined,
   columns: DuckDBColumn[]
 ): string[] {
-  const statements: string[] = [];
-  const fullTableName = schemaName
-    ? `${escapeIdentifier(schemaName)}.${escapeIdentifier(tableName)}`
-    : escapeIdentifier(tableName);
-
-  for (const column of columns) {
-    // Create indexes for unique columns (separate from UNIQUE constraint)
-    // In practice, UNIQUE already creates an index, but explicit indexes
-    // might be wanted for non-unique indexed fields
-    if (column.unique) {
-      const indexName = `idx_${tableName}_${column.name}`.replace(/\$/g, '_');
-      statements.push(
-        `CREATE INDEX IF NOT EXISTS ${escapeIdentifier(indexName)} ON ${fullTableName} (${escapeIdentifier(column.name)});`
-      );
-    }
-  }
-
-  return statements;
+  return generateIndexStatementsBase(tableName, schemaName, columns as SqlColumn[], 'duckdb');
 }

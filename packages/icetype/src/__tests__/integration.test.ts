@@ -19,7 +19,15 @@ import {
 } from '@icetype/adapters';
 import { ClickHouseAdapter } from '@icetype/clickhouse';
 import { DuckDBAdapter, transformToDuckDBDDL } from '@icetype/duckdb';
+import { PostgresAdapter, transformToPostgresDDL, createPostgresAdapter } from '@icetype/postgres';
 import { generateTypeScriptInterface } from '@icetype/cli';
+
+// Import PostgreSQL adapter from main icetype package for re-export verification
+import {
+  PostgresAdapter as PostgresAdapterFromMain,
+  transformToPostgresDDL as transformToPostgresDDLFromMain,
+  createPostgresAdapter as createPostgresAdapterFromMain,
+} from 'icetype';
 
 // =============================================================================
 // Test Schemas
@@ -376,7 +384,83 @@ describe('Schema to DuckDB DDL Flow', () => {
 });
 
 // =============================================================================
-// 5. Adapter Registry Integration
+// 5. Schema to PostgreSQL DDL Flow
+// =============================================================================
+
+describe('Schema to PostgreSQL DDL Flow', () => {
+  it('should parse schema, transform to PostgreSQL DDL, and serialize to DDL string', () => {
+    // Step 1: Parse the schema
+    const schema = parseSchema(userSchemaDefinition);
+
+    // Step 2: Transform to PostgreSQL DDL
+    const adapter = new PostgresAdapter();
+    const ddl = adapter.transform(schema, {
+      ifNotExists: true,
+      schema: 'public',
+    });
+
+    // Verify DDL structure
+    expect(ddl.tableName).toBe('User');
+    expect(ddl.schemaName).toBe('public');
+    expect(ddl.ifNotExists).toBe(true);
+    expect(ddl.columns.length).toBeGreaterThan(0);
+
+    // Step 3: Serialize to DDL string
+    const sql = adapter.serialize(ddl);
+
+    // Step 4: Verify DDL syntax
+    expect(sql).toContain('CREATE TABLE IF NOT EXISTS');
+    expect(sql).toContain('"public"."User"');
+
+    // System columns
+    expect(sql).toContain('"$id"');
+    expect(sql).toContain('"$type"');
+    expect(sql).toContain('"$version"');
+    expect(sql).toContain('"$createdAt"');
+    expect(sql).toContain('"$updatedAt"');
+
+    // User columns with proper types
+    expect(sql).toContain('UUID');
+    expect(sql).toContain('TEXT');
+    expect(sql).toContain('INTEGER');
+    expect(sql).toContain('DECIMAL');
+    expect(sql).toContain('BOOLEAN');
+    expect(sql).toContain('TIMESTAMP');
+    expect(sql).toContain('TEXT[]'); // tags array
+  });
+
+  it('should handle convenience function transformToPostgresDDL', () => {
+    const schema = parseSchema(orderSchemaDefinition);
+    const sql = transformToPostgresDDL(schema, { ifNotExists: true });
+
+    expect(sql).toContain('CREATE TABLE IF NOT EXISTS');
+    expect(sql).toContain('"Order"');
+    expect(sql).toContain('id');
+    expect(sql).toContain('customerId');
+    expect(sql).toContain('status');
+    expect(sql).toContain('totalAmount');
+    expect(sql).toContain('DECIMAL');
+  });
+
+  it('should create adapter via createPostgresAdapter factory', () => {
+    const adapter = createPostgresAdapter();
+    expect(adapter).toBeInstanceOf(PostgresAdapter);
+    expect(adapter.name).toBe('postgres');
+  });
+
+  it('should include unique constraints for indexed fields', () => {
+    const schema = parseSchema(productSchemaDefinition);
+    const adapter = new PostgresAdapter();
+    const ddl = adapter.transform(schema);
+    const sql = adapter.serialize(ddl);
+
+    // sku has # modifier, should have unique constraint
+    expect(sql).toContain('UNIQUE');
+  });
+});
+
+// =============================================================================
+// 6. Adapter Registry Integration
 // =============================================================================
 
 describe('Adapter Registry Integration', () => {
@@ -522,6 +606,10 @@ describe('Full Pipeline Integration', () => {
     // Transform to DuckDB DDL
     const duckdbSQL = transformToDuckDBDDL(schema);
     expect(duckdbSQL).toContain('CREATE TABLE');
+
+    // Transform to PostgreSQL DDL
+    const postgresSQL = transformToPostgresDDL(schema);
+    expect(postgresSQL).toContain('CREATE TABLE');
   });
 
   it('should handle complex schemas with all field types', () => {
@@ -578,5 +666,42 @@ describe('Full Pipeline Integration', () => {
     expect(() => chAdapter.transform(complexSchema, { engine: 'MergeTree', orderBy: ['id'] })).not.toThrow();
 
     expect(() => transformToDuckDBDDL(complexSchema)).not.toThrow();
+
+    expect(() => transformToPostgresDDL(complexSchema)).not.toThrow();
+  });
+});
+
+// =============================================================================
+// Main Package Export Tests
+// =============================================================================
+
+describe('Main icetype Package Exports', () => {
+  it('should export PostgresAdapter from main icetype package', () => {
+    expect(PostgresAdapterFromMain).toBeDefined();
+    expect(PostgresAdapterFromMain).toBe(PostgresAdapter);
+  });
+
+  it('should export transformToPostgresDDL from main icetype package', () => {
+    expect(transformToPostgresDDLFromMain).toBeDefined();
+    expect(transformToPostgresDDLFromMain).toBe(transformToPostgresDDL);
+  });
+
+  it('should export createPostgresAdapter from main icetype package', () => {
+    expect(createPostgresAdapterFromMain).toBeDefined();
+    expect(createPostgresAdapterFromMain).toBe(createPostgresAdapter);
+  });
+
+  it('should generate PostgreSQL DDL using main package exports', () => {
+    const schema = parseSchema({
+      $type: 'TestEntity',
+      id: 'uuid!',
+      name: 'string',
+      value: 'int?',
+    });
+
+    const sql = transformToPostgresDDLFromMain(schema, { ifNotExists: true });
+    expect(sql).toContain('CREATE TABLE IF NOT EXISTS');
+    expect(sql).toContain('TestEntity');
+    expect(sql).toContain('UUID');
   });
 });

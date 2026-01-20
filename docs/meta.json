@@ -2,6 +2,7 @@
   "title": "Documentation",
   "pages": [
     "index",
+    "why-icetype",
     "getting-started",
     "---Guides---",
     "schema-language",

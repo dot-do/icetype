@@ -82,68 +82,22 @@ describe('validate command', () => {
   // ===========================================================================
 
   describe('missing --schema flag', () => {
-    it('should exit with error when --schema is not provided', async () => {
-      // Mock schema-loader (won't be called)
-      vi.doMock('../utils/schema-loader.js', () => ({
-        loadSchemaFile: vi.fn(),
-      }));
-
-      // Mock validateSchema (won't be called)
-      vi.doMock('@icetype/core', async () => {
-        const actual = await vi.importActual<typeof import('@icetype/core')>('@icetype/core');
-        return {
-          ...actual,
-          validateSchema: vi.fn(),
-        };
-      });
-
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
+    it('should throw error when --schema is not provided', async () => {
       const { validate } = await import('../commands/validate.js');
 
-      try {
-        await validate([]);
-      } catch {
-        // Expected
-      }
-
-      expect(mockExit).toHaveBeenCalledWith(1);
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        expect.stringContaining('--schema is required')
-      );
-
-      mockExit.mockRestore();
+      // Commands now throw errors for central handling by main CLI
+      await expect(validate([])).rejects.toThrow('--schema is required');
     });
 
-    it('should show usage hint when --schema is not provided', async () => {
-      vi.doMock('../utils/schema-loader.js', () => ({
-        loadSchemaFile: vi.fn(),
-      }));
-
-      vi.doMock('@icetype/core', async () => {
-        const actual = await vi.importActual<typeof import('@icetype/core')>('@icetype/core');
-        return { ...actual, validateSchema: vi.fn() };
-      });
-
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
+    it('should include usage hint in error message when --schema is not provided', async () => {
       const { validate } = await import('../commands/validate.js');
 
       try {
         await validate([]);
-      } catch {
-        // Expected
+      } catch (error) {
+        // The error message should include the usage hint
+        expect((error as Error).message).toContain('Usage:');
       }
-
-      expect(mockConsoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('Usage:')
-      );
-
-      mockExit.mockRestore();
     });
   });
 
@@ -152,7 +106,7 @@ describe('validate command', () => {
   // ===========================================================================
 
   describe('file not found', () => {
-    it('should exit with error when schema file does not exist', async () => {
+    it('should throw error when schema file does not exist', async () => {
       vi.doMock('../utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [],
@@ -165,24 +119,11 @@ describe('validate command', () => {
         return { ...actual, validateSchema: vi.fn() };
       });
 
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
       const { validate } = await import('../commands/validate.js');
 
-      try {
-        await validate(['--schema', '/path/to/missing.ts']);
-      } catch {
-        // Expected
-      }
-
-      expect(mockExit).toHaveBeenCalledWith(1);
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        expect.stringContaining('File not found')
+      await expect(validate(['--schema', '/path/to/missing.ts'])).rejects.toThrow(
+        'File not found'
       );
-
-      mockExit.mockRestore();
     });
 
     it('should support -s short flag for schema path', async () => {
@@ -200,21 +141,15 @@ describe('validate command', () => {
         return { ...actual, validateSchema: vi.fn() };
       });
 
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
       const { validate } = await import('../commands/validate.js');
 
       try {
         await validate(['-s', '/path/to/schema.ts']);
       } catch {
-        // Expected
+        // Expected - short flag is parsed, file load fails
       }
 
       expect(mockLoadSchemaFile).toHaveBeenCalled();
-
-      mockExit.mockRestore();
     });
   });
 
@@ -312,7 +247,7 @@ describe('validate command', () => {
   // ===========================================================================
 
   describe('schema with loading/syntax errors', () => {
-    it('should exit with error when schema file has syntax errors', async () => {
+    it('should throw error when schema file has syntax errors', async () => {
       vi.doMock('../utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [],
@@ -325,27 +260,14 @@ describe('validate command', () => {
         return { ...actual, validateSchema: vi.fn() };
       });
 
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
       const { validate } = await import('../commands/validate.js');
 
-      try {
-        await validate(['--schema', '/path/to/bad.ts']);
-      } catch {
-        // Expected
-      }
-
-      expect(mockExit).toHaveBeenCalledWith(1);
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to load TypeScript file')
+      await expect(validate(['--schema', '/path/to/bad.ts'])).rejects.toThrow(
+        'Failed to load TypeScript file'
       );
-
-      mockExit.mockRestore();
     });
 
-    it('should exit with error when no schemas are found in file', async () => {
+    it('should throw error when no schemas are found in file', async () => {
       vi.doMock('../utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [],
@@ -358,27 +280,14 @@ describe('validate command', () => {
         return { ...actual, validateSchema: vi.fn() };
       });
 
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
       const { validate } = await import('../commands/validate.js');
 
-      try {
-        await validate(['--schema', '/path/to/empty.ts']);
-      } catch {
-        // Expected
-      }
-
-      expect(mockExit).toHaveBeenCalledWith(1);
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        expect.stringContaining('No schemas found')
+      await expect(validate(['--schema', '/path/to/empty.ts'])).rejects.toThrow(
+        'No schemas found'
       );
-
-      mockExit.mockRestore();
     });
 
-    it('should report multiple loading errors', async () => {
+    it('should include multiple loading errors in thrown error message', async () => {
       vi.doMock('../utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [],
@@ -391,26 +300,16 @@ describe('validate command', () => {
         return { ...actual, validateSchema: vi.fn() };
       });
 
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
       const { validate } = await import('../commands/validate.js');
 
       try {
         await validate(['--schema', '/path/to/bad.ts']);
-      } catch {
-        // Expected
+        expect.fail('Should have thrown');
+      } catch (error) {
+        const message = (error as Error).message;
+        expect(message).toContain('Error 1');
+        expect(message).toContain('Error 2');
       }
-
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        expect.stringContaining('Error 1')
-      );
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        expect.stringContaining('Error 2')
-      );
-
-      mockExit.mockRestore();
     });
   });
 
@@ -419,7 +318,7 @@ describe('validate command', () => {
   // ===========================================================================
 
   describe('schema with semantic/validation errors', () => {
-    it('should exit with error when schema has unknown types', async () => {
+    it('should throw error when schema has unknown types', async () => {
       const schema = createValidSchema('BadSchema');
 
       vi.doMock('../utils/schema-loader.js', () => ({
@@ -441,19 +340,14 @@ describe('validate command', () => {
         };
       });
 
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
       const { validate } = await import('../commands/validate.js');
 
-      try {
-        await validate(['--schema', '/path/to/schema.ts']);
-      } catch {
-        // Expected
-      }
+      // Validation errors are logged, then an error is thrown
+      await expect(validate(['--schema', '/path/to/schema.ts'])).rejects.toThrow(
+        'Schema validation failed'
+      );
 
-      expect(mockExit).toHaveBeenCalledWith(1);
+      // The logger should have been called with error details
       expect(mockConsoleError).toHaveBeenCalledWith(
         expect.stringContaining('BadSchema validation failed')
       );
@@ -463,11 +357,9 @@ describe('validate command', () => {
       expect(mockConsoleError).toHaveBeenCalledWith(
         expect.stringContaining('badField')
       );
-
-      mockExit.mockRestore();
     });
 
-    it('should exit with error when schema has invalid directive references', async () => {
+    it('should throw error when schema has invalid directive references', async () => {
       const schema = createValidSchema('BadDirectives');
 
       vi.doMock('../utils/schema-loader.js', () => ({
@@ -493,23 +385,14 @@ describe('validate command', () => {
         };
       });
 
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
       const { validate } = await import('../commands/validate.js');
 
-      try {
-        await validate(['--schema', '/path/to/schema.ts']);
-      } catch {
-        // Expected
-      }
+      // Validation errors are logged, then an error is thrown
+      await expect(validate(['--schema', '/path/to/schema.ts'])).rejects.toThrow();
 
       expect(mockConsoleError).toHaveBeenCalledWith(
         expect.stringContaining('UNKNOWN_PARTITION_FIELD')
       );
-
-      mockExit.mockRestore();
     });
 
     it('should report multiple validation errors', async () => {
@@ -837,7 +720,7 @@ describe('validate command', () => {
   // ===========================================================================
 
   describe('mixed valid and invalid schemas', () => {
-    it('should exit with error if any schema is invalid', async () => {
+    it('should throw error if any schema is invalid', async () => {
       const validSchema = createValidSchema('ValidSchema');
       const invalidSchema = createValidSchema('InvalidSchema');
 
@@ -865,30 +748,22 @@ describe('validate command', () => {
         };
       });
 
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
       const { validate } = await import('../commands/validate.js');
 
-      try {
-        await validate(['--schema', '/path/to/schemas.ts']);
-      } catch {
-        // Expected
-      }
+      // Command throws error when any schema is invalid
+      await expect(validate(['--schema', '/path/to/schemas.ts'])).rejects.toThrow(
+        'Schema validation failed'
+      );
 
-      expect(mockExit).toHaveBeenCalledWith(1);
       expect(mockConsoleLog).toHaveBeenCalledWith(
         expect.stringContaining('ValidSchema is valid')
       );
       expect(mockConsoleError).toHaveBeenCalledWith(
         expect.stringContaining('InvalidSchema validation failed')
       );
-
-      mockExit.mockRestore();
     });
 
-    it('should validate all schemas before exiting', async () => {
+    it('should validate all schemas before throwing', async () => {
       const schema1 = createValidSchema('Schema1');
       const schema2 = createValidSchema('Schema2');
       const schema3 = createValidSchema('Schema3');
@@ -914,10 +789,6 @@ describe('validate command', () => {
         return { ...actual, validateSchema: mockValidateSchema };
       });
 
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
       const { validate } = await import('../commands/validate.js');
 
       try {
@@ -926,10 +797,8 @@ describe('validate command', () => {
         // Expected
       }
 
-      // All 3 schemas should be validated
+      // All 3 schemas should be validated before throwing
       expect(mockValidateSchema).toHaveBeenCalledTimes(3);
-
-      mockExit.mockRestore();
     });
   });
 
@@ -938,7 +807,7 @@ describe('validate command', () => {
   // ===========================================================================
 
   describe('error handling', () => {
-    it('should handle unexpected errors during schema loading', async () => {
+    it('should throw error during schema loading (main CLI catches and exits)', async () => {
       vi.doMock('../utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockRejectedValue(new Error('Unexpected loading error')),
       }));
@@ -948,27 +817,15 @@ describe('validate command', () => {
         return { ...actual, validateSchema: vi.fn() };
       });
 
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
       const { validate } = await import('../commands/validate.js');
 
-      try {
-        await validate(['--schema', '/path/to/schema.ts']);
-      } catch {
-        // Expected
-      }
-
-      expect(mockExit).toHaveBeenCalledWith(1);
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        expect.stringContaining('Error loading schema')
+      // Commands now throw errors, main CLI catches and handles them
+      await expect(validate(['--schema', '/path/to/schema.ts'])).rejects.toThrow(
+        'Unexpected loading error'
       );
-
-      mockExit.mockRestore();
     });
 
-    it('should include error message in output', async () => {
+    it('should propagate error with custom message', async () => {
       vi.doMock('../utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockRejectedValue(new Error('Custom error message')),
       }));
@@ -978,26 +835,14 @@ describe('validate command', () => {
         return { ...actual, validateSchema: vi.fn() };
       });
 
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
       const { validate } = await import('../commands/validate.js');
 
-      try {
-        await validate(['--schema', '/path/to/schema.ts']);
-      } catch {
-        // Expected
-      }
-
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        expect.stringContaining('Custom error message')
+      await expect(validate(['--schema', '/path/to/schema.ts'])).rejects.toThrow(
+        'Custom error message'
       );
-
-      mockExit.mockRestore();
     });
 
-    it('should handle non-Error thrown values', async () => {
+    it('should propagate non-Error thrown values', async () => {
       vi.doMock('../utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockRejectedValue('String error'),
       }));
@@ -1007,23 +852,9 @@ describe('validate command', () => {
         return { ...actual, validateSchema: vi.fn() };
       });
 
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
       const { validate } = await import('../commands/validate.js');
 
-      try {
-        await validate(['--schema', '/path/to/schema.ts']);
-      } catch {
-        // Expected
-      }
-
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        expect.stringContaining('String error')
-      );
-
-      mockExit.mockRestore();
+      await expect(validate(['--schema', '/path/to/schema.ts'])).rejects.toBe('String error');
     });
   });
 

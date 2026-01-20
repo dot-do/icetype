@@ -1,7 +1,7 @@
 {
-  "name": "@icetype/postgres",
+  "name": "@icetype/sql-common",
   "version": "0.1.0",
-  "description": "IceType adapter for PostgreSQL - generates DDL from IceType schemas",
+  "description": "Shared SQL DDL utilities for IceType database adapters",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,14 +19,11 @@
   },
   "keywords": [
     "icetype",
-    "postgres",
-    "postgresql",
-    "adapter",
-    "schema",
-    "ddl",
     "sql",
-    "typescript",
-    "drizzle"
+    "ddl",
+    "common",
+    "utilities",
+    "typescript"
   ],
   "author": "Nathan Clevenger",
   "license": "MIT",
@@ -37,11 +34,6 @@
   "homepage": "https://github.com/dot-do/icetype",
   "bugs": {
     "url": "https://github.com/dot-do/icetype/issues"
-  },
-  "dependencies": {
-    "@icetype/core": "workspace:*",
-    "@icetype/adapters": "workspace:*",
-    "@icetype/sql-common": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

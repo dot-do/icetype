@@ -8,6 +8,27 @@ import { parseArgs } from 'node:util';
 import { validateSchema } from '@icetype/core';
 import { loadSchemaFile } from '../utils/schema-loader.js';
 import { createLogger, LogLevel, type LoggerOptions } from '../utils/logger.js';
+import { generateHelpText, hasHelpFlag, type HelpCommand } from '../utils/help.js';
+import {
+  requireOption,
+  checkSchemaLoadErrors,
+  checkSchemasExist,
+} from '../utils/cli-error.js';
+
+const VALIDATE_HELP: HelpCommand = {
+  name: 'validate',
+  description: 'Validate IceType schema syntax',
+  usage: 'ice validate --schema <file>',
+  options: [
+    { name: 'schema', short: 's', description: 'Path to the schema file', required: true },
+    { name: 'quiet', short: 'q', description: 'Suppress non-error output' },
+    { name: 'verbose', short: 'v', description: 'Enable verbose/debug output' },
+  ],
+  examples: [
+    'ice validate --schema ./schema.ts',
+    'ice validate -s ./schema.ts --verbose',
+  ],
+};
 
 export interface ValidateOptions {
   /** Path to the schema file */
@@ -19,6 +40,12 @@ export interface ValidateOptions {
 }
 
 export async function validate(args: string[]) {
+  // Check for help flag first
+  if (hasHelpFlag(args)) {
+    console.log(generateHelpText(VALIDATE_HELP));
+    process.exit(0);
+  }
+
   const { values } = parseArgs({
     args,
     options: {
@@ -35,76 +62,59 @@ export async function validate(args: string[]) {
   };
   const logger = createLogger(loggerOptions);
 
-  if (!values.schema) {
-    logger.error('--schema is required');
-    logger.info('Usage: ice validate --schema ./schema.ts');
-    process.exit(1);
-  }
+  // Validate required options - throws if missing
+  requireOption(values.schema, 'schema', 'validate', 'ice validate --schema ./schema.ts');
 
   // values.schema is guaranteed to be string after the check above
   const schemaPath = values.schema;
   logger.info(`Validating schema: ${schemaPath}`);
 
-  try {
-    // Load schemas from the file
-    logger.debug('Loading schema file', { path: schemaPath });
-    const loadResult = await loadSchemaFile(schemaPath);
+  // Load schemas from the file
+  logger.debug('Loading schema file', { path: schemaPath });
+  const loadResult = await loadSchemaFile(schemaPath);
 
-    // Check for loading errors
-    if (loadResult.errors.length > 0) {
-      for (const error of loadResult.errors) {
-        logger.error(error);
+  // Check for loading errors - throws if any
+  checkSchemaLoadErrors(loadResult.errors, schemaPath);
+
+  // Check that schemas exist - throws if none
+  checkSchemasExist(loadResult.schemas, schemaPath);
+
+  logger.info(`Found ${loadResult.schemas.length} schema(s)`);
+
+  let hasErrors = false;
+
+  // Validate each schema
+  for (const { name, schema } of loadResult.schemas) {
+    logger.debug(`Validating schema`, { name });
+    const result = validateSchema(schema);
+
+    if (result.valid) {
+      logger.success(`${name} is valid`);
+
+      if (result.warnings.length > 0) {
+        for (const warning of result.warnings) {
+          logger.warn(`[${warning.code}] ${warning.path}: ${warning.message}`, { schema: name });
+        }
       }
-      process.exit(1);
-    }
+    } else {
+      hasErrors = true;
+      logger.error(`${name} validation failed`);
 
-    if (loadResult.schemas.length === 0) {
-      logger.error('No schemas found in the file');
-      process.exit(1);
-    }
+      for (const error of result.errors) {
+        logger.error(`[${error.code}] ${error.path}: ${error.message}`, { schema: name });
+      }
 
-    logger.info(`Found ${loadResult.schemas.length} schema(s)`);
-
-    let hasErrors = false;
-
-    // Validate each schema
-    for (const { name, schema } of loadResult.schemas) {
-      logger.debug(`Validating schema`, { name });
-      const result = validateSchema(schema);
-
-      if (result.valid) {
-        logger.success(`${name} is valid`);
-
-        if (result.warnings.length > 0) {
-          for (const warning of result.warnings) {
-            logger.warn(`[${warning.code}] ${warning.path}: ${warning.message}`, { schema: name });
-          }
-        }
-      } else {
-        hasErrors = true;
-        logger.error(`${name} validation failed`);
-
-        for (const error of result.errors) {
-          logger.error(`[${error.code}] ${error.path}: ${error.message}`, { schema: name });
-        }
-
-        if (result.warnings.length > 0) {
-          for (const warning of result.warnings) {
-            logger.warn(`[${warning.code}] ${warning.path}: ${warning.message}`, { schema: name });
-          }
+      if (result.warnings.length > 0) {
+        for (const warning of result.warnings) {
+          logger.warn(`[${warning.code}] ${warning.path}: ${warning.message}`, { schema: name });
         }
       }
     }
-
-    if (hasErrors) {
-      process.exit(1);
-    }
-
-    logger.success('All schemas are valid');
-  } catch (error) {
-    logger.error('Error loading schema', {
-      message: error instanceof Error ? error.message : String(error),
-    });
-    process.exit(1);
   }
+
+  if (hasErrors) {
+    throw new Error('Schema validation failed');
+  }
+
+  logger.success('All schemas are valid');
 }

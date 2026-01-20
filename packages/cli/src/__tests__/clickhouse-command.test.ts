@@ -165,22 +165,8 @@ describe('ice clickhouse command', () => {
     it('should error when --schema is missing', async () => {
       const { clickhouseExport } = await import('../commands/clickhouse.js');
 
-      // Mock process.exit to not actually exit
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
-      try {
-        await clickhouseExport([]);
-      } catch {
-        // Expected - process.exit was called
-      }
-
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        expect.stringContaining('--schema is required')
-      );
-
-      mockExit.mockRestore();
+      // Commands now throw errors (main CLI catches and exits)
+      await expect(clickhouseExport([])).rejects.toThrow('--schema is required');
     });
 
     it('should support --database option', async () => {
@@ -223,24 +209,11 @@ describe('ice clickhouse command', () => {
     it('should parse --schema argument correctly', async () => {
       const { clickhouseExport } = await import('../commands/clickhouse.js');
 
-      // Mock process.exit
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
       // Mock file not found
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
-      try {
-        await clickhouseExport(['--schema', './nonexistent.ts']);
-      } catch {
-        // Expected
-      }
-
-      // Should have tried to load the file
-      expect(mockConsoleError).toHaveBeenCalled();
-
-      mockExit.mockRestore();
+      // Should throw error when file not found
+      await expect(clickhouseExport(['--schema', './nonexistent.ts'])).rejects.toThrow();
     });
 
     it('should parse --engine argument correctly', async () => {
@@ -306,41 +279,20 @@ describe('ice clickhouse command', () => {
   });
 
   describe('error handling', () => {
-    it('should handle file not found error gracefully', async () => {
+    it('should throw error when file not found', async () => {
       const { clickhouseExport } = await import('../commands/clickhouse.js');
-
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
 
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
-      try {
-        await clickhouseExport(['--schema', './nonexistent.ts']);
-      } catch {
-        // Expected
-      }
-
-      expect(mockConsoleError).toHaveBeenCalled();
-
-      mockExit.mockRestore();
+      // Commands now throw errors (main CLI catches and exits)
+      await expect(clickhouseExport(['--schema', './nonexistent.ts'])).rejects.toThrow();
     });
 
-    it('should handle invalid schema file gracefully', async () => {
+    it('should throw error for invalid schema file', async () => {
       const { clickhouseExport } = await import('../commands/clickhouse.js');
 
-      // Mock process.exit
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
-      try {
-        await clickhouseExport(['--schema', './invalid-schema.ts']);
-      } catch {
-        // Expected
-      }
-
-      mockExit.mockRestore();
+      // Should throw when schema is invalid
+      await expect(clickhouseExport(['--schema', './invalid-schema.ts'])).rejects.toThrow();
     });
 
     it('should handle file write errors gracefully', async () => {

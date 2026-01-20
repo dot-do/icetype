@@ -98,4 +98,9 @@ export {
 // Adapter
 // =============================================================================
 
-export { ClickHouseAdapter, createClickHouseAdapter } from './adapter.js';
+export {
+  ClickHouseAdapter,
+  createClickHouseAdapter,
+  transformToClickHouseDDL,
+  generateClickHouseDDL,
+} from './adapter.js';

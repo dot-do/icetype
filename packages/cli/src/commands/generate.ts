@@ -11,6 +11,29 @@ import type { IceTypeSchema, FieldDefinition } from '@icetype/core';
 import { loadSchemaFile } from '../utils/schema-loader.js';
 import { watchGenerate } from '../utils/watcher.js';
 import { createLogger, LogLevel } from '../utils/logger.js';
+import { generateHelpText, hasHelpFlag, type HelpCommand } from '../utils/help.js';
+import {
+  requireOption,
+  checkSchemaLoadErrors,
+  checkSchemasExist,
+} from '../utils/cli-error.js';
+
+const GENERATE_HELP: HelpCommand = {
+  name: 'generate',
+  description: 'Generate TypeScript types from IceType schema',
+  usage: 'ice generate --schema <file> [--output <file>] [--watch]',
+  options: [
+    { name: 'schema', short: 's', description: 'Path to the schema file', required: true },
+    { name: 'output', short: 'o', description: 'Output file path (default: <schema>.generated.ts)' },
+    { name: 'watch', short: 'w', description: 'Watch mode for automatic regeneration' },
+    { name: 'quiet', short: 'q', description: 'Suppress non-error output' },
+    { name: 'verbose', short: 'v', description: 'Enable verbose logging' },
+  ],
+  examples: [
+    'ice generate --schema ./schema.ts --output ./types.ts',
+    'ice generate -s ./schema.ts -o ./types.ts --watch',
+  ],
+};
 
 /**
  * Options for the generate command.
@@ -47,19 +70,14 @@ export async function runGeneration(options: GenerateOptions): Promise<void> {
   logger.debug('Starting generation', { schemaPath, outputPath });
 
   // Load schemas from the file
+  logger.debug('Loading schema file', { path: schemaPath });
   const loadResult = await loadSchemaFile(schemaPath);
 
-  // Check for loading errors
-  if (loadResult.errors.length > 0) {
-    for (const error of loadResult.errors) {
-      logger.error(error);
-    }
-    throw new Error('Schema loading failed');
-  }
+  // Check for loading errors - throws if any
+  checkSchemaLoadErrors(loadResult.errors, schemaPath);
 
-  if (loadResult.schemas.length === 0) {
-    throw new Error('No schemas found in the file');
-  }
+  // Check that schemas exist - throws if none
+  checkSchemasExist(loadResult.schemas, schemaPath);
 
   logger.debug(`Found ${loadResult.schemas.length} schema(s)`);
 
@@ -76,6 +94,12 @@ export async function runGeneration(options: GenerateOptions): Promise<void> {
 }
 
 export async function generate(args: string[]) {
+  // Check for help flag first
+  if (hasHelpFlag(args)) {
+    console.log(generateHelpText(GENERATE_HELP));
+    process.exit(0);
+  }
+
   const { values } = parseArgs({
     args,
     options: {
@@ -87,11 +111,13 @@ export async function generate(args: string[]) {
     },
   });
 
-  if (!values.schema) {
-    console.error('Error: --schema is required');
-    console.log('Usage: ice generate --schema ./schema.ts --output ./types.ts [--watch]');
-    process.exit(1);
-  }
+  // Validate required options - throws if missing
+  requireOption(
+    values.schema,
+    'schema',
+    'generate',
+    'ice generate --schema ./schema.ts --output ./types.ts [--watch]'
+  );
 
   // values.schema is guaranteed to be string after the check above
   const schemaPath = values.schema;
@@ -122,16 +148,9 @@ export async function generate(args: string[]) {
       verbose: options.verbose,
     });
   } else {
-    // Single generation
+    // Single generation - let errors propagate to main CLI handler
     logger.info(`Generating types from: ${schemaPath}`);
-    try {
-      await runGeneration(options);
-    } catch (error) {
-      logger.error('Error generating types', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      process.exit(1);
-    }
+    await runGeneration(options);
   }
 }
 

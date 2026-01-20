@@ -101,3 +101,31 @@ export {
   generateParquetSchemaString,
   documentToParquetRow,
 } from '@icetype/iceberg';
+
+// Re-export PostgreSQL adapter from @icetype/postgres
+export {
+  // PostgreSQL types
+  type PostgresType,
+  type PostgresColumn,
+  type PostgresTableOptions,
+  type PostgresDDL,
+  type PostgresTypeMapping,
+  type PostgresAdapterOptions,
+  ICETYPE_TO_POSTGRES,
+
+  // PostgreSQL DDL helpers
+  mapIceTypeToPostgres,
+  getPostgresTypeString,
+  fieldToPostgresColumn,
+  generateSystemColumns as generatePostgresSystemColumns,
+  escapeIdentifier as escapePostgresIdentifier,
+  serializeColumn as serializePostgresColumn,
+  serializeDDL as serializePostgresDDL,
+  generateIndexStatements as generatePostgresIndexStatements,
+
+  // PostgreSQL adapter
+  PostgresAdapter,
+  createPostgresAdapter,
+  transformToPostgresDDL,
+  generatePostgresDDL,
+} from '@icetype/postgres';

@@ -31,6 +31,8 @@ import {
   isValidEngine,
   inferOrderBy,
   ICETYPE_TO_CLICKHOUSE,
+  transformToClickHouseDDL,
+  generateClickHouseDDL,
 } from '../index.js';
 import type { ClickHouseDDL, ClickHouseColumn } from '../types.js';
 
@@ -947,5 +949,139 @@ describe('ICETYPE_TO_CLICKHOUSE', () => {
     expect(ICETYPE_TO_CLICKHOUSE['json']).toBe('JSON');
     expect(ICETYPE_TO_CLICKHOUSE['binary']).toBe('String');
     expect(ICETYPE_TO_CLICKHOUSE['decimal']).toBe('Decimal(38, 9)');
+  });
+});
+
+// =============================================================================
+// Convenience Function Tests
+// =============================================================================
+
+describe('transformToClickHouseDDL', () => {
+  it('should exist as an exported function', () => {
+    expect(typeof transformToClickHouseDDL).toBe('function');
+  });
+
+  it('should produce valid ClickHouse DDL string', () => {
+    const schema = parseSchema({
+      $type: 'User',
+      id: 'uuid!',
+      name: 'string',
+      email: 'string#',
+    });
+
+    const sql = transformToClickHouseDDL(schema);
+
+    expect(typeof sql).toBe('string');
+    expect(sql).toContain('CREATE TABLE');
+    expect(sql).toContain('user');
+    expect(sql).toContain('id UUID');
+    expect(sql).toContain('name String');
+    expect(sql).toContain('email String');
+    expect(sql).toContain('ENGINE = MergeTree()');
+    expect(sql).toContain('ORDER BY');
+  });
+
+  it('should work like adapter.transform() + adapter.serialize()', () => {
+    const schema = parseSchema({
+      $type: 'Event',
+      id: 'uuid!',
+      created_at: 'timestamp!',
+      data: 'json?',
+    });
+
+    const adapter = new ClickHouseAdapter();
+    const ddl = adapter.transform(schema);
+    const expectedSql = adapter.serialize(ddl);
+
+    const actualSql = transformToClickHouseDDL(schema);
+
+    expect(actualSql).toBe(expectedSql);
+  });
+
+  it('should pass options through correctly', () => {
+    const schema = parseSchema({
+      $type: 'Event',
+      id: 'uuid!',
+      created_at: 'timestamp!',
+    });
+
+    const sql = transformToClickHouseDDL(schema, {
+      engine: 'ReplacingMergeTree',
+      orderBy: ['id'],
+      partitionBy: 'toYYYYMM(created_at)',
+      database: 'events_db',
+      ifNotExists: true,
+    });
+
+    expect(sql).toContain('CREATE TABLE IF NOT EXISTS events_db.event');
+    expect(sql).toContain('ENGINE = ReplacingMergeTree()');
+    expect(sql).toContain('PARTITION BY toYYYYMM(created_at)');
+    expect(sql).toContain('ORDER BY (id)');
+  });
+
+  it('should handle complex options like settings and TTL', () => {
+    const schema = parseSchema({
+      $type: 'Logs',
+      id: 'uuid!',
+      message: 'string',
+      created_at: 'timestamp!',
+    });
+
+    const sql = transformToClickHouseDDL(schema, {
+      engine: 'MergeTree',
+      orderBy: ['id'],
+      ttl: 'created_at + INTERVAL 30 DAY',
+      settings: {
+        index_granularity: '8192',
+      },
+    });
+
+    expect(sql).toContain('TTL created_at + INTERVAL 30 DAY');
+    expect(sql).toContain('SETTINGS');
+    expect(sql).toContain('index_granularity = 8192');
+  });
+});
+
+// =============================================================================
+// generateClickHouseDDL Tests
+// =============================================================================
+
+describe('generateClickHouseDDL', () => {
+  it('should exist as an exported function', () => {
+    expect(typeof generateClickHouseDDL).toBe('function');
+  });
+
+  it('should return a ClickHouseDDL structure (not a string)', () => {
+    const schema = parseSchema({
+      $type: 'User',
+      id: 'uuid!',
+      name: 'string',
+    });
+
+    const ddl = generateClickHouseDDL(schema);
+
+    expect(typeof ddl).toBe('object');
+    expect(ddl.tableName).toBe('user');
+    expect(ddl.engine).toBe('MergeTree');
+    expect(Array.isArray(ddl.columns)).toBe(true);
+    expect(Array.isArray(ddl.orderBy)).toBe(true);
+  });
+
+  it('should pass options through to the DDL structure', () => {
+    const schema = parseSchema({
+      $type: 'Event',
+      id: 'uuid!',
+      created_at: 'timestamp!',
+    });
+
+    const ddl = generateClickHouseDDL(schema, {
+      engine: 'ReplacingMergeTree',
+      orderBy: ['id'],
+      database: 'analytics',
+    });
+
+    expect(ddl.engine).toBe('ReplacingMergeTree');
+    expect(ddl.orderBy).toEqual(['id']);
+    expect(ddl.database).toBe('analytics');
   });
 });

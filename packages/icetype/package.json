@@ -53,7 +53,8 @@
     "@icetype/cli": "workspace:*",
     "@icetype/adapters": "workspace:*",
     "@icetype/clickhouse": "workspace:*",
-    "@icetype/duckdb": "workspace:*"
+    "@icetype/duckdb": "workspace:*",
+    "@icetype/postgres": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

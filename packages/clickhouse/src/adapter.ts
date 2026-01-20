@@ -340,3 +340,68 @@ export class ClickHouseAdapter
 export function createClickHouseAdapter(): ClickHouseAdapter {
   return new ClickHouseAdapter();
 }
+
+// =============================================================================
+// Convenience Functions
+// =============================================================================
+
+/**
+ * Transform an IceType schema directly to a ClickHouse CREATE TABLE statement.
+ *
+ * This is a convenience function that combines the adapter transform
+ * and serialize steps.
+ *
+ * @param schema - The IceType schema to transform
+ * @param options - Optional ClickHouse-specific options
+ * @returns SQL CREATE TABLE statement
+ *
+ * @example
+ * ```typescript
+ * import { parseSchema } from '@icetype/core';
+ * import { transformToClickHouseDDL } from '@icetype/clickhouse';
+ *
+ * const schema = parseSchema({
+ *   $type: 'User',
+ *   id: 'uuid!',
+ *   email: 'string#',
+ * });
+ *
+ * const sql = transformToClickHouseDDL(schema, {
+ *   engine: 'ReplacingMergeTree',
+ *   orderBy: ['id'],
+ *   partitionBy: 'toYYYYMM(created_at)',
+ * });
+ * console.log(sql);
+ * // CREATE TABLE IF NOT EXISTS user
+ * // (
+ * //     id UUID,
+ * //     email String
+ * // )
+ * // ENGINE = ReplacingMergeTree()
+ * // PARTITION BY toYYYYMM(created_at)
+ * // ORDER BY (id)
+ * ```
+ */
+export function transformToClickHouseDDL(
+  schema: IceTypeSchema,
+  options?: ClickHouseTableOptions
+): string {
+  const adapter = new ClickHouseAdapter();
+  const ddl = adapter.transform(schema, options);
+  return adapter.serialize(ddl);
+}
+
+/**
+ * Transform an IceType schema to ClickHouse DDL structure.
+ *
+ * @param schema - The IceType schema to transform
+ * @param options - Optional ClickHouse-specific options
+ * @returns ClickHouse DDL structure
+ */
+export function generateClickHouseDDL(
+  schema: IceTypeSchema,
+  options?: ClickHouseTableOptions
+): ClickHouseDDL {
+  const adapter = new ClickHouseAdapter();
+  return adapter.transform(schema, options);
+}

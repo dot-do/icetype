@@ -9,6 +9,15 @@
 
 import type { FieldDefinition } from '@icetype/core';
 
+import {
+  escapeIdentifier as escapeIdentifierBase,
+  formatDefaultValue as formatDefaultValueBase,
+  serializeColumn as serializeColumnBase,
+  generateSystemColumns as generateSystemColumnsBase,
+  generateIndexStatements as generateIndexStatementsBase,
+  type SqlColumn,
+} from '@icetype/sql-common';
+
 import type {
   PostgresColumn,
   PostgresDDL,
@@ -16,38 +25,6 @@ import type {
 } from './types.js';
 
 import { ICETYPE_TO_POSTGRES } from './types.js';
-
-// =============================================================================
-// SQL Reserved Keywords
-// =============================================================================
-
-/**
- * Common SQL reserved keywords that should always be quoted when used as identifiers.
- * This is a subset of PostgreSQL reserved keywords that are most commonly used
- * and could cause issues if not quoted.
- */
-const SQL_RESERVED_KEYWORDS = new Set([
-  'select', 'from', 'where', 'insert', 'update', 'delete', 'drop', 'create',
-  'alter', 'table', 'index', 'view', 'database', 'schema', 'column', 'constraint',
-  'primary', 'foreign', 'key', 'references', 'unique', 'check', 'default',
-  'null', 'not', 'and', 'or', 'in', 'is', 'like', 'between', 'exists',
-  'case', 'when', 'then', 'else', 'end', 'as', 'on', 'join', 'left', 'right',
-  'inner', 'outer', 'cross', 'full', 'group', 'by', 'having', 'order', 'asc',
-  'desc', 'limit', 'offset', 'union', 'intersect', 'except', 'all', 'distinct',
-  'into', 'values', 'set', 'grant', 'revoke', 'begin', 'commit', 'rollback',
-  'transaction', 'true', 'false', 'user', 'role', 'public', 'current_user',
-  'current_date', 'current_time', 'current_timestamp', 'localtime', 'localtimestamp',
-]);
-
-/**
- * Check if an identifier is a SQL reserved keyword.
- *
- * @param identifier - The identifier to check
- * @returns True if the identifier is a reserved keyword
- */
-function isReservedKeyword(identifier: string): boolean {
-  return SQL_RESERVED_KEYWORDS.has(identifier.toLowerCase());
-}
 
 // =============================================================================
 // Type Mapping
@@ -171,38 +148,7 @@ export function fieldToPostgresColumn(
  * @returns The SQL expression string
  */
 export function formatDefaultValue(value: unknown, type: string): string {
-  if (value === null) {
-    return 'NULL';
-  }
-
-  if (typeof value === 'string') {
-    // Escape single quotes
-    const escaped = value.replace(/'/g, "''");
-    return `'${escaped}'`;
-  }
-
-  if (typeof value === 'number') {
-    return String(value);
-  }
-
-  if (typeof value === 'boolean') {
-    return value ? 'TRUE' : 'FALSE';
-  }
-
-  if (value instanceof Date) {
-    if (type.includes('DATE') && !type.includes('TIMESTAMP')) {
-      return `'${value.toISOString().split('T')[0]}'`;
-    }
-    return `'${value.toISOString()}'`;
-  }
-
-  if (Array.isArray(value) || typeof value === 'object') {
-    // JSON serialize for complex types
-    const escaped = JSON.stringify(value).replace(/'/g, "''");
-    return `'${escaped}'`;
-  }
-
-  return String(value);
+  return formatDefaultValueBase(value, type);
 }
 
 // =============================================================================
@@ -218,35 +164,9 @@ export function formatDefaultValue(value: unknown, type: string): string {
  * @returns Array of system column definitions
  */
 export function generateSystemColumns(): PostgresColumn[] {
-  return [
-    {
-      name: '$id',
-      type: 'TEXT',
-      nullable: false,
-      primaryKey: true,
-    },
-    {
-      name: '$type',
-      type: 'TEXT',
-      nullable: false,
-    },
-    {
-      name: '$version',
-      type: 'INTEGER',
-      nullable: false,
-      default: '1',
-    },
-    {
-      name: '$createdAt',
-      type: 'BIGINT',
-      nullable: false,
-    },
-    {
-      name: '$updatedAt',
-      type: 'BIGINT',
-      nullable: false,
-    },
-  ];
+  // Use shared implementation and cast to PostgresColumn[]
+  // The types are compatible since PostgresColumn extends SqlColumn's shape
+  return generateSystemColumnsBase('postgres') as PostgresColumn[];
 }
 
 // =============================================================================
@@ -266,20 +186,7 @@ export function generateSystemColumns(): PostgresColumn[] {
  * @returns The escaped identifier
  */
 export function escapeIdentifier(identifier: string): string {
-  // Check if it's a valid simple identifier and not a reserved keyword
-  const isSimpleIdentifier = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(identifier);
-  const startsWithDollar = identifier.startsWith('$');
-  const isKeyword = isReservedKeyword(identifier);
-
-  // PostgreSQL uses double quotes for identifiers with special characters,
-  // starting with $, or SQL reserved keywords
-  if (isSimpleIdentifier && !startsWithDollar && !isKeyword) {
-    return identifier;
-  }
-
-  // Escape double quotes within the identifier
-  const escaped = identifier.replace(/"/g, '""');
-  return `"${escaped}"`;
+  return escapeIdentifierBase(identifier, 'postgres');
 }
 
 /**
@@ -289,24 +196,7 @@ export function escapeIdentifier(identifier: string): string {
  * @returns The DDL column fragment
  */
 export function serializeColumn(column: PostgresColumn): string {
-  const parts: string[] = [
-    escapeIdentifier(column.name),
-    column.type,
-  ];
-
-  if (!column.nullable) {
-    parts.push('NOT NULL');
-  }
-
-  if (column.unique) {
-    parts.push('UNIQUE');
-  }
-
-  if (column.default !== undefined) {
-    parts.push(`DEFAULT ${column.default}`);
-  }
-
-  return parts.join(' ');
+  return serializeColumnBase(column as SqlColumn, 'postgres');
 }
 
 /**
@@ -403,22 +293,5 @@ export function generateIndexStatements(
   schemaName: string | undefined,
   columns: PostgresColumn[]
 ): string[] {
-  const statements: string[] = [];
-  const fullTableName = schemaName
-    ? `${escapeIdentifier(schemaName)}.${escapeIdentifier(tableName)}`
-    : escapeIdentifier(tableName);
-
-  for (const column of columns) {
-    // Create indexes for unique columns (separate from UNIQUE constraint)
-    // In practice, UNIQUE already creates an index, but explicit indexes
-    // might be wanted for non-unique indexed fields
-    if (column.unique) {
-      const indexName = `idx_${tableName}_${column.name}`.replace(/\$/g, '_');
-      statements.push(
-        `CREATE INDEX IF NOT EXISTS ${escapeIdentifier(indexName)} ON ${fullTableName} (${escapeIdentifier(column.name)});`
-      );
-    }
-  }
-
-  return statements;
+  return generateIndexStatementsBase(tableName, schemaName, columns as SqlColumn[], 'postgres');
 }

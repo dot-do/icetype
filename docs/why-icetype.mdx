@@ -1,0 +1,282 @@
+---
+title: Why IceType
+description: Understanding when and why to choose IceType over other schema solutions.
+---
+
+# Why IceType?
+
+Modern data engineering suffers from **schema proliferation**: you define your data model once for your application, again for your database, again for your data warehouse, and again for your analytics tools. Each definition drifts over time, creating maintenance burden and data quality issues.
+
+IceType solves this by providing a **single source of truth** that compiles to multiple backends, with first-class support for analytical data formats like Apache Iceberg and Parquet.
+
+## The Schema Proliferation Problem
+
+A typical data stack requires schemas in multiple places:
+
+```
+Application Code    --> TypeScript interfaces
+ORM                 --> Prisma schema / Drizzle definitions
+Database            --> SQL DDL
+Data Warehouse      --> DBT models
+Analytics           --> Iceberg/Parquet schemas
+```
+
+Each schema definition:
+- Must be kept in sync manually
+- Uses different syntax and conventions
+- Has different capabilities and constraints
+- Requires different tooling and expertise
+
+When your data model changes, you update 5+ different schema files across different repositories, hoping nothing breaks.
+
+## How IceType Solves This
+
+IceType provides one concise schema that generates all the others:
+
+```typescript
+import { parseSchema } from 'icetype';
+
+const OrderSchema = parseSchema({
+  $type: 'Order',
+  $partitionBy: ['year', 'month'],
+  $index: [['customerId'], ['createdAt']],
+
+  id: 'uuid!',
+  customerId: 'uuid!',
+  customer: '-> Customer!',
+  items: 'json',
+  total: 'decimal(10,2)',
+  status: 'string = "pending"',
+  createdAt: 'timestamp',
+});
+```
+
+From this single definition, IceType generates:
+- **TypeScript types** for type-safe application code
+- **Iceberg metadata** for data lake storage
+- **Parquet schemas** for columnar analytics
+- **Partition specs** for query optimization
+
+## Comparison with Alternatives
+
+| Feature | IceType | Prisma | Drizzle | Plain SQL | DBT |
+|---------|---------|--------|---------|-----------|-----|
+| **TypeScript-native** | Yes | Codegen | Yes | No | No |
+| **Iceberg/Parquet output** | Yes | No | No | No | Plugin |
+| **Partition specs** | Built-in | No | No | Manual | Manual |
+| **Single source of truth** | Yes | App-only | App-only | DB-only | Analytics-only |
+| **Schema validation** | Runtime + Types | Codegen | Types | None | Compile |
+| **Learning curve** | Low | Medium | Low | Low | High |
+
+### vs Prisma
+
+**Prisma** is excellent for application-database schema management but stops at the database layer:
+
+- Generates TypeScript from database schema
+- No support for analytical formats (Iceberg, Parquet)
+- No partition specification
+- Requires Prisma runtime and migration system
+
+**Choose IceType when**: You need schemas that work across both transactional and analytical systems.
+
+**Choose Prisma when**: You only need ORM functionality for a traditional database.
+
+### vs Drizzle
+
+**Drizzle** provides TypeScript-first schema definitions:
+
+- Excellent TypeScript integration
+- SQL-focused, requires database knowledge
+- No analytical format support
+- More verbose than IceType syntax
+
+**Choose IceType when**: You want concise syntax and analytical output formats.
+
+**Choose Drizzle when**: You prefer explicit SQL-like syntax and only target relational databases.
+
+### vs Plain SQL DDL
+
+**SQL DDL** is the universal database language:
+
+- Works everywhere
+- No TypeScript integration
+- Manual partition and index management
+- No analytical format generation
+
+**Choose IceType when**: You want type safety and multi-format output.
+
+**Choose SQL when**: You need maximum database portability or have existing DDL.
+
+### vs DBT
+
+**DBT** is the standard for analytics engineering:
+
+- Powerful transformation and testing
+- Analytics-focused, not application-focused
+- Steep learning curve
+- Requires existing data warehouse
+
+**Choose IceType when**: You need schemas that bridge application and analytics.
+
+**Choose DBT when**: You're building pure analytics pipelines on existing data.
+
+## Key Differentiators
+
+### 1. Apache Iceberg Native
+
+IceType generates Iceberg table metadata directly:
+
+```typescript
+import { generateIcebergMetadata } from 'icetype';
+
+const metadata = generateIcebergMetadata(
+  OrderSchema,
+  's3://data-lake/orders',
+  { 'write.parquet.compression-codec': 'zstd' }
+);
+```
+
+This enables:
+- Time travel queries on historical data
+- Schema evolution without data rewrites
+- Partition pruning for fast analytics
+- Compatibility with Spark, Trino, DuckDB, and more
+
+### 2. Parquet Schema Generation
+
+Generate Parquet schemas for efficient columnar storage:
+
+```typescript
+import { generateParquetSchemaString } from 'icetype';
+
+const schema = generateParquetSchemaString(OrderSchema);
+// message Order {
+//   REQUIRED BYTE_ARRAY id (UTF8);
+//   REQUIRED BYTE_ARRAY customerId (UTF8);
+//   ...
+// }
+```
+
+### 3. Concise, Readable Syntax
+
+Compare IceType to equivalent Prisma:
+
+**IceType:**
+```typescript
+const UserSchema = parseSchema({
+  $type: 'User',
+  $index: [['email']],
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+  posts: '<- Post.author[]',
+});
+```
+
+**Prisma:**
+```prisma
+model User {
+  id    String @id @default(uuid())
+  email String @unique
+  name  String
+  posts Post[]
+
+  @@index([email])
+}
+```
+
+IceType's modifier syntax (`!`, `#`, `?`, `[]`) is more concise while remaining readable.
+
+### 4. Built-in Partitioning
+
+Partitioning is a first-class concept:
+
+```typescript
+const EventSchema = parseSchema({
+  $type: 'Event',
+  $partitionBy: ['year', 'month', 'day'],
+  // Fields...
+});
+```
+
+This generates proper partition specs for Iceberg, enabling efficient query pruning.
+
+## Use Cases Where IceType Shines
+
+### Data Lake Architecture
+
+When you're building a modern data lake with:
+- Iceberg tables for historical data
+- Real-time ingestion from applications
+- Analytics queries via Spark/Trino/DuckDB
+
+IceType ensures your application schemas and lake schemas stay synchronized.
+
+### Event Sourcing / CDC
+
+For event-driven architectures where:
+- Events are written by applications
+- Events are analyzed by data teams
+- Schema consistency is critical
+
+IceType provides the bridge between operational and analytical schemas.
+
+### Multi-Tenant SaaS
+
+When you need:
+- Tenant-based partitioning
+- Efficient cross-tenant analytics
+- Type-safe application code
+
+The `$partitionBy` directive makes this straightforward.
+
+### Startups Scaling to Analytics
+
+When you're:
+- Starting with a simple database
+- Planning to add analytics later
+- Want to avoid schema rewrites
+
+Define schemas in IceType from day one, add Iceberg export when ready.
+
+## When NOT to Use IceType
+
+IceType is not the right choice when:
+
+### You Only Need an ORM
+
+If you just need database queries with type safety and have no analytics requirements, tools like Prisma or Drizzle are more mature and feature-complete for pure ORM use cases.
+
+### You Have Existing Schemas
+
+If you already have schemas defined in Prisma, SQL, or another format and don't need Iceberg/Parquet output, the migration cost may not be worth it.
+
+### You Need Database-Specific Features
+
+IceType focuses on portable schemas. If you need database-specific features like PostgreSQL's full-text search or MySQL's spatial indexes, you may need to supplement IceType with native DDL.
+
+### You're Building Pure Analytics
+
+If you're building analytics pipelines on existing data without an application layer, DBT or direct SQL may be more appropriate.
+
+## Getting Started
+
+Ready to try IceType? Start with the [Getting Started](/getting-started) guide to define your first schema.
+
+```bash
+npm install icetype
+```
+
+```typescript
+import { parseSchema, validateSchema } from 'icetype';
+
+const schema = parseSchema({
+  $type: 'MyEntity',
+  id: 'uuid!',
+  name: 'string',
+  createdAt: 'timestamp',
+});
+
+const result = validateSchema(schema);
+console.log(result.valid ? 'Schema is valid!' : result.errors);
+```

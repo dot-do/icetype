@@ -12,7 +12,6 @@
  */
 
 import { createRequire } from 'node:module';
-import { isIceTypeError, getErrorMessage } from '@icetype/core';
 import { initializeAdapterRegistry } from './utils/adapter-registry.js';
 import { init } from './commands/init.js';
 import { generate } from './commands/generate.js';
@@ -23,6 +22,7 @@ import { icebergExport } from './commands/iceberg.js';
 import { postgresExport } from './commands/postgres.js';
 import { diff } from './commands/diff.js';
 import { generateHelpText, hasHelpFlag, type HelpCommand } from './utils/help.js';
+import { formatCliError } from './utils/cli-error.js';
 
 // Initialize the global adapter registry at CLI startup
 // This registers all supported adapters (postgres, duckdb, clickhouse, iceberg)
@@ -204,12 +204,9 @@ async function main() {
         process.exit(1);
     }
   } catch (error) {
-    // Use IceType's standardized error formatting
-    if (isIceTypeError(error)) {
-      console.error(getErrorMessage(error));
-    } else {
-      console.error('Error:', error instanceof Error ? error.message : String(error));
-    }
+    // Use centralized error formatting for all error types
+    // This ensures consistent formatting across all commands
+    console.error(formatCliError(error));
     process.exit(1);
   }
 }

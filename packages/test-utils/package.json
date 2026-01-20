@@ -1,7 +1,7 @@
 {
-  "name": "@icetype/postgres",
+  "name": "@icetype/test-utils",
   "version": "0.1.0",
-  "description": "IceType adapter for PostgreSQL - generates DDL from IceType schemas",
+  "description": "Shared test utilities and schema factories for IceType",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,14 +19,9 @@
   },
   "keywords": [
     "icetype",
-    "postgres",
-    "postgresql",
-    "adapter",
-    "schema",
-    "ddl",
-    "sql",
-    "typescript",
-    "drizzle"
+    "testing",
+    "test-utils",
+    "schema-factories"
   ],
   "author": "Nathan Clevenger",
   "license": "MIT",
@@ -39,9 +34,7 @@
     "url": "https://github.com/dot-do/icetype/issues"
   },
   "dependencies": {
-    "@icetype/core": "workspace:*",
-    "@icetype/adapters": "workspace:*",
-    "@icetype/sql-common": "workspace:*"
+    "@icetype/core": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

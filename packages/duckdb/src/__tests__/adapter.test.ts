@@ -7,6 +7,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { parseSchema } from '@icetype/core';
 import type { IceTypeSchema } from '@icetype/core';
+import {
+  createSimpleSchema,
+  createAllTypesSchema,
+} from '@icetype/test-utils';
 
 import {
   DuckDBAdapter,
@@ -28,15 +32,15 @@ import {
 import type { DuckDBDDL, DuckDBColumn } from '../types.js';
 
 // =============================================================================
-// Test Helpers
+// Test Helpers - using @icetype/test-utils
 // =============================================================================
 
 /**
  * Create a simple test schema for basic testing
+ * Uses the shared createSimpleSchema factory from @icetype/test-utils
  */
-function createSimpleSchema(): IceTypeSchema {
-  return parseSchema({
-    $type: 'User',
+function createBasicUserSchema(): IceTypeSchema {
+  return createSimpleSchema('User', {
     id: 'uuid!',
     email: 'string#',
     name: 'string',
@@ -46,10 +50,10 @@ function createSimpleSchema(): IceTypeSchema {
 
 /**
  * Create a schema with various field types
+ * Uses the shared createSimpleSchema factory from @icetype/test-utils
  */
-function createTypedSchema(): IceTypeSchema {
-  return parseSchema({
-    $type: 'Product',
+function createTypedProductSchema(): IceTypeSchema {
+  return createSimpleSchema('Product', {
     id: 'uuid!',
     name: 'string!',
     description: 'text',
@@ -63,37 +67,11 @@ function createTypedSchema(): IceTypeSchema {
 }
 
 /**
- * Create a schema with all supported types
- */
-function createAllTypesSchema(): IceTypeSchema {
-  return parseSchema({
-    $type: 'AllTypes',
-    stringField: 'string',
-    textField: 'text',
-    intField: 'int',
-    longField: 'long',
-    bigintField: 'bigint',
-    floatField: 'float',
-    doubleField: 'double',
-    boolField: 'bool',
-    booleanField: 'boolean',
-    uuidField: 'uuid',
-    timestampField: 'timestamp',
-    timestamptzField: 'timestamptz',
-    dateField: 'date',
-    timeField: 'time',
-    jsonField: 'json',
-    binaryField: 'binary',
-    decimalField: 'decimal',
-  });
-}
-
-/**
  * Create a schema with array types
+ * Uses the shared createSimpleSchema factory from @icetype/test-utils
  */
-function createArraySchema(): IceTypeSchema {
-  return parseSchema({
-    $type: 'Tags',
+function createTagsSchema(): IceTypeSchema {
+  return createSimpleSchema('Tags', {
     id: 'uuid!',
     tags: 'string[]',
     scores: 'int[]',
@@ -547,7 +525,7 @@ describe('DuckDBAdapter.transform()', () => {
 
   describe('Basic transformation', () => {
     it('should return valid DuckDBDDL structure', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const result = adapter.transform(schema);
 
       expect(result).toBeDefined();
@@ -557,7 +535,7 @@ describe('DuckDBAdapter.transform()', () => {
     });
 
     it('should include system fields by default', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const result = adapter.transform(schema);
 
       const columnNames = result.columns.map(c => c.name);
@@ -569,7 +547,7 @@ describe('DuckDBAdapter.transform()', () => {
     });
 
     it('should include user-defined fields', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const result = adapter.transform(schema);
 
       const columnNames = result.columns.map(c => c.name);
@@ -580,7 +558,7 @@ describe('DuckDBAdapter.transform()', () => {
     });
 
     it('should set $id as primary key', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const result = adapter.transform(schema);
 
       expect(result.primaryKey).toContain('$id');
@@ -616,7 +594,7 @@ describe('DuckDBAdapter.transform()', () => {
 
   describe('Field modifiers', () => {
     it('should handle required fields (!) as NOT NULL', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const result = adapter.transform(schema);
 
       const idColumn = result.columns.find(c => c.name === 'id');
@@ -624,7 +602,7 @@ describe('DuckDBAdapter.transform()', () => {
     });
 
     it('should handle optional fields (?) as nullable', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const result = adapter.transform(schema);
 
       const ageColumn = result.columns.find(c => c.name === 'age');
@@ -632,7 +610,7 @@ describe('DuckDBAdapter.transform()', () => {
     });
 
     it('should handle unique fields (#)', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const result = adapter.transform(schema);
 
       const emailColumn = result.columns.find(c => c.name === 'email');
@@ -642,7 +620,7 @@ describe('DuckDBAdapter.transform()', () => {
 
   describe('Array types', () => {
     it('should handle array fields', () => {
-      const schema = createArraySchema();
+      const schema = createTagsSchema();
       const result = adapter.transform(schema);
 
       const tagsColumn = result.columns.find(c => c.name === 'tags');
@@ -655,35 +633,35 @@ describe('DuckDBAdapter.transform()', () => {
 
   describe('Options handling', () => {
     it('should respect tableName option', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const result = adapter.transform(schema, { tableName: 'custom_users' });
 
       expect(result.tableName).toBe('custom_users');
     });
 
     it('should respect schema option', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const result = adapter.transform(schema, { schema: 'analytics' });
 
       expect(result.schemaName).toBe('analytics');
     });
 
     it('should respect temporary option', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const result = adapter.transform(schema, { temporary: true });
 
       expect(result.temporary).toBe(true);
     });
 
     it('should respect ifNotExists option', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const result = adapter.transform(schema, { ifNotExists: true });
 
       expect(result.ifNotExists).toBe(true);
     });
 
     it('should respect includeSystemFields: false', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const result = adapter.transform(schema, { includeSystemFields: false });
 
       const columnNames = result.columns.map(c => c.name);
@@ -705,7 +683,7 @@ describe('DuckDBAdapter.serialize()', () => {
   });
 
   it('should serialize DDL to valid SQL', () => {
-    const schema = createSimpleSchema();
+    const schema = createBasicUserSchema();
     const ddl = adapter.transform(schema);
     const sql = adapter.serialize(ddl);
 
@@ -715,7 +693,7 @@ describe('DuckDBAdapter.serialize()', () => {
   });
 
   it('should include all columns in output', () => {
-    const schema = createSimpleSchema();
+    const schema = createBasicUserSchema();
     const ddl = adapter.transform(schema);
     const sql = adapter.serialize(ddl);
 
@@ -727,7 +705,7 @@ describe('DuckDBAdapter.serialize()', () => {
   });
 
   it('should include type information', () => {
-    const schema = createSimpleSchema();
+    const schema = createBasicUserSchema();
     const ddl = adapter.transform(schema);
     const sql = adapter.serialize(ddl);
 
@@ -737,7 +715,7 @@ describe('DuckDBAdapter.serialize()', () => {
   });
 
   it('should include constraints', () => {
-    const schema = createSimpleSchema();
+    const schema = createBasicUserSchema();
     const ddl = adapter.transform(schema);
     const sql = adapter.serialize(ddl);
 
@@ -754,7 +732,7 @@ describe('DuckDBAdapter.serialize()', () => {
 describe('Convenience Functions', () => {
   describe('transformToDuckDBDDL()', () => {
     it('should transform and serialize in one step', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const sql = transformToDuckDBDDL(schema);
 
       expect(typeof sql).toBe('string');
@@ -763,7 +741,7 @@ describe('Convenience Functions', () => {
     });
 
     it('should accept options', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const sql = transformToDuckDBDDL(schema, { ifNotExists: true });
 
       expect(sql).toContain('IF NOT EXISTS');
@@ -772,7 +750,7 @@ describe('Convenience Functions', () => {
 
   describe('generateDuckDBDDL()', () => {
     it('should return DDL structure', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const ddl = generateDuckDBDDL(schema);
 
       expect(ddl.tableName).toBe('User');
@@ -780,7 +758,7 @@ describe('Convenience Functions', () => {
     });
 
     it('should accept options', () => {
-      const schema = createSimpleSchema();
+      const schema = createBasicUserSchema();
       const ddl = generateDuckDBDDL(schema, { tableName: 'custom' });
 
       expect(ddl.tableName).toBe('custom');
@@ -800,7 +778,7 @@ describe('DuckDBAdapter Integration', () => {
   });
 
   it('should produce complete transform and serialize workflow', () => {
-    const schema = createTypedSchema();
+    const schema = createTypedProductSchema();
 
     // Transform
     const ddl = adapter.transform(schema, { ifNotExists: true });
@@ -866,7 +844,7 @@ describe('DuckDBAdapter Integration', () => {
   });
 
   it('should generate valid SQL for different table configurations', () => {
-    const schema = createSimpleSchema();
+    const schema = createBasicUserSchema();
 
     // Standard table
     const standardSql = transformToDuckDBDDL(schema);
@@ -882,7 +860,7 @@ describe('DuckDBAdapter Integration', () => {
   });
 
   it('should handle serializeWithIndexes', () => {
-    const schema = createSimpleSchema();
+    const schema = createBasicUserSchema();
     const ddl = adapter.transform(schema);
     const sqlWithIndexes = adapter.serializeWithIndexes(ddl);
 

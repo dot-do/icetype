@@ -24,6 +24,12 @@ import { loadSchemaFile } from '../utils/schema-loader.js';
 import { createLogger, LogLevel } from '../utils/logger.js';
 import type { Logger } from '../utils/logger.js';
 import { generateHelpText, hasHelpFlag, type HelpCommand } from '../utils/help.js';
+import {
+  requireOption,
+  validateOptionValue,
+  checkSchemaLoadErrors,
+  checkSchemasExist,
+} from '../utils/cli-error.js';
 
 const CLICKHOUSE_EXPORT_HELP: HelpCommand = {
   name: 'clickhouse export',
@@ -60,6 +66,9 @@ const VALID_ENGINES: ClickHouseEngine[] = [
 function isValidEngine(value: string): value is ClickHouseEngine {
   return VALID_ENGINES.includes(value as ClickHouseEngine);
 }
+
+// Export for use in other modules
+export { isValidEngine };
 
 /**
  * Export IceType schema to ClickHouse DDL.
@@ -98,14 +107,13 @@ export async function clickhouseExport(args: string[]): Promise<void> {
     quiet: values.quiet,
   });
 
-  // Validate required --schema option
-  if (!values.schema) {
-    console.error('Error: --schema is required');
-    console.log(
-      'Usage: ice clickhouse export --schema ./schema.ts --output ./create-tables.sql'
-    );
-    process.exit(1);
-  }
+  // Validate required --schema option - throws if missing
+  requireOption(
+    values.schema,
+    'schema',
+    'clickhouse export',
+    'ice clickhouse export --schema ./schema.ts --output ./create-tables.sql'
+  );
 
   const schemaPath = values.schema;
   const outputPath = values.output; // undefined means stdout
@@ -113,11 +121,7 @@ export async function clickhouseExport(args: string[]): Promise<void> {
   // Validate engine option if provided
   let engine: ClickHouseEngine = 'MergeTree';
   if (values.engine) {
-    if (!isValidEngine(values.engine)) {
-      console.error(`Error: Invalid engine '${values.engine}'`);
-      console.error(`Valid engines: ${VALID_ENGINES.join(', ')}`);
-      process.exit(1);
-    }
+    validateOptionValue(values.engine, 'engine', VALID_ENGINES);
     engine = values.engine;
   }
 
@@ -131,24 +135,16 @@ export async function clickhouseExport(args: string[]): Promise<void> {
     output: outputPath || '(stdout)',
   });
 
-  try {
-    // Load schemas from the file
-    const loadResult = await loadSchemaFile(schemaPath);
+  // Load schemas from the file - throws on errors
+  logger.debug('Loading schema file', { path: schemaPath });
+  const loadResult = await loadSchemaFile(schemaPath);
+  checkSchemaLoadErrors(loadResult.errors, schemaPath);
+  checkSchemasExist(loadResult.schemas, schemaPath);
 
-    // Check for loading errors
-    if (loadResult.errors.length > 0) {
-      for (const error of loadResult.errors) {
-        console.error(error);
-      }
-      process.exit(1);
-    }
-
-    if (loadResult.schemas.length === 0) {
-      console.error('No schemas found in the file');
-      process.exit(1);
-    }
-
-    logger.info(`Found ${loadResult.schemas.length} schema(s)`);
+  logger.info(`Found ${loadResult.schemas.length} schema(s)`);
+  logger.debug('Schemas found:', {
+    names: loadResult.schemas.map((s) => s.name),
+  });
 
     // Get the ClickHouse adapter from the registry
     const adapter = getAdapter('clickhouse') as ClickHouseAdapter | undefined;
@@ -192,23 +188,13 @@ export async function clickhouseExport(args: string[]): Promise<void> {
       } catch (writeError) {
         const message =
           writeError instanceof Error ? writeError.message : String(writeError);
-        console.error(
-          `Error: Failed to write output file '${outputPath}': ${message}`
-        );
-        console.error(
+        throw new Error(
+          `Failed to write output file '${outputPath}': ${message}\n` +
           'Check that the directory exists and you have write permissions.'
         );
-        process.exit(1);
       }
     } else {
       // Output to stdout
       console.log(fullDdl);
     }
-  } catch (error) {
-    console.error(
-      'Error exporting ClickHouse DDL:',
-      error instanceof Error ? error.message : String(error)
-    );
-    process.exit(1);
-  }
 }

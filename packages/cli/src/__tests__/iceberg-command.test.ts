@@ -234,23 +234,8 @@ describe('ice iceberg command', () => {
     it('should error when --schema is missing', async () => {
       const { icebergExport } = await import('../commands/iceberg.js');
 
-      // Mock process.exit to prevent actual exit
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
-      try {
-        await icebergExport([]);
-      } catch {
-        // Expected - process.exit was called
-      }
-
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        expect.stringContaining('--schema is required')
-      );
-      expect(mockExit).toHaveBeenCalledWith(1);
-
-      mockExit.mockRestore();
+      // Commands now throw errors (main CLI catches and exits)
+      await expect(icebergExport([])).rejects.toThrow('--schema is required');
     });
 
     it('should support --output option to write to file', async () => {
@@ -331,43 +316,23 @@ describe('ice iceberg command', () => {
   });
 
   describe('error handling', () => {
-    it('should handle file not found error gracefully', async () => {
+    it('should throw error when file not found', async () => {
       const { icebergExport } = await import('../commands/iceberg.js');
-
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
 
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
-      try {
-        await icebergExport(['--schema', './nonexistent.ts']);
-      } catch {
-        // Expected
-      }
-
-      expect(mockConsoleError).toHaveBeenCalled();
-
-      mockExit.mockRestore();
+      // Commands now throw errors (main CLI catches and exits)
+      await expect(icebergExport(['--schema', './nonexistent.ts'])).rejects.toThrow();
     });
 
-    it('should handle invalid schema file gracefully', async () => {
+    it('should throw error for invalid schema file', async () => {
       const { icebergExport } = await import('../commands/iceberg.js');
 
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
-      try {
-        await icebergExport(['--schema', './invalid-schema.ts']);
-      } catch {
-        // Expected
-      }
-
-      mockExit.mockRestore();
+      // Should throw when schema is invalid
+      await expect(icebergExport(['--schema', './invalid-schema.ts'])).rejects.toThrow();
     });
 
-    it('should handle file write errors gracefully', async () => {
+    it('should handle file write errors by throwing', async () => {
       const { icebergExport } = await import('../commands/iceberg.js');
 
       // Mock writeFileSync to throw an error
@@ -379,20 +344,11 @@ describe('ice iceberg command', () => {
       expect(typeof icebergExport).toBe('function');
     });
 
-    it('should handle empty schema file', async () => {
+    it('should throw error for empty schema file', async () => {
       const { icebergExport } = await import('../commands/iceberg.js');
 
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
-      try {
-        await icebergExport(['--schema', './empty.ts']);
-      } catch {
-        // Expected
-      }
-
-      mockExit.mockRestore();
+      // Should throw when schema file is empty
+      await expect(icebergExport(['--schema', './empty.ts'])).rejects.toThrow();
     });
   });
 
@@ -809,24 +765,17 @@ describe('CLI integration', () => {
     vi.clearAllMocks();
   });
 
-  it('should display usage when --schema is missing', async () => {
+  it('should include usage hint in error when --schema is missing', async () => {
     const { icebergExport } = await import('../commands/iceberg.js');
 
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-      throw new Error('process.exit called');
-    });
-
+    // Commands now throw errors with usage hint in message
     try {
       await icebergExport([]);
-    } catch {
-      // Expected
+      expect.fail('Should have thrown');
+    } catch (error) {
+      expect((error as Error).message).toContain('--schema is required');
+      expect((error as Error).message).toContain('Usage:');
     }
-
-    expect(mockConsoleLog).toHaveBeenCalledWith(
-      expect.stringContaining('Usage:')
-    );
-
-    mockExit.mockRestore();
   });
 
   it('should log export progress', async () => {

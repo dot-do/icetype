@@ -11,6 +11,31 @@ import type { DuckDBAdapter } from '@icetype/duckdb';
 import { getAdapter } from '../utils/adapter-registry.js';
 import { loadSchemaFile } from '../utils/schema-loader.js';
 import { createLogger, LogLevel } from '../utils/logger.js';
+import { generateHelpText, hasHelpFlag, type HelpCommand } from '../utils/help.js';
+import {
+  requireOption,
+  checkSchemaLoadErrors,
+  checkSchemasExist,
+} from '../utils/cli-error.js';
+
+const DUCKDB_EXPORT_HELP: HelpCommand = {
+  name: 'duckdb export',
+  description: 'Export IceType schema to DuckDB DDL',
+  usage: 'ice duckdb export --schema <file> [--output <file>]',
+  options: [
+    { name: 'schema', short: 's', description: 'Path to the schema file', required: true },
+    { name: 'output', short: 'o', description: 'Output file path (default: stdout)' },
+    { name: 'schema-name', description: 'DuckDB schema name to use' },
+    { name: 'if-not-exists', description: 'Add IF NOT EXISTS to CREATE statements' },
+    { name: 'indexes', description: 'Include index creation statements' },
+    { name: 'quiet', short: 'q', description: 'Suppress informational output' },
+    { name: 'verbose', short: 'v', description: 'Show detailed output' },
+  ],
+  examples: [
+    'ice duckdb export --schema ./schema.ts --output ./tables.sql',
+    'ice duckdb export -s ./schema.ts --schema-name analytics',
+  ],
+};
 
 // =============================================================================
 // Types
@@ -134,6 +159,12 @@ function parseArgs(args: string[]): DuckDBExportOptions {
  * ```
  */
 export async function duckdbExport(args: string[]): Promise<void> {
+  // Check for help flag first
+  if (hasHelpFlag(args)) {
+    console.log(generateHelpText(DUCKDB_EXPORT_HELP));
+    process.exit(0);
+  }
+
   const options = parseArgs(args);
 
   // Create logger based on verbosity
@@ -148,74 +179,64 @@ export async function duckdbExport(args: string[]): Promise<void> {
     quiet: options.quiet,
   });
 
-  // Validate required options
-  if (!options.schema) {
-    const error = new Error('--schema is required');
-    logger.error('Error: --schema is required');
-    logger.info(
-      'Usage: ice duckdb export --schema ./schema.ts --output ./tables.sql'
-    );
-    throw error;
-  }
+  // Validate required options - throws if missing
+  requireOption(
+    options.schema,
+    'schema',
+    'duckdb export',
+    'ice duckdb export --schema ./schema.ts --output ./tables.sql'
+  );
 
   const schemaPath = options.schema;
 
   logger.info(`Exporting DuckDB DDL from: ${schemaPath}`);
+  logger.debug('Options:', {
+    schemaName: options.schemaName || '(default)',
+    output: options.output || '(stdout)',
+    ifNotExists: options.ifNotExists,
+    includeIndexes: options.includeIndexes,
+  });
 
-  try {
-    // Load schemas from the file
-    const loadResult = await loadSchemaFile(schemaPath);
+  // Load schemas from the file - throws on errors
+  logger.debug('Loading schema file', { path: schemaPath });
+  const loadResult = await loadSchemaFile(schemaPath);
+  checkSchemaLoadErrors(loadResult.errors, schemaPath);
+  checkSchemasExist(loadResult.schemas, schemaPath);
 
-    // Check for loading errors
-    if (loadResult.errors.length > 0) {
-      for (const error of loadResult.errors) {
-        logger.error(error);
-      }
-      throw new Error(`Failed to load schema from: ${schemaPath}`);
+  logger.info(`Found ${loadResult.schemas.length} schema(s)`);
+  logger.debug('Schemas found:', {
+    names: loadResult.schemas.map((s) => s.name),
+  });
+
+  // Generate DDL for all schemas
+  const schemas = loadResult.schemas.map((s) => s.schema);
+  const ddl = generateDDLFromSchemas(schemas, {
+    schemaName: options.schemaName,
+    ifNotExists: options.ifNotExists,
+    includeIndexes: options.includeIndexes,
+  });
+
+  // Output DDL
+  if (options.output) {
+    try {
+      writeFileSync(options.output, ddl);
+      logger.success(`Exported DuckDB DDL to: ${options.output}`);
+    } catch (writeError) {
+      const message =
+        writeError instanceof Error ? writeError.message : String(writeError);
+      throw new Error(
+        `Failed to write output file '${options.output}': ${message}`
+      );
     }
+  } else {
+    // Output to stdout
+    console.log(ddl);
+  }
 
-    if (loadResult.schemas.length === 0) {
-      throw new Error('No schemas found in the file');
-    }
-
-    logger.info(`Found ${loadResult.schemas.length} schema(s)`);
-
-    // Generate DDL for all schemas
-    const schemas = loadResult.schemas.map((s) => s.schema);
-    const ddl = generateDDLFromSchemas(schemas, {
-      schemaName: options.schemaName,
-      ifNotExists: options.ifNotExists,
-      includeIndexes: options.includeIndexes,
-    });
-
-    // Output DDL
-    if (options.output) {
-      try {
-        writeFileSync(options.output, ddl);
-        logger.success(`Exported DuckDB DDL to: ${options.output}`);
-      } catch (writeError) {
-        const message =
-          writeError instanceof Error ? writeError.message : String(writeError);
-        logger.error(`Failed to write output file '${options.output}': ${message}`);
-        throw new Error(`Failed to write output file: ${options.output}`);
-      }
-    } else {
-      // Output to stdout
-      console.log(ddl);
-    }
-
-    // Log summary
-    logger.info(`Generated DDL for ${schemas.length} table(s)`);
-    if (options.schemaName) {
-      logger.info(`Using DuckDB schema: ${options.schemaName}`);
-    }
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('--schema is required')) {
-      throw error;
-    }
-    const message = error instanceof Error ? error.message : String(error);
-    logger.error(`Error exporting DuckDB DDL: ${message}`);
-    throw error;
+  // Log summary
+  logger.info(`Generated DDL for ${schemas.length} table(s)`);
+  if (options.schemaName) {
+    logger.info(`Using DuckDB schema: ${options.schemaName}`);
   }
 }
 
