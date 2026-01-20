@@ -73,11 +73,84 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  examples/basic:
+    dependencies:
+      '@icetype/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.7
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
   examples/basic-usage:
     dependencies:
       '@icetype/core':
         specifier: workspace:*
         version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.7
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  examples/clickhouse:
+    dependencies:
+      '@icetype/clickhouse':
+        specifier: workspace:*
+        version: link:../../packages/clickhouse
+      '@icetype/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.7
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  examples/duckdb:
+    dependencies:
+      '@icetype/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@icetype/duckdb':
+        specifier: workspace:*
+        version: link:../../packages/duckdb
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.7
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  examples/iceberg:
+    dependencies:
+      '@icetype/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@icetype/iceberg':
+        specifier: workspace:*
+        version: link:../../packages/iceberg
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -218,12 +291,21 @@ importers:
 
   packages/icetype:
     dependencies:
+      '@icetype/adapters':
+        specifier: workspace:*
+        version: link:../adapters
       '@icetype/cli':
         specifier: workspace:*
         version: link:../cli
+      '@icetype/clickhouse':
+        specifier: workspace:*
+        version: link:../clickhouse
       '@icetype/core':
         specifier: workspace:*
         version: link:../core
+      '@icetype/duckdb':
+        specifier: workspace:*
+        version: link:../duckdb
       '@icetype/iceberg':
         specifier: workspace:*
         version: link:../iceberg

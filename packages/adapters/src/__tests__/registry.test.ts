@@ -10,7 +10,7 @@ import {
   globalRegistry,
 } from '../registry.js';
 import type { SchemaAdapter, AdapterRegistry } from '../types.js';
-import type { IceTypeSchema } from '@icetype/core';
+import { AdapterError, type IceTypeSchema } from '@icetype/core';
 
 // =============================================================================
 // Test Helpers
@@ -104,15 +104,14 @@ describe('AdapterRegistry.register()', () => {
     expect(registry.list()).toHaveLength(3);
   });
 
-  it('should throw when registering an adapter with a duplicate name', () => {
+  it('should throw AdapterError when registering an adapter with a duplicate name', () => {
     const adapter1 = createMockAdapter('duplicate-name');
     const adapter2 = createMockAdapter('duplicate-name', '2.0.0');
 
     registry.register(adapter1);
 
-    expect(() => registry.register(adapter2)).toThrow(
-      "Adapter 'duplicate-name' is already registered"
-    );
+    expect(() => registry.register(adapter2)).toThrow(AdapterError);
+    expect(() => registry.register(adapter2)).toThrow(/already registered/);
   });
 
   it('should preserve the exact adapter reference', () => {

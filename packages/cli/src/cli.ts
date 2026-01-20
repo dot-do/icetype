@@ -12,6 +12,7 @@
  */
 
 import { createRequire } from 'node:module';
+import { isIceTypeError, getErrorMessage } from '@icetype/core';
 import { init } from './commands/init.js';
 import { generate } from './commands/generate.js';
 import { validate } from './commands/validate.js';
@@ -89,7 +90,12 @@ async function main() {
         process.exit(1);
     }
   } catch (error) {
-    console.error('Error:', error instanceof Error ? error.message : String(error));
+    // Use IceType's standardized error formatting
+    if (isIceTypeError(error)) {
+      console.error(getErrorMessage(error));
+    } else {
+      console.error('Error:', error instanceof Error ? error.message : String(error));
+    }
     process.exit(1);
   }
 }

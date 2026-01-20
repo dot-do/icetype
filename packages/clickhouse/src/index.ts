@@ -80,6 +80,10 @@ export {
 export {
   escapeIdentifier,
   escapeString,
+  escapeSettingKey,
+  escapeSettingValue,
+  InvalidSettingKeyError,
+  InvalidSettingValueError,
   generateColumnDDL,
   generateEngineDDL,
   generateCreateTableDDL,

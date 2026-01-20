@@ -45,6 +45,95 @@ export function escapeString(value: string): string {
 }
 
 // =============================================================================
+// Settings Escaping
+// =============================================================================
+
+/**
+ * Error thrown when a setting key is invalid.
+ */
+export class InvalidSettingKeyError extends Error {
+  constructor(key: string) {
+    super(`Invalid setting key: "${key}". Setting keys must contain only alphanumeric characters and underscores, and must start with a letter or underscore.`);
+    this.name = 'InvalidSettingKeyError';
+  }
+}
+
+/**
+ * Error thrown when a setting value is invalid.
+ */
+export class InvalidSettingValueError extends Error {
+  constructor(value: unknown) {
+    super(`Invalid setting value: ${JSON.stringify(value)}. Setting values must be strings, numbers, or booleans.`);
+    this.name = 'InvalidSettingValueError';
+  }
+}
+
+/**
+ * Validate and escape a ClickHouse setting key.
+ *
+ * Setting keys must contain only alphanumeric characters and underscores,
+ * and must start with a letter or underscore (not a number).
+ *
+ * @param key - The setting key to validate/escape
+ * @returns The validated setting key
+ * @throws InvalidSettingKeyError if the key contains invalid characters
+ */
+export function escapeSettingKey(key: string): string {
+  // Setting keys must:
+  // - Be non-empty
+  // - Contain only alphanumeric characters and underscores
+  // - Start with a letter or underscore (not a number)
+  if (!key || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
+    throw new InvalidSettingKeyError(key);
+  }
+  return key;
+}
+
+/**
+ * Escape a ClickHouse setting value.
+ *
+ * Handles the following value types:
+ * - Numbers: returned as-is
+ * - Booleans: converted to 0 or 1
+ * - Strings: escaped with single quotes (handling embedded quotes)
+ *
+ * @param value - The setting value to escape
+ * @returns The escaped setting value
+ * @throws InvalidSettingValueError if the value type is not supported
+ */
+export function escapeSettingValue(value: string | number | boolean): string {
+  if (typeof value === 'number') {
+    // Validate it's a finite number
+    if (!Number.isFinite(value)) {
+      throw new InvalidSettingValueError(value);
+    }
+    return String(value);
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? '1' : '0';
+  }
+
+  if (typeof value === 'string') {
+    // If the value looks like a number, return it as-is
+    if (/^-?\d+(\.\d+)?$/.test(value)) {
+      return value;
+    }
+    // If it's already quoted, validate and return (after checking for injection)
+    if (value.startsWith("'") && value.endsWith("'")) {
+      // Check for unescaped quotes inside
+      const inner = value.slice(1, -1);
+      // Re-escape to ensure safety
+      return `'${inner.replace(/'/g, "''")}'`;
+    }
+    // Escape as a string
+    return `'${value.replace(/'/g, "''")}'`;
+  }
+
+  throw new InvalidSettingValueError(value);
+}
+
+// =============================================================================
 // Column DDL Generation
 // =============================================================================
 
@@ -206,7 +295,9 @@ export function generateCreateTableDDL(ddl: ClickHouseDDL): string {
   if (ddl.settings && Object.keys(ddl.settings).length > 0) {
     const settingsParts: string[] = [];
     for (const [key, value] of Object.entries(ddl.settings)) {
-      settingsParts.push(`${key} = ${value}`);
+      const escapedKey = escapeSettingKey(key);
+      const escapedValue = escapeSettingValue(value);
+      settingsParts.push(`${escapedKey} = ${escapedValue}`);
     }
     lines.push(`SETTINGS ${settingsParts.join(', ')}`);
   }

@@ -7,7 +7,7 @@
  * @packageDocumentation
  */
 
-import type { IceTypeSchema } from '@icetype/core';
+import { AdapterError, ErrorCodes, type IceTypeSchema } from '@icetype/core';
 import {
   generateIcebergMetadata,
   type IcebergTableMetadata,
@@ -55,14 +55,22 @@ export class IcebergAdapter
    * @param schema - The IceType schema to transform
    * @param options - Iceberg-specific options including location
    * @returns Iceberg table metadata
-   * @throws Error if location is not provided
+   * @throws AdapterError if location is not provided
    */
   transform(
     schema: IceTypeSchema,
     options?: IcebergAdapterOptions
   ): IcebergTableMetadata {
     if (!options?.location) {
-      throw new Error('IcebergAdapter requires a location option');
+      throw new AdapterError('Missing required option: location', {
+        adapterName: this.name,
+        operation: 'transform',
+        code: ErrorCodes.MISSING_ADAPTER_OPTION,
+        context: {
+          requiredOption: 'location',
+          schema: schema.name,
+        },
+      });
     }
 
     return generateIcebergMetadata(schema, options.location, options.properties);

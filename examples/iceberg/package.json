@@ -1,0 +1,20 @@
+{
+  "name": "@icetype-examples/iceberg",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Export IceType schemas to Apache Iceberg metadata format",
+  "type": "module",
+  "scripts": {
+    "export": "npx tsx export.ts",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@icetype/core": "workspace:*",
+    "@icetype/iceberg": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0"
+  }
+}

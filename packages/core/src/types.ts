@@ -303,76 +303,11 @@ export type SchemaDefinition = {
 };
 
 // =============================================================================
-// Parse Error
+// Parse Error (re-exported from errors.ts for backward compatibility)
 // =============================================================================
 
 /**
- * Custom error class for parse errors with location information.
- *
- * Provides helpful error messages with line/column info when parsing fails.
+ * Re-export ParseError from errors.ts for backward compatibility.
+ * The new implementation in errors.ts extends IceTypeError.
  */
-export class ParseError extends Error {
-  /** Line number where the error occurred (1-indexed) */
-  public readonly line: number;
-  /** Column number where the error occurred (1-indexed) */
-  public readonly column: number;
-  /** The field or path that caused the error */
-  public readonly path?: string;
-  /** Error code for programmatic handling */
-  public readonly code: string;
-
-  constructor(
-    message: string,
-    options: {
-      line?: number;
-      column?: number;
-      path?: string;
-      code?: string;
-    } = {}
-  ) {
-    const { line = 1, column = 1, path, code = 'PARSE_ERROR' } = options;
-
-    // Build a helpful error message with location info
-    let fullMessage = message;
-    if (path) {
-      fullMessage = `${path}: ${message}`;
-    }
-    fullMessage = `Parse error at line ${line}, column ${column}: ${fullMessage}`;
-
-    super(fullMessage);
-    this.name = 'ParseError';
-    this.line = line;
-    this.column = column;
-    this.path = path;
-    this.code = code;
-
-    // Maintain proper prototype chain for instanceof checks
-    Object.setPrototypeOf(this, ParseError.prototype);
-  }
-
-  /**
-   * Format the error for display with context.
-   *
-   * @param source - The original source string (optional)
-   * @returns Formatted error message with source context
-   */
-  format(source?: string): string {
-    let output = this.message;
-
-    if (source && this.line > 0) {
-      const lines = source.split('\n');
-      const lineIndex = this.line - 1;
-
-      if (lineIndex >= 0 && lineIndex < lines.length) {
-        const sourceLine = lines[lineIndex];
-        const pointer = ' '.repeat(Math.max(0, this.column - 1)) + '^';
-
-        output += '\n\n';
-        output += `  ${this.line} | ${sourceLine}\n`;
-        output += `    | ${pointer}`;
-      }
-    }
-
-    return output;
-  }
-}
+export { ParseError } from './errors.js';

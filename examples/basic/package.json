@@ -1,0 +1,19 @@
+{
+  "name": "@icetype-examples/basic",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Basic IceType schema definition and TypeScript generation example",
+  "type": "module",
+  "scripts": {
+    "generate": "npx tsx generate.ts",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@icetype/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0"
+  }
+}

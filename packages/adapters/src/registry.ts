@@ -6,6 +6,7 @@
  * @packageDocumentation
  */
 
+import { AdapterError, ErrorCodes } from '@icetype/core';
 import type { SchemaAdapter, AdapterRegistry } from './types.js';
 
 // =============================================================================
@@ -22,11 +23,15 @@ class AdapterRegistryImpl implements AdapterRegistry {
    * Register an adapter with the registry.
    *
    * @param adapter - The adapter to register
-   * @throws Error if an adapter with the same name is already registered
+   * @throws AdapterError if an adapter with the same name is already registered
    */
   register(adapter: SchemaAdapter): void {
     if (this.adapters.has(adapter.name)) {
-      throw new Error(`Adapter '${adapter.name}' is already registered`);
+      throw new AdapterError(`Adapter is already registered`, {
+        adapterName: adapter.name,
+        operation: 'register',
+        code: ErrorCodes.ADAPTER_ALREADY_REGISTERED,
+      });
     }
     this.adapters.set(adapter.name, adapter);
   }

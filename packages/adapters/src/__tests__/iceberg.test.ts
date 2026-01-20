@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { parseSchema } from '@icetype/core';
+import { parseSchema, AdapterError, ErrorCodes } from '@icetype/core';
 import {
   IcebergAdapter,
   createIcebergAdapter,
@@ -142,28 +142,38 @@ describe('IcebergAdapter.transform()', () => {
   });
 
   describe('Options validation', () => {
-    it('should throw when location is not provided', () => {
+    it('should throw AdapterError when location is not provided', () => {
       const schema = createSimpleSchema();
 
-      expect(() => adapter.transform(schema)).toThrow(
-        'IcebergAdapter requires a location option'
-      );
+      expect(() => adapter.transform(schema)).toThrow(AdapterError);
+      expect(() => adapter.transform(schema)).toThrow(/Missing required option: location/);
     });
 
-    it('should throw when options is undefined', () => {
+    it('should throw AdapterError when options is undefined', () => {
       const schema = createSimpleSchema();
 
-      expect(() => adapter.transform(schema, undefined)).toThrow(
-        'IcebergAdapter requires a location option'
-      );
+      expect(() => adapter.transform(schema, undefined)).toThrow(AdapterError);
     });
 
-    it('should throw when location is empty string', () => {
+    it('should throw AdapterError when location is empty string', () => {
       const schema = createSimpleSchema();
 
-      expect(() => adapter.transform(schema, { location: '' })).toThrow(
-        'IcebergAdapter requires a location option'
-      );
+      expect(() => adapter.transform(schema, { location: '' })).toThrow(AdapterError);
+    });
+
+    it('should include adapter name and operation in error', () => {
+      const schema = createSimpleSchema();
+
+      try {
+        adapter.transform(schema);
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(AdapterError);
+        const adapterError = error as AdapterError;
+        expect(adapterError.adapterName).toBe('iceberg');
+        expect(adapterError.operation).toBe('transform');
+        expect(adapterError.code).toBe(ErrorCodes.MISSING_ADAPTER_OPTION);
+      }
     });
   });
 

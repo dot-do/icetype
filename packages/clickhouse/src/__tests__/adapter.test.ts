@@ -18,6 +18,10 @@ import {
   getArrayType,
   escapeIdentifier,
   escapeString,
+  escapeSettingKey,
+  escapeSettingValue,
+  InvalidSettingKeyError,
+  InvalidSettingValueError,
   generateColumnDDL,
   generateEngineDDL,
   generateCreateTableDDL,
@@ -175,6 +179,183 @@ describe('escapeString', () => {
   it('should escape single quotes', () => {
     expect(escapeString("it's")).toBe("'it''s'");
     expect(escapeString("'test'")).toBe("'''test'''");
+  });
+});
+
+// =============================================================================
+// Setting Key Escaping Tests
+// =============================================================================
+
+describe('escapeSettingKey', () => {
+  it('should accept valid setting keys', () => {
+    expect(escapeSettingKey('index_granularity')).toBe('index_granularity');
+    expect(escapeSettingKey('storage_policy')).toBe('storage_policy');
+    expect(escapeSettingKey('max_threads')).toBe('max_threads');
+    expect(escapeSettingKey('_internal_setting')).toBe('_internal_setting');
+    expect(escapeSettingKey('setting123')).toBe('setting123');
+  });
+
+  it('should reject empty keys', () => {
+    expect(() => escapeSettingKey('')).toThrow(InvalidSettingKeyError);
+  });
+
+  it('should reject keys starting with numbers', () => {
+    expect(() => escapeSettingKey('123setting')).toThrow(InvalidSettingKeyError);
+    expect(() => escapeSettingKey('1_index')).toThrow(InvalidSettingKeyError);
+  });
+
+  it('should reject keys with special characters', () => {
+    expect(() => escapeSettingKey('setting-name')).toThrow(InvalidSettingKeyError);
+    expect(() => escapeSettingKey('setting.name')).toThrow(InvalidSettingKeyError);
+    expect(() => escapeSettingKey('setting name')).toThrow(InvalidSettingKeyError);
+    expect(() => escapeSettingKey('setting;DROP')).toThrow(InvalidSettingKeyError);
+  });
+
+  it('should reject SQL injection attempts in keys', () => {
+    expect(() => escapeSettingKey("key'; DROP TABLE users; --")).toThrow(InvalidSettingKeyError);
+    expect(() => escapeSettingKey('key=1; --')).toThrow(InvalidSettingKeyError);
+    expect(() => escapeSettingKey('key/**/=')).toThrow(InvalidSettingKeyError);
+    expect(() => escapeSettingKey("key' OR '1'='1")).toThrow(InvalidSettingKeyError);
+  });
+
+  it('should reject unicode/special characters', () => {
+    expect(() => escapeSettingKey('setting\u0000')).toThrow(InvalidSettingKeyError);
+    expect(() => escapeSettingKey('setting\n')).toThrow(InvalidSettingKeyError);
+    expect(() => escapeSettingKey('setting\t')).toThrow(InvalidSettingKeyError);
+  });
+});
+
+// =============================================================================
+// Setting Value Escaping Tests
+// =============================================================================
+
+describe('escapeSettingValue', () => {
+  it('should handle numeric strings', () => {
+    expect(escapeSettingValue('8192')).toBe('8192');
+    expect(escapeSettingValue('3.14')).toBe('3.14');
+    expect(escapeSettingValue('-100')).toBe('-100');
+    expect(escapeSettingValue('-3.5')).toBe('-3.5');
+  });
+
+  it('should handle actual numbers', () => {
+    expect(escapeSettingValue(8192)).toBe('8192');
+    expect(escapeSettingValue(3.14)).toBe('3.14');
+    expect(escapeSettingValue(-100)).toBe('-100');
+    expect(escapeSettingValue(0)).toBe('0');
+  });
+
+  it('should handle booleans', () => {
+    expect(escapeSettingValue(true)).toBe('1');
+    expect(escapeSettingValue(false)).toBe('0');
+  });
+
+  it('should escape string values', () => {
+    expect(escapeSettingValue('fast_ssd')).toBe("'fast_ssd'");
+    expect(escapeSettingValue('my policy')).toBe("'my policy'");
+  });
+
+  it('should escape single quotes in string values', () => {
+    expect(escapeSettingValue("it's a test")).toBe("'it''s a test'");
+    expect(escapeSettingValue("test'value")).toBe("'test''value'");
+  });
+
+  it('should handle pre-quoted strings safely', () => {
+    // Should re-escape to ensure safety
+    expect(escapeSettingValue("'fast_ssd'")).toBe("'fast_ssd'");
+    expect(escapeSettingValue("'test''value'")).toBe("'test''''value'");
+  });
+
+  it('should reject invalid number values', () => {
+    expect(() => escapeSettingValue(NaN)).toThrow(InvalidSettingValueError);
+    expect(() => escapeSettingValue(Infinity)).toThrow(InvalidSettingValueError);
+    expect(() => escapeSettingValue(-Infinity)).toThrow(InvalidSettingValueError);
+  });
+
+  it('should handle SQL injection attempts in string values', () => {
+    // These should be safely escaped
+    const malicious1 = escapeSettingValue("'; DROP TABLE users; --");
+    expect(malicious1).toBe("'''; DROP TABLE users; --'");
+
+    const malicious2 = escapeSettingValue("value' OR '1'='1");
+    expect(malicious2).toBe("'value'' OR ''1''=''1'");
+
+    const malicious3 = escapeSettingValue("1; DELETE FROM settings");
+    expect(malicious3).toBe("'1; DELETE FROM settings'");
+  });
+
+  it('should handle special characters in string values', () => {
+    expect(escapeSettingValue('value\nwith\nnewlines')).toBe("'value\nwith\nnewlines'");
+    expect(escapeSettingValue('value\twith\ttabs')).toBe("'value\twith\ttabs'");
+  });
+});
+
+// =============================================================================
+// Settings Integration Tests
+// =============================================================================
+
+describe('generateCreateTableDDL with validated settings', () => {
+  it('should generate SETTINGS with escaped values', () => {
+    const ddl: ClickHouseDDL = {
+      tableName: 'users',
+      columns: [{ name: 'id', type: 'UUID', nullable: false }],
+      engine: 'MergeTree',
+      orderBy: ['id'],
+      settings: {
+        index_granularity: '8192',
+        storage_policy: 'fast_ssd',
+      },
+    };
+
+    const sql = generateCreateTableDDL(ddl);
+    expect(sql).toContain('SETTINGS');
+    expect(sql).toContain('index_granularity = 8192');
+    expect(sql).toContain("storage_policy = 'fast_ssd'");
+  });
+
+  it('should throw on invalid setting keys', () => {
+    const ddl: ClickHouseDDL = {
+      tableName: 'users',
+      columns: [{ name: 'id', type: 'UUID', nullable: false }],
+      engine: 'MergeTree',
+      orderBy: ['id'],
+      settings: {
+        'invalid-key': '8192',
+      },
+    };
+
+    expect(() => generateCreateTableDDL(ddl)).toThrow(InvalidSettingKeyError);
+  });
+
+  it('should throw on SQL injection in setting keys', () => {
+    const ddl: ClickHouseDDL = {
+      tableName: 'users',
+      columns: [{ name: 'id', type: 'UUID', nullable: false }],
+      engine: 'MergeTree',
+      orderBy: ['id'],
+      settings: {
+        "key'; DROP TABLE users; --": 'value',
+      },
+    };
+
+    expect(() => generateCreateTableDDL(ddl)).toThrow(InvalidSettingKeyError);
+  });
+
+  it('should escape SQL injection attempts in setting values', () => {
+    const ddl: ClickHouseDDL = {
+      tableName: 'users',
+      columns: [{ name: 'id', type: 'UUID', nullable: false }],
+      engine: 'MergeTree',
+      orderBy: ['id'],
+      settings: {
+        storage_policy: "'; DROP TABLE users; --",
+      },
+    };
+
+    const sql = generateCreateTableDDL(ddl);
+    // The malicious value should be escaped
+    expect(sql).toContain("storage_policy = '''; DROP TABLE users; --'");
+    // Should NOT contain unescaped injection
+    expect(sql).not.toContain("storage_policy = '; DROP TABLE users; --");
   });
 });
 
@@ -403,13 +584,14 @@ describe('generateCreateTableDDL', () => {
       orderBy: ['id'],
       settings: {
         index_granularity: '8192',
-        storage_policy: "'fast_ssd'",
+        storage_policy: 'fast_ssd',
       },
     };
 
     const sql = generateCreateTableDDL(ddl);
     expect(sql).toContain('SETTINGS');
     expect(sql).toContain('index_granularity = 8192');
+    expect(sql).toContain("storage_policy = 'fast_ssd'");
   });
 
   it('should include TTL', () => {

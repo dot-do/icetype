@@ -9,6 +9,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { IceTypeSchema } from '@icetype/core';
+import { SchemaLoadError, ErrorCodes } from '@icetype/core';
 
 export interface LoadedSchema {
   name: string;
@@ -170,12 +171,18 @@ export async function loadSingleSchema(filePath: string): Promise<IceTypeSchema>
   const result = await loadSchemaFile(filePath);
 
   if (result.errors.length > 0) {
-    throw new Error(result.errors.join('\n'));
+    throw new SchemaLoadError(result.errors.join('\n'), {
+      filePath,
+      code: ErrorCodes.SCHEMA_LOAD_ERROR,
+    });
   }
 
   const firstSchema = result.schemas[0];
   if (!firstSchema) {
-    throw new Error(`No schemas found in ${filePath}`);
+    throw new SchemaLoadError('No schemas found in file', {
+      filePath,
+      code: ErrorCodes.NO_SCHEMAS_FOUND,
+    });
   }
 
   return firstSchema.schema;
@@ -191,7 +198,10 @@ export async function loadAllSchemas(filePath: string): Promise<IceTypeSchema[]>
   const result = await loadSchemaFile(filePath);
 
   if (result.errors.length > 0) {
-    throw new Error(result.errors.join('\n'));
+    throw new SchemaLoadError(result.errors.join('\n'), {
+      filePath,
+      code: ErrorCodes.SCHEMA_LOAD_ERROR,
+    });
   }
 
   return result.schemas.map((s) => s.schema);

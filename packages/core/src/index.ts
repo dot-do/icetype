@@ -73,13 +73,43 @@ export type {
   SchemaDefinition,
 } from './types.js';
 
-// Re-export ParseError class and branded type creators
+// Re-export ParseError class and branded type creators from types.js
+// (ParseError in types.js now re-exports from errors.ts for backward compatibility)
 export {
   ParseError,
   createSchemaId,
   createFieldId,
   createRelationId,
 } from './types.js';
+
+// Re-export all error classes and utilities
+export {
+  // Error classes
+  IceTypeError,
+  SchemaValidationError,
+  AdapterError,
+  SchemaLoadError,
+  // Error codes
+  ErrorCodes,
+  // Type guards
+  isIceTypeError,
+  isParseError,
+  isSchemaValidationError,
+  isAdapterError,
+  isSchemaLoadError,
+  // Utilities
+  getErrorMessage,
+} from './errors.js';
+
+// Re-export error option types
+export type {
+  ErrorCode,
+  IceTypeErrorOptions,
+  ParseErrorOptions,
+  SchemaValidationErrorOptions,
+  AdapterErrorOptions,
+  SchemaLoadErrorOptions,
+} from './errors.js';
 
 // Re-export parser functions
 export {
