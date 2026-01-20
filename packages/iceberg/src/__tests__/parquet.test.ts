@@ -13,7 +13,6 @@ import {
   generateParquetSchemaString,
   documentToParquetRow,
 } from '../parquet.js';
-import type { ParquetSchema, ParquetField } from '../types.js';
 
 // =============================================================================
 // Test Helpers

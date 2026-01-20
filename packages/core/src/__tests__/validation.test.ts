@@ -6,7 +6,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { parseSchema, validateSchema } from '../parser.js';
-import type { IceTypeSchema, ValidationResult } from '../types.js';
 
 // =============================================================================
 // Valid Schema Tests

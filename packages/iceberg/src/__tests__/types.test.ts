@@ -15,7 +15,6 @@ import { describe, it, expect } from 'vitest';
 import { parseSchema } from '@icetype/core';
 import { generateIcebergMetadata } from '../metadata.js';
 import { generateParquetSchema, generateParquetSchemaString } from '../parquet.js';
-import type { IcebergType } from '../types.js';
 
 // =============================================================================
 // Array Types -> LIST Tests

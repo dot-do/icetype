@@ -26,7 +26,7 @@ vi.mock('node:fs', async () => {
 
 // Mock console methods to capture output
 const mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
-const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+vi.spyOn(console, 'error').mockImplementation(() => {});
 
 // =============================================================================
 // Helper Functions

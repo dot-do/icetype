@@ -11,7 +11,7 @@ import {
   createIcebergMetadataGenerator,
   generateIcebergMetadata,
 } from '../metadata.js';
-import type { IcebergSchema, IcebergTableMetadata } from '../types.js';
+import type { IcebergTableMetadata } from '../types.js';
 
 // =============================================================================
 // Test Helpers

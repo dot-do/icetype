@@ -18,7 +18,6 @@ import {
   type RelationDefinition,
   type RelationOperator,
   type SchemaDirectives,
-  type IndexDirective,
   type VectorDirective,
   type IceTypeSchema,
   type ParsedType,

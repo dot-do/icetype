@@ -11,7 +11,7 @@ import {
   parseRelation,
   parseDirectives,
 } from '../parser.js';
-import type { Token, TokenType, RelationOperator } from '../types.js';
+import type { TokenType } from '../types.js';
 
 // =============================================================================
 // Tokenizer Tests

@@ -246,7 +246,7 @@ export class IcebergMetadataGenerator {
   /**
    * Generate sort order from schema.
    */
-  generateSortOrder(schema: IceTypeSchema, icebergSchema: IcebergSchema): IcebergSortOrder {
+  generateSortOrder(_schema: IceTypeSchema, icebergSchema: IcebergSchema): IcebergSortOrder {
     const fields: IcebergSortField[] = [];
 
     const createdAtField = icebergSchema.fields.find(f => f.name === '$createdAt');

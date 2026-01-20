@@ -11,13 +11,15 @@
  * @packageDocumentation
  */
 
-import { parseArgs } from 'node:util';
+import { createRequire } from 'node:module';
 import { init } from './commands/init.js';
 import { generate } from './commands/generate.js';
 import { validate } from './commands/validate.js';
 import { icebergExport } from './commands/iceberg.js';
 
-const VERSION = '0.1.0';
+const require = createRequire(import.meta.url);
+const pkg = require('../package.json') as { version: string };
+const VERSION = pkg.version;
 
 const HELP = `
 IceType CLI v${VERSION}

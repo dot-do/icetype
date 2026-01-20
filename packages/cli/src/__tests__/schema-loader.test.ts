@@ -4,9 +4,8 @@
  * Tests for the schema loader utility that loads IceType schema files.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import { loadSchemaFile, loadSingleSchema, loadAllSchemas } from '../utils/schema-loader.js';
 import type { IceTypeSchema } from '@icetype/core';
 
@@ -58,31 +57,6 @@ function createValidSchema(name: string = 'TestEntity'): IceTypeSchema {
   };
 }
 
-/**
- * Create a JSON representation of a valid schema (for JSON file tests)
- */
-function createValidSchemaJson(name: string = 'TestEntity'): object {
-  return {
-    name,
-    version: 1,
-    fields: new Map([
-      ['id', {
-        name: 'id',
-        type: 'uuid',
-        modifier: '!',
-        isArray: false,
-        isOptional: false,
-        isUnique: true,
-        isIndexed: false,
-      }],
-    ]),
-    directives: {},
-    relations: new Map(),
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  };
-}
-
 // =============================================================================
 // isIceTypeSchema Type Guard Tests (via loadFromJson)
 // =============================================================================
@@ -97,7 +71,7 @@ describe('isIceTypeSchema type guard', () => {
       const validSchema = createValidSchema();
 
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(validSchema, (key, value) => {
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(validSchema, (_key, value) => {
         // Convert Map to array for JSON serialization (note: this won't round-trip properly)
         if (value instanceof Map) {
           return Array.from(value.entries());

@@ -95,16 +95,6 @@ export const Tag = parseSchema({
 });
 `;
 
-const PACKAGE_JSON_ADDITIONS = {
-  dependencies: {
-    '@icetype/core': '^0.1.0',
-    '@icetype/iceberg': '^0.1.0',
-  },
-  devDependencies: {
-    'icetype': '^0.1.0',
-  },
-};
-
 export async function init(args: string[]) {
   const { values } = parseArgs({
     args,
