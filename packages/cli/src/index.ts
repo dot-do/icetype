@@ -58,3 +58,38 @@ export {
   resetAdapterRegistry,
   globalRegistry,
 } from './utils/adapter-registry.js';
+
+// Help utilities
+export {
+  generateHelpText,
+  hasHelpFlag,
+  showHelpIfRequested,
+  type HelpCommand,
+  type HelpOption,
+} from './utils/help.js';
+
+// Config utilities
+export {
+  defineConfig,
+  loadConfig,
+  findConfigFile,
+  mergeConfig,
+  validateConfig,
+  validateConfigExport,
+  resolveConfig,
+  resolveFullConfig,
+  type IceTypeConfig,
+  type IceTypeConfigFn,
+  type IceTypeConfigExport,
+  type OutputConfig,
+  type AdaptersConfig,
+  type DuckDBAdapterConfig,
+  type PostgresAdapterConfig,
+  type ClickHouseAdapterConfig,
+  type IcebergAdapterConfig,
+  type WatchConfig,
+  type ValidationResult,
+  type LoadConfigResult,
+  type LoadConfigOptions,
+  type ResolveConfigOptions,
+} from './utils/config.js';
