@@ -18,11 +18,30 @@
 
 import { writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
-import { ClickHouseAdapter } from '@icetype/clickhouse';
-import type { ClickHouseEngine } from '@icetype/clickhouse';
+import type { ClickHouseAdapter, ClickHouseEngine } from '@icetype/clickhouse';
+import { getAdapter } from '../utils/adapter-registry.js';
 import { loadSchemaFile } from '../utils/schema-loader.js';
 import { createLogger, LogLevel } from '../utils/logger.js';
 import type { Logger } from '../utils/logger.js';
+import { generateHelpText, hasHelpFlag, type HelpCommand } from '../utils/help.js';
+
+const CLICKHOUSE_EXPORT_HELP: HelpCommand = {
+  name: 'clickhouse export',
+  description: 'Export IceType schema to ClickHouse DDL',
+  usage: 'ice clickhouse export --schema <file> [--output <file>] [--engine <engine>]',
+  options: [
+    { name: 'schema', short: 's', description: 'Path to the schema file', required: true },
+    { name: 'output', short: 'o', description: 'Output file path (default: stdout)' },
+    { name: 'engine', short: 'e', description: 'ClickHouse engine type', defaultValue: 'MergeTree' },
+    { name: 'database', short: 'd', description: 'Database name to prefix tables with' },
+    { name: 'quiet', short: 'q', description: 'Suppress informational output' },
+    { name: 'verbose', short: 'v', description: 'Show detailed output' },
+  ],
+  examples: [
+    'ice clickhouse export --schema ./schema.ts --output ./tables.sql',
+    'ice clickhouse export -s ./schema.ts --engine ReplacingMergeTree --database analytics',
+  ],
+};
 
 /**
  * Valid ClickHouse engine types.
@@ -48,6 +67,12 @@ function isValidEngine(value: string): value is ClickHouseEngine {
  * @param args - Command line arguments
  */
 export async function clickhouseExport(args: string[]): Promise<void> {
+  // Check for help flag first
+  if (hasHelpFlag(args)) {
+    console.log(generateHelpText(CLICKHOUSE_EXPORT_HELP));
+    process.exit(0);
+  }
+
   const { values } = parseArgs({
     args,
     options: {
@@ -125,8 +150,11 @@ export async function clickhouseExport(args: string[]): Promise<void> {
 
     logger.info(`Found ${loadResult.schemas.length} schema(s)`);
 
-    // Create the ClickHouse adapter
-    const adapter = new ClickHouseAdapter();
+    // Get the ClickHouse adapter from the registry
+    const adapter = getAdapter('clickhouse') as ClickHouseAdapter | undefined;
+    if (!adapter) {
+      throw new Error('ClickHouse adapter is not registered. Call initializeAdapterRegistry() first.');
+    }
 
     // Generate DDL for all schemas
     const ddlStatements: string[] = [];

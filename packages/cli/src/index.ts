@@ -48,3 +48,13 @@ export {
   type WatcherOptions,
   type WatchGenerateOptions,
 } from './utils/watcher.js';
+
+// Adapter registry utilities
+export {
+  initializeAdapterRegistry,
+  getAdapter,
+  hasAdapter,
+  listAdapters,
+  resetAdapterRegistry,
+  globalRegistry,
+} from './utils/adapter-registry.js';

@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import type { IceTypeSchema, FieldDefinition } from '@icetype/core';
+import { initializeAdapterRegistry, resetAdapterRegistry } from '../utils/adapter-registry.js';
 
 // Mock modules
 vi.mock('node:fs', async () => {
@@ -23,6 +24,9 @@ vi.mock('node:fs', async () => {
 // Mock console methods to capture output
 const _mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
 const _mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+// Initialize adapter registry before all tests
+initializeAdapterRegistry();
 
 // =============================================================================
 // Helper Functions

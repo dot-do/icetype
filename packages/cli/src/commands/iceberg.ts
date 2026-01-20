@@ -6,7 +6,8 @@
 
 import { writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
-import { generateIcebergMetadata } from '@icetype/iceberg';
+import type { IcebergAdapter, IcebergTableMetadata } from '@icetype/adapters';
+import { getAdapter } from '../utils/adapter-registry.js';
 import { loadSchemaFile } from '../utils/schema-loader.js';
 
 export async function icebergExport(args: string[]) {
@@ -60,12 +61,22 @@ export async function icebergExport(args: string[]) {
     const { name, schema } = firstSchema;
     console.log(`Using schema: ${name}`);
 
-    const metadata = generateIcebergMetadata(schema, location, {
-      'write.format.default': 'parquet',
-      'write.parquet.compression-codec': 'snappy',
-    });
+    // Get the Iceberg adapter from the registry
+    const adapter = getAdapter('iceberg') as IcebergAdapter | undefined;
+    if (!adapter) {
+      throw new Error('Iceberg adapter is not registered. Call initializeAdapterRegistry() first.');
+    }
 
-    const json = JSON.stringify(metadata, null, 2);
+    // Transform the schema using the adapter
+    const metadata = adapter.transform(schema, {
+      location,
+      properties: {
+        'write.format.default': 'parquet',
+        'write.parquet.compression-codec': 'snappy',
+      },
+    }) as IcebergTableMetadata;
+
+    const json = adapter.serialize(metadata);
 
     try {
       writeFileSync(outputPath, json);

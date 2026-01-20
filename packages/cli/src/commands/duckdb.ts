@@ -7,7 +7,8 @@
 import { writeFileSync } from 'node:fs';
 import { parseArgs as nodeParseArgs } from 'node:util';
 import type { IceTypeSchema } from '@icetype/core';
-import { DuckDBAdapter } from '@icetype/duckdb';
+import type { DuckDBAdapter } from '@icetype/duckdb';
+import { getAdapter } from '../utils/adapter-registry.js';
 import { loadSchemaFile } from '../utils/schema-loader.js';
 import { createLogger, LogLevel } from '../utils/logger.js';
 
@@ -46,7 +47,11 @@ function generateDDLFromSchema(
   schema: IceTypeSchema,
   options: GenerateDDLOptions
 ): string {
-  const adapter = new DuckDBAdapter();
+  // Get the DuckDB adapter from the registry
+  const adapter = getAdapter('duckdb') as DuckDBAdapter | undefined;
+  if (!adapter) {
+    throw new Error('DuckDB adapter is not registered. Call initializeAdapterRegistry() first.');
+  }
 
   const ddl = adapter.transform(schema, {
     schema: options.schemaName,

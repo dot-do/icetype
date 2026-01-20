@@ -41,6 +41,7 @@
     "url": "https://github.com/dot-do/icetype/issues"
   },
   "dependencies": {
+    "@icetype/adapters": "workspace:*",
     "@icetype/clickhouse": "workspace:*",
     "@icetype/core": "workspace:*",
     "@icetype/duckdb": "workspace:*",

@@ -218,6 +218,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@icetype/adapters':
+        specifier: workspace:*
+        version: link:../adapters
       '@icetype/clickhouse':
         specifier: workspace:*
         version: link:../clickhouse
@@ -318,6 +321,9 @@ importers:
       '@icetype/iceberg':
         specifier: workspace:*
         version: link:../iceberg
+      '@icetype/postgres':
+        specifier: workspace:*
+        version: link:../postgres
     devDependencies:
       typescript:
         specifier: ^5.7.0

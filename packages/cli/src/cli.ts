@@ -13,6 +13,7 @@
 
 import { createRequire } from 'node:module';
 import { isIceTypeError, getErrorMessage } from '@icetype/core';
+import { initializeAdapterRegistry } from './utils/adapter-registry.js';
 import { init } from './commands/init.js';
 import { generate } from './commands/generate.js';
 import { validate } from './commands/validate.js';
@@ -21,6 +22,11 @@ import { duckdbExport } from './commands/duckdb.js';
 import { icebergExport } from './commands/iceberg.js';
 import { postgresExport } from './commands/postgres.js';
 import { diff } from './commands/diff.js';
+import { generateHelpText, hasHelpFlag, type HelpCommand } from './utils/help.js';
+
+// Initialize the global adapter registry at CLI startup
+// This registers all supported adapters (postgres, duckdb, clickhouse, iceberg)
+initializeAdapterRegistry();
 
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json') as { version: string };
@@ -57,6 +63,55 @@ Examples:
   ice postgres export --schema ./schema.ts --output ./create-tables.sql
 `;
 
+// Parent command help definitions
+const CLICKHOUSE_HELP: HelpCommand = {
+  name: 'clickhouse',
+  description: 'ClickHouse schema operations',
+  usage: 'ice clickhouse <subcommand> [options]',
+  options: [],
+  subcommands: [{ name: 'export', description: 'Export to ClickHouse DDL format' }],
+  examples: [
+    'ice clickhouse export --schema ./schema.ts --output ./tables.sql',
+    'ice clickhouse export -s ./schema.ts --engine ReplacingMergeTree',
+  ],
+};
+
+const DUCKDB_HELP: HelpCommand = {
+  name: 'duckdb',
+  description: 'DuckDB schema operations',
+  usage: 'ice duckdb <subcommand> [options]',
+  options: [],
+  subcommands: [{ name: 'export', description: 'Export to DuckDB DDL format' }],
+  examples: [
+    'ice duckdb export --schema ./schema.ts --output ./tables.sql',
+    'ice duckdb export -s ./schema.ts --schema-name analytics',
+  ],
+};
+
+const ICEBERG_HELP: HelpCommand = {
+  name: 'iceberg',
+  description: 'Apache Iceberg schema operations',
+  usage: 'ice iceberg <subcommand> [options]',
+  options: [],
+  subcommands: [{ name: 'export', description: 'Export to Iceberg metadata format' }],
+  examples: [
+    'ice iceberg export --schema ./schema.ts --output ./metadata.json',
+    'ice iceberg export -s ./schema.ts --location s3://bucket/table',
+  ],
+};
+
+const POSTGRES_HELP: HelpCommand = {
+  name: 'postgres',
+  description: 'PostgreSQL schema operations',
+  usage: 'ice postgres <subcommand> [options]',
+  options: [],
+  subcommands: [{ name: 'export', description: 'Export to PostgreSQL DDL format' }],
+  examples: [
+    'ice postgres export --schema ./schema.ts --output ./create-tables.sql',
+    'ice postgres export -s ./schema.ts --schemaName public',
+  ],
+};
+
 async function main() {
   const args = process.argv.slice(2);
 
@@ -92,7 +147,10 @@ async function main() {
         break;
 
       case 'clickhouse':
-        if (commandArgs[0] === 'export') {
+        if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
+          console.log(generateHelpText(CLICKHOUSE_HELP));
+          process.exit(0);
+        } else if (commandArgs[0] === 'export') {
           await clickhouseExport(commandArgs.slice(1));
         } else {
           console.error(`Unknown clickhouse subcommand: ${commandArgs[0]}`);
@@ -102,7 +160,10 @@ async function main() {
         break;
 
       case 'duckdb':
-        if (commandArgs[0] === 'export') {
+        if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
+          console.log(generateHelpText(DUCKDB_HELP));
+          process.exit(0);
+        } else if (commandArgs[0] === 'export') {
           await duckdbExport(commandArgs.slice(1));
         } else {
           console.error(`Unknown duckdb subcommand: ${commandArgs[0]}`);
@@ -112,7 +173,10 @@ async function main() {
         break;
 
       case 'iceberg':
-        if (commandArgs[0] === 'export') {
+        if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
+          console.log(generateHelpText(ICEBERG_HELP));
+          process.exit(0);
+        } else if (commandArgs[0] === 'export') {
           await icebergExport(commandArgs.slice(1));
         } else {
           console.error(`Unknown iceberg subcommand: ${commandArgs[0]}`);
@@ -122,7 +186,10 @@ async function main() {
         break;
 
       case 'postgres':
-        if (commandArgs[0] === 'export') {
+        if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
+          console.log(generateHelpText(POSTGRES_HELP));
+          process.exit(0);
+        } else if (commandArgs[0] === 'export') {
           await postgresExport(commandArgs.slice(1));
         } else {
           console.error(`Unknown postgres subcommand: ${commandArgs[0]}`);
