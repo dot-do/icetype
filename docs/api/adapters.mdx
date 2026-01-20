@@ -1,0 +1,408 @@
+---
+title: "@icetype/adapters API"
+description: API reference for the @icetype/adapters package - adapter abstraction layer for schema transformations.
+---
+
+# @icetype/adapters API
+
+The `@icetype/adapters` package provides a unified interface for transforming IceType schemas to various output formats.
+
+## Installation
+
+```bash
+npm install @icetype/adapters
+# or
+pnpm add @icetype/adapters
+```
+
+## Overview
+
+The adapters package provides:
+
+- **Adapter Interface** - Standard interface for schema transformations
+- **Registry** - Centralized management of multiple adapters
+- **Built-in Adapters** - Iceberg and Parquet adapters
+
+## Quick Start
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import {
+  createAdapterRegistry,
+  IcebergAdapter,
+  ParquetAdapter,
+} from '@icetype/adapters';
+
+// Parse a schema
+const schema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+});
+
+// Create registry and register adapters
+const registry = createAdapterRegistry();
+registry.register(new IcebergAdapter());
+registry.register(new ParquetAdapter());
+
+// Transform to Iceberg
+const iceberg = registry.get('iceberg');
+const metadata = iceberg?.transform(schema, {
+  location: 's3://bucket/tables/users',
+});
+
+// Transform to Parquet
+const parquet = registry.get('parquet');
+const parquetSchema = parquet?.transform(schema);
+```
+
+## Adapter Registry
+
+### `createAdapterRegistry()`
+
+Creates a new adapter registry.
+
+```typescript
+import { createAdapterRegistry } from '@icetype/adapters';
+
+const registry = createAdapterRegistry();
+```
+
+**Returns:** `AdapterRegistry`
+
+---
+
+### `globalRegistry`
+
+A pre-configured global registry instance.
+
+```typescript
+import { globalRegistry, IcebergAdapter } from '@icetype/adapters';
+
+// Register adapters to the global registry
+globalRegistry.register(new IcebergAdapter());
+
+// Use from anywhere
+const iceberg = globalRegistry.get('iceberg');
+```
+
+---
+
+### `AdapterRegistry` Interface
+
+```typescript
+interface AdapterRegistry {
+  // Register an adapter
+  register(adapter: SchemaAdapter<unknown, unknown>): void;
+
+  // Get an adapter by name
+  get<T, O>(name: string): SchemaAdapter<T, O> | undefined;
+
+  // Check if an adapter is registered
+  has(name: string): boolean;
+
+  // Remove an adapter
+  unregister(name: string): boolean;
+
+  // List all registered adapter names
+  list(): string[];
+}
+```
+
+**Methods:**
+
+#### `register(adapter)`
+
+Registers an adapter with the registry.
+
+```typescript
+registry.register(new IcebergAdapter());
+registry.register(new ParquetAdapter());
+```
+
+#### `get(name)`
+
+Retrieves an adapter by name.
+
+```typescript
+const adapter = registry.get('iceberg');
+if (adapter) {
+  const result = adapter.transform(schema, options);
+}
+```
+
+#### `has(name)`
+
+Checks if an adapter is registered.
+
+```typescript
+if (registry.has('iceberg')) {
+  console.log('Iceberg adapter is available');
+}
+```
+
+#### `unregister(name)`
+
+Removes an adapter from the registry.
+
+```typescript
+registry.unregister('iceberg');
+```
+
+#### `list()`
+
+Lists all registered adapter names.
+
+```typescript
+const adapters = registry.list();
+// ['iceberg', 'parquet']
+```
+
+## Built-in Adapters
+
+### `IcebergAdapter`
+
+Transforms IceType schemas to Apache Iceberg metadata.
+
+```typescript
+import { IcebergAdapter, createIcebergAdapter } from '@icetype/adapters';
+
+// Using class
+const adapter = new IcebergAdapter();
+
+// Using factory function
+const adapter = createIcebergAdapter();
+
+// Transform
+const metadata = adapter.transform(schema, {
+  location: 's3://bucket/table',
+  properties: {
+    'write.parquet.compression-codec': 'zstd',
+  },
+});
+```
+
+**Properties:**
+
+| Property | Type | Value |
+|----------|------|-------|
+| `name` | `string` | `'iceberg'` |
+| `version` | `string` | `'1.0.0'` |
+
+**Options (`IcebergAdapterOptions`):**
+
+```typescript
+interface IcebergAdapterOptions {
+  // Table location URL (required)
+  location: string;
+
+  // Optional table properties
+  properties?: Record<string, string>;
+}
+```
+
+**Returns:** `IcebergTableMetadata`
+
+---
+
+### `ParquetAdapter`
+
+Transforms IceType schemas to Parquet schema definitions.
+
+```typescript
+import { ParquetAdapter, createParquetAdapter } from '@icetype/adapters';
+
+// Using class
+const adapter = new ParquetAdapter();
+
+// Using factory function
+const adapter = createParquetAdapter();
+
+// Transform
+const parquetSchema = adapter.transform(schema);
+
+// Or with options
+const parquetSchema = adapter.transform(schema, {
+  includeMetadataFields: true,
+});
+```
+
+**Properties:**
+
+| Property | Type | Value |
+|----------|------|-------|
+| `name` | `string` | `'parquet'` |
+| `version` | `string` | `'1.0.0'` |
+
+**Options (`ParquetAdapterOptions`):**
+
+```typescript
+interface ParquetAdapterOptions {
+  // Include $id and $type metadata fields (default: true)
+  includeMetadataFields?: boolean;
+}
+```
+
+**Returns:** `ParquetSchema`
+
+---
+
+### `transformToParquetString(schema)`
+
+Convenience function to generate a Parquet schema string.
+
+```typescript
+import { transformToParquetString } from '@icetype/adapters';
+
+const schemaString = transformToParquetString(schema);
+console.log(schemaString);
+// message User {
+//   REQUIRED BYTE_ARRAY id (UTF8);
+//   REQUIRED BYTE_ARRAY email (UTF8);
+//   ...
+// }
+```
+
+## Creating Custom Adapters
+
+Implement the `SchemaAdapter` interface to create custom adapters:
+
+```typescript
+import type { SchemaAdapter } from '@icetype/adapters';
+import type { IceTypeSchema } from '@icetype/core';
+
+interface MyOutputFormat {
+  // Your output structure
+}
+
+interface MyAdapterOptions {
+  // Your options
+}
+
+class MyCustomAdapter implements SchemaAdapter<MyOutputFormat, MyAdapterOptions> {
+  readonly name = 'my-adapter';
+  readonly version = '1.0.0';
+
+  transform(schema: IceTypeSchema, options?: MyAdapterOptions): MyOutputFormat {
+    // Transform the schema to your format
+    return {
+      // Your transformation logic
+    };
+  }
+}
+
+// Register with the registry
+registry.register(new MyCustomAdapter());
+
+// Use it
+const adapter = registry.get('my-adapter');
+const result = adapter?.transform(schema, { /* options */ });
+```
+
+### Example: SQL DDL Adapter
+
+```typescript
+class SqlDdlAdapter implements SchemaAdapter<string, { dialect: 'postgres' | 'mysql' }> {
+  readonly name = 'sql-ddl';
+  readonly version = '1.0.0';
+
+  transform(schema: IceTypeSchema, options?: { dialect: 'postgres' | 'mysql' }): string {
+    const dialect = options?.dialect ?? 'postgres';
+    const tableName = schema.name;
+    const columns: string[] = [];
+
+    for (const [name, field] of schema.fields) {
+      const sqlType = this.mapType(field.type, dialect);
+      const nullable = field.required ? 'NOT NULL' : 'NULL';
+      columns.push(`  ${name} ${sqlType} ${nullable}`);
+    }
+
+    return `CREATE TABLE ${tableName} (\n${columns.join(',\n')}\n);`;
+  }
+
+  private mapType(iceType: string, dialect: string): string {
+    const mapping: Record<string, Record<string, string>> = {
+      postgres: {
+        string: 'TEXT',
+        int: 'INTEGER',
+        long: 'BIGINT',
+        float: 'REAL',
+        double: 'DOUBLE PRECISION',
+        bool: 'BOOLEAN',
+        uuid: 'UUID',
+        timestamp: 'TIMESTAMPTZ',
+        date: 'DATE',
+        json: 'JSONB',
+      },
+      mysql: {
+        string: 'VARCHAR(255)',
+        int: 'INT',
+        long: 'BIGINT',
+        float: 'FLOAT',
+        double: 'DOUBLE',
+        bool: 'BOOLEAN',
+        uuid: 'CHAR(36)',
+        timestamp: 'DATETIME',
+        date: 'DATE',
+        json: 'JSON',
+      },
+    };
+    return mapping[dialect]?.[iceType] ?? 'TEXT';
+  }
+}
+```
+
+## Types
+
+### `SchemaAdapter<T, O>`
+
+The base adapter interface.
+
+```typescript
+interface SchemaAdapter<T, O = void> {
+  // Adapter name (unique identifier)
+  readonly name: string;
+
+  // Adapter version
+  readonly version: string;
+
+  // Transform an IceType schema to the target format
+  transform(schema: IceTypeSchema, options?: O): T;
+}
+```
+
+### `IcebergAdapterOptions`
+
+Options for the Iceberg adapter.
+
+```typescript
+interface IcebergAdapterOptions {
+  location: string;
+  properties?: Record<string, string>;
+}
+```
+
+### `ParquetAdapterOptions`
+
+Options for the Parquet adapter.
+
+```typescript
+interface ParquetAdapterOptions {
+  includeMetadataFields?: boolean;
+}
+```
+
+## Re-exported Types
+
+For convenience, the adapters package re-exports relevant types from `@icetype/iceberg`:
+
+```typescript
+export type {
+  IcebergTableMetadata,
+  IcebergSchema,
+  IcebergField,
+  ParquetSchema,
+  ParquetField,
+} from '@icetype/iceberg';
+```

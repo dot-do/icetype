@@ -1,0 +1,401 @@
+---
+title: "@icetype/core API"
+description: API reference for the @icetype/core package - parser, types, and validation.
+---
+
+# @icetype/core API
+
+The `@icetype/core` package provides the core functionality for IceType: parsing schemas, validating them, and inferring types.
+
+## Installation
+
+```bash
+npm install @icetype/core
+# or
+pnpm add @icetype/core
+```
+
+## Functions
+
+### `parseSchema(definition)`
+
+Parses a schema definition object into an `IceTypeSchema`.
+
+```typescript
+import { parseSchema } from '@icetype/core';
+
+const schema = parseSchema({
+  $type: 'User',
+  $partitionBy: ['tenantId'],
+  $index: [['email']],
+
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+  age: 'int?',
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `definition` | `SchemaDefinition` | Object with fields and directives |
+
+**Returns:** `IceTypeSchema`
+
+---
+
+### `parseField(fieldDef)`
+
+Parses a single field definition string.
+
+```typescript
+import { parseField } from '@icetype/core';
+
+const field = parseField('string#');
+// { type: 'string', modifiers: ['indexed'], required: true }
+
+const optionalArray = parseField('int[]?');
+// { type: 'int', modifiers: ['optional'], isArray: true, required: false }
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `fieldDef` | `string` | Field definition string |
+
+**Returns:** `FieldDefinition`
+
+---
+
+### `parseRelation(relationDef)`
+
+Parses a relation definition string.
+
+```typescript
+import { parseRelation } from '@icetype/core';
+
+const forward = parseRelation('-> User!');
+// { operator: '->', target: 'User', required: true }
+
+const backward = parseRelation('<- Post.author[]');
+// { operator: '<-', target: 'Post', field: 'author', isArray: true }
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `relationDef` | `string` | Relation definition string |
+
+**Returns:** `RelationDefinition`
+
+---
+
+### `parseDirectives(definition)`
+
+Extracts and parses directives from a schema definition.
+
+```typescript
+import { parseDirectives } from '@icetype/core';
+
+const directives = parseDirectives({
+  $type: 'User',
+  $partitionBy: ['tenantId'],
+  $index: [['email'], ['createdAt']],
+  $fts: ['bio'],
+});
+// {
+//   type: 'User',
+//   partitionBy: ['tenantId'],
+//   index: [['email'], ['createdAt']],
+//   fts: ['bio']
+// }
+```
+
+**Returns:** `SchemaDirectives`
+
+---
+
+### `validateSchema(schema)`
+
+Validates an `IceTypeSchema` for errors and inconsistencies.
+
+```typescript
+import { parseSchema, validateSchema } from '@icetype/core';
+
+const schema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  email: 'string#',
+});
+
+const result = validateSchema(schema);
+
+if (result.valid) {
+  console.log('Schema is valid');
+} else {
+  console.error('Errors:', result.errors);
+}
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `schema` | `IceTypeSchema` | Parsed schema to validate |
+
+**Returns:** `ValidationResult`
+
+```typescript
+interface ValidationResult {
+  valid: boolean;
+  errors: ValidationError[];
+}
+
+interface ValidationError {
+  field?: string;
+  message: string;
+  code: string;
+}
+```
+
+---
+
+### `inferType(value)`
+
+Infers an IceType type from a JavaScript value.
+
+```typescript
+import { inferType } from '@icetype/core';
+
+inferType('hello')                    // 'string'
+inferType(42)                         // 'int'
+inferType(3.14)                       // 'float'
+inferType(true)                       // 'bool'
+inferType(null)                       // 'json'
+inferType('2024-01-15')               // 'date'
+inferType('2024-01-15T10:30:00Z')     // 'timestamp'
+inferType('550e8400-e29b-41d4-a716-446655440000') // 'uuid'
+inferType([1, 2, 3])                  // 'int[]'
+inferType(['a', 'b'])                 // 'string[]'
+inferType({ foo: 'bar' })             // 'json'
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `value` | `unknown` | Value to infer type from |
+
+**Returns:** `string` - The inferred IceType type
+
+---
+
+### `tokenize(input)`
+
+Tokenizes a field definition string into tokens.
+
+```typescript
+import { tokenize } from '@icetype/core';
+
+const tokens = tokenize('string# = "default"');
+// [
+//   { type: 'identifier', value: 'string' },
+//   { type: 'modifier', value: '#' },
+//   { type: 'equals', value: '=' },
+//   { type: 'string', value: 'default' }
+// ]
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `input` | `string` | String to tokenize |
+
+**Returns:** `Token[]`
+
+## Type Guards
+
+### `isValidPrimitiveType(type)`
+
+Checks if a string is a valid primitive type.
+
+```typescript
+import { isValidPrimitiveType } from '@icetype/core';
+
+isValidPrimitiveType('string')  // true
+isValidPrimitiveType('int')     // true
+isValidPrimitiveType('foo')     // false
+```
+
+---
+
+### `isValidModifier(char)`
+
+Checks if a character is a valid field modifier.
+
+```typescript
+import { isValidModifier } from '@icetype/core';
+
+isValidModifier('!')  // true
+isValidModifier('#')  // true
+isValidModifier('?')  // true
+isValidModifier('x')  // false
+```
+
+---
+
+### `isValidRelationOperator(op)`
+
+Checks if a string is a valid relation operator.
+
+```typescript
+import { isValidRelationOperator } from '@icetype/core';
+
+isValidRelationOperator('->')  // true
+isValidRelationOperator('<-')  // true
+isValidRelationOperator('~>')  // true
+isValidRelationOperator('<~')  // true
+isValidRelationOperator('=>')  // false
+```
+
+## Classes
+
+### `IceTypeParser`
+
+The main parser class for advanced usage.
+
+```typescript
+import { IceTypeParser } from '@icetype/core';
+
+const parser = new IceTypeParser();
+
+// Parse a complete schema
+const schema = parser.parse({
+  $type: 'User',
+  id: 'uuid!',
+  email: 'string#',
+});
+
+// Access parser internals
+const fieldDef = parser.parseFieldDefinition('string#');
+```
+
+### `ParseError`
+
+Error class thrown when parsing fails.
+
+```typescript
+import { parseSchema, ParseError } from '@icetype/core';
+
+try {
+  parseSchema({
+    $type: 'User',
+    id: 'invalid-type!',
+  });
+} catch (error) {
+  if (error instanceof ParseError) {
+    console.error('Parse error:', error.message);
+    console.error('Position:', error.position);
+  }
+}
+```
+
+## Types
+
+### `IceTypeSchema`
+
+The main schema type returned by `parseSchema()`.
+
+```typescript
+interface IceTypeSchema {
+  id: SchemaId;
+  name: string;
+  fields: Map<string, FieldDefinition>;
+  relations: Map<string, RelationDefinition>;
+  directives: SchemaDirectives;
+}
+```
+
+### `FieldDefinition`
+
+Represents a parsed field.
+
+```typescript
+interface FieldDefinition {
+  id: FieldId;
+  name: string;
+  type: PrimitiveType | ParametricType;
+  required: boolean;
+  indexed: boolean;
+  unique: boolean;
+  isArray: boolean;
+  defaultValue?: unknown;
+  modifiers: FieldModifier[];
+}
+```
+
+### `RelationDefinition`
+
+Represents a parsed relation.
+
+```typescript
+interface RelationDefinition {
+  id: RelationId;
+  name: string;
+  operator: RelationOperator;
+  target: string;
+  targetField?: string;
+  required: boolean;
+  isArray: boolean;
+}
+```
+
+### `SchemaDirectives`
+
+Schema-level configuration.
+
+```typescript
+interface SchemaDirectives {
+  type: string;
+  partitionBy?: string[];
+  index?: string[][];
+  fts?: string[];
+  vector?: string;
+}
+```
+
+### `PrimitiveType`
+
+Union of all primitive type names.
+
+```typescript
+type PrimitiveType =
+  | 'string' | 'text'
+  | 'int' | 'long' | 'bigint'
+  | 'float' | 'double'
+  | 'bool' | 'boolean'
+  | 'uuid'
+  | 'timestamp' | 'date' | 'time'
+  | 'json' | 'binary';
+```
+
+### `FieldModifier`
+
+Field modifier characters.
+
+```typescript
+type FieldModifier = '!' | '#' | '?';
+```
+
+### `RelationOperator`
+
+Relation operator strings.
+
+```typescript
+type RelationOperator = '->' | '<-' | '~>' | '<~';
+```

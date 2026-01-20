@@ -1,0 +1,416 @@
+---
+title: "@icetype/iceberg API"
+description: API reference for the @icetype/iceberg package - Iceberg metadata and Parquet schema generation.
+---
+
+# @icetype/iceberg API
+
+The `@icetype/iceberg` package generates Apache Iceberg table metadata and Parquet schemas from IceType schemas.
+
+## Installation
+
+```bash
+npm install @icetype/iceberg
+# or
+pnpm add @icetype/iceberg
+```
+
+## Iceberg Metadata Generation
+
+### `generateIcebergMetadata(schema, location, properties?)`
+
+Generates Apache Iceberg v2 table metadata from an IceType schema.
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { generateIcebergMetadata } from '@icetype/iceberg';
+
+const schema = parseSchema({
+  $type: 'User',
+  $partitionBy: ['tenantId'],
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+  tenantId: 'string!',
+  createdAt: 'timestamp',
+});
+
+const metadata = generateIcebergMetadata(
+  schema,
+  's3://my-bucket/tables/users',
+  {
+    'write.parquet.compression-codec': 'zstd',
+    'write.metadata.compression-codec': 'gzip',
+  }
+);
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `schema` | `IceTypeSchema` | Parsed IceType schema |
+| `location` | `string` | Table location URL (S3, GCS, etc.) |
+| `properties` | `Record<string, string>` | Optional table properties |
+
+**Returns:** `IcebergTableMetadata`
+
+---
+
+### `IcebergMetadataGenerator`
+
+Class for more control over metadata generation.
+
+```typescript
+import { IcebergMetadataGenerator } from '@icetype/iceberg';
+
+const generator = new IcebergMetadataGenerator({
+  formatVersion: 2,
+  defaultFileFormat: 'parquet',
+});
+
+const metadata = generator.generate(schema, 's3://bucket/table');
+```
+
+---
+
+### `createIcebergMetadataGenerator(options?)`
+
+Factory function to create a metadata generator.
+
+```typescript
+import { createIcebergMetadataGenerator } from '@icetype/iceberg';
+
+const generator = createIcebergMetadataGenerator({
+  formatVersion: 2,
+});
+
+const metadata = generator.generate(schema, location);
+```
+
+## Parquet Schema Generation
+
+### `generateParquetSchema(schema)`
+
+Generates a Parquet schema object from an IceType schema.
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { generateParquetSchema } from '@icetype/iceberg';
+
+const schema = parseSchema({
+  $type: 'Event',
+  id: 'uuid!',
+  timestamp: 'timestamp!',
+  data: 'json',
+  tags: 'string[]',
+});
+
+const parquetSchema = generateParquetSchema(schema);
+// {
+//   name: 'Event',
+//   fields: [
+//     { name: 'id', type: 'BYTE_ARRAY', convertedType: 'UTF8', repetition: 'REQUIRED' },
+//     { name: 'timestamp', type: 'INT96', repetition: 'REQUIRED' },
+//     { name: 'data', type: 'BYTE_ARRAY', convertedType: 'JSON', repetition: 'OPTIONAL' },
+//     { name: 'tags', type: 'BYTE_ARRAY', convertedType: 'UTF8', repetition: 'REPEATED' }
+//   ]
+// }
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `schema` | `IceTypeSchema` | Parsed IceType schema |
+
+**Returns:** `ParquetSchema`
+
+---
+
+### `generateParquetSchemaString(schema)`
+
+Generates a Parquet schema definition string (for debugging or inspection).
+
+```typescript
+import { generateParquetSchemaString } from '@icetype/iceberg';
+
+const schemaString = generateParquetSchemaString(schema);
+console.log(schemaString);
+// message User {
+//   REQUIRED BYTE_ARRAY $id (UTF8);
+//   REQUIRED BYTE_ARRAY $type (UTF8);
+//   REQUIRED BYTE_ARRAY id (UTF8);
+//   REQUIRED BYTE_ARRAY email (UTF8);
+//   REQUIRED BYTE_ARRAY name (UTF8);
+//   OPTIONAL INT32 age;
+//   OPTIONAL BOOLEAN isActive;
+// }
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `schema` | `IceTypeSchema` | Parsed IceType schema |
+
+**Returns:** `string`
+
+---
+
+### `documentToParquetRow(document, schema)`
+
+Converts a document object to a Parquet-compatible row.
+
+```typescript
+import { documentToParquetRow } from '@icetype/iceberg';
+
+const user = {
+  id: '550e8400-e29b-41d4-a716-446655440000',
+  email: 'user@example.com',
+  name: 'John Doe',
+  createdAt: new Date(),
+};
+
+const row = documentToParquetRow(user, userSchema);
+// Row with proper Parquet type conversions
+```
+
+---
+
+### `ParquetSchemaGenerator`
+
+Class for more control over Parquet schema generation.
+
+```typescript
+import { ParquetSchemaGenerator } from '@icetype/iceberg';
+
+const generator = new ParquetSchemaGenerator();
+const parquetSchema = generator.generate(schema);
+```
+
+## Types
+
+### Iceberg Types
+
+#### `IcebergTableMetadata`
+
+The main Iceberg metadata structure.
+
+```typescript
+interface IcebergTableMetadata {
+  'format-version': number;
+  'table-uuid': string;
+  location: string;
+  'last-sequence-number': number;
+  'last-updated-ms': number;
+  'last-column-id': number;
+  schema: IcebergSchema;
+  schemas: IcebergSchema[];
+  'current-schema-id': number;
+  'partition-spec': IcebergPartitionField[];
+  'partition-specs': IcebergPartitionSpec[];
+  'default-spec-id': number;
+  'last-partition-id': number;
+  'sort-order': IcebergSortOrder;
+  'sort-orders': IcebergSortOrder[];
+  'default-sort-order-id': number;
+  properties: Record<string, string>;
+  'current-snapshot-id'?: number;
+  snapshots?: IcebergSnapshot[];
+  'snapshot-log'?: Array<{ 'snapshot-id': number; 'timestamp-ms': number }>;
+  refs?: Record<string, IcebergSnapshotRef>;
+}
+```
+
+#### `IcebergSchema`
+
+```typescript
+interface IcebergSchema {
+  type: 'struct';
+  'schema-id': number;
+  fields: IcebergField[];
+  'identifier-field-ids'?: number[];
+}
+```
+
+#### `IcebergField`
+
+```typescript
+interface IcebergField {
+  id: number;
+  name: string;
+  type: IcebergType;
+  required: boolean;
+  doc?: string;
+}
+```
+
+#### `IcebergType`
+
+```typescript
+type IcebergPrimitiveType =
+  | 'boolean'
+  | 'int'
+  | 'long'
+  | 'float'
+  | 'double'
+  | 'decimal'
+  | 'date'
+  | 'time'
+  | 'timestamp'
+  | 'timestamptz'
+  | 'string'
+  | 'uuid'
+  | 'fixed'
+  | 'binary';
+
+type IcebergType =
+  | IcebergPrimitiveType
+  | { type: 'list'; 'element-id': number; element: IcebergType; 'element-required': boolean }
+  | { type: 'map'; 'key-id': number; key: IcebergType; 'value-id': number; value: IcebergType; 'value-required': boolean }
+  | { type: 'struct'; fields: IcebergField[] };
+```
+
+#### `IcebergPartitionField`
+
+```typescript
+interface IcebergPartitionField {
+  'source-id': number;
+  'field-id': number;
+  name: string;
+  transform: string;
+}
+```
+
+#### `IcebergPartitionSpec`
+
+```typescript
+interface IcebergPartitionSpec {
+  'spec-id': number;
+  fields: IcebergPartitionField[];
+}
+```
+
+#### `IcebergSortField`
+
+```typescript
+interface IcebergSortField {
+  'source-id': number;
+  transform: string;
+  direction: 'asc' | 'desc';
+  'null-order': 'nulls-first' | 'nulls-last';
+}
+```
+
+#### `IcebergSortOrder`
+
+```typescript
+interface IcebergSortOrder {
+  'order-id': number;
+  fields: IcebergSortField[];
+}
+```
+
+### Parquet Types
+
+#### `ParquetSchema`
+
+```typescript
+interface ParquetSchema {
+  name: string;
+  fields: ParquetField[];
+}
+```
+
+#### `ParquetField`
+
+```typescript
+interface ParquetField {
+  name: string;
+  type: ParquetPrimitiveType;
+  convertedType?: ParquetConvertedType;
+  logicalType?: ParquetLogicalType;
+  repetition: ParquetRepetition;
+  precision?: number;
+  scale?: number;
+  length?: number;
+}
+```
+
+#### `ParquetPrimitiveType`
+
+```typescript
+type ParquetPrimitiveType =
+  | 'BOOLEAN'
+  | 'INT32'
+  | 'INT64'
+  | 'INT96'
+  | 'FLOAT'
+  | 'DOUBLE'
+  | 'BYTE_ARRAY'
+  | 'FIXED_LEN_BYTE_ARRAY';
+```
+
+#### `ParquetConvertedType`
+
+```typescript
+type ParquetConvertedType =
+  | 'UTF8'
+  | 'JSON'
+  | 'BSON'
+  | 'DECIMAL'
+  | 'DATE'
+  | 'TIME_MILLIS'
+  | 'TIME_MICROS'
+  | 'TIMESTAMP_MILLIS'
+  | 'TIMESTAMP_MICROS'
+  | 'UINT_8' | 'UINT_16' | 'UINT_32' | 'UINT_64'
+  | 'INT_8' | 'INT_16' | 'INT_32' | 'INT_64'
+  | 'LIST' | 'MAP' | 'ENUM' | 'UUID';
+```
+
+#### `ParquetRepetition`
+
+```typescript
+type ParquetRepetition = 'REQUIRED' | 'OPTIONAL' | 'REPEATED';
+```
+
+## Type Mapping
+
+### IceType to Iceberg
+
+| IceType | Iceberg |
+|---------|---------|
+| `string`, `text` | `string` |
+| `int` | `int` |
+| `long`, `bigint` | `long` |
+| `float` | `float` |
+| `double` | `double` |
+| `bool`, `boolean` | `boolean` |
+| `uuid` | `uuid` |
+| `timestamp` | `timestamptz` |
+| `date` | `date` |
+| `time` | `time` |
+| `json` | `string` |
+| `binary` | `binary` |
+| `decimal(p,s)` | `decimal(p,s)` |
+| `type[]` | `list<type>` |
+
+### IceType to Parquet
+
+| IceType | Parquet Type | Converted Type |
+|---------|--------------|----------------|
+| `string`, `text` | `BYTE_ARRAY` | `UTF8` |
+| `int` | `INT32` | - |
+| `long`, `bigint` | `INT64` | - |
+| `float` | `FLOAT` | - |
+| `double` | `DOUBLE` | - |
+| `bool`, `boolean` | `BOOLEAN` | - |
+| `uuid` | `FIXED_LEN_BYTE_ARRAY[16]` | `UUID` |
+| `timestamp` | `INT96` | - |
+| `date` | `INT32` | `DATE` |
+| `time` | `INT32` | `TIME_MILLIS` |
+| `json` | `BYTE_ARRAY` | `JSON` |
+| `binary` | `BYTE_ARRAY` | - |
+| `decimal(p,s)` | `FIXED_LEN_BYTE_ARRAY` | `DECIMAL` |

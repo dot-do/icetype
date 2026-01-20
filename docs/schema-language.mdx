@@ -1,0 +1,300 @@
+---
+title: Schema Language
+description: Complete reference for IceType schema syntax, field modifiers, relations, and directives.
+---
+
+# Schema Language Reference
+
+IceType uses a concise, expressive syntax for defining schemas. This reference covers all features of the schema language.
+
+## Basic Schema Structure
+
+A schema is defined using `parseSchema()` with an object containing field definitions and directives:
+
+```typescript
+import { parseSchema } from 'icetype';
+
+const schema = parseSchema({
+  $type: 'EntityName',      // Required: entity/table name
+  $partitionBy: ['field'],  // Optional: partition keys
+  $index: [['field']],      // Optional: secondary indexes
+
+  fieldName: 'type',        // Field definitions
+});
+```
+
+## Field Modifiers
+
+Field modifiers are suffixes that change field behavior:
+
+| Modifier | Description | Example |
+|----------|-------------|---------|
+| `!` | Required/unique | `'uuid!'` |
+| `#` | Indexed | `'string#'` |
+| `?` | Optional/nullable | `'int?'` |
+| `[]` | Array type | `'string[]'` |
+
+### Examples
+
+```typescript
+const schema = parseSchema({
+  $type: 'User',
+
+  id: 'uuid!',           // Required, unique UUID
+  email: 'string#',      // Indexed string (for fast lookups)
+  name: 'string',        // Regular required string
+  bio: 'text?',          // Optional text field
+  tags: 'string[]',      // Array of strings
+  scores: 'int[]?',      // Optional array of integers
+});
+```
+
+### Combining Modifiers
+
+Modifiers can be combined:
+
+```typescript
+{
+  primaryKey: 'uuid!',      // Required + unique
+  searchField: 'string#',   // Required + indexed
+  optionalList: 'int[]?',   // Optional array
+  indexedList: 'string[]#', // Indexed array field
+}
+```
+
+## Primitive Types
+
+IceType supports these primitive types:
+
+| Type | Description | Example Values |
+|------|-------------|----------------|
+| `string` | UTF-8 string | `"hello"` |
+| `text` | Long text (alias for string) | `"..."` |
+| `int` | 32-bit integer | `42` |
+| `long` | 64-bit integer | `9007199254740993` |
+| `bigint` | Arbitrary precision integer | `BigInt(...)` |
+| `float` | 32-bit floating point | `3.14` |
+| `double` | 64-bit floating point | `3.141592653589793` |
+| `bool` / `boolean` | Boolean | `true`, `false` |
+| `uuid` | UUID string | `"550e8400-e29b-41d4..."` |
+| `timestamp` | ISO 8601 datetime | `"2024-01-15T10:30:00Z"` |
+| `date` | ISO 8601 date | `"2024-01-15"` |
+| `time` | Time of day | `"10:30:00"` |
+| `json` | Arbitrary JSON | `{ key: "value" }` |
+| `binary` | Binary data | `Buffer`, `Uint8Array` |
+| `decimal(p,s)` | Decimal with precision/scale | `decimal(10,2)` |
+
+### Parametric Types
+
+Some types accept parameters:
+
+```typescript
+{
+  price: 'decimal(10,2)',   // Decimal with precision 10, scale 2
+  coords: 'float[3]',       // Fixed-size array of 3 floats
+  matrix: 'int[3][3]',      // 3x3 matrix
+}
+```
+
+## Default Values
+
+Specify default values using `=`:
+
+```typescript
+const schema = parseSchema({
+  $type: 'User',
+
+  status: 'string = "active"',     // String default
+  score: 'int = 0',                // Integer default
+  isVerified: 'bool = false',      // Boolean default
+  role: 'string = "user"',         // Enum-like default
+});
+```
+
+## Relation Operators
+
+IceType supports four relation operators for defining relationships between entities:
+
+| Operator | Type | Description | Status |
+|----------|------|-------------|--------|
+| `->` | Forward | Direct foreign key reference | Implemented |
+| `<-` | Backward | Reverse reference (one-to-many) | Implemented |
+| `~>` | Fuzzy Forward | AI-powered semantic matching | Planned |
+| `<~` | Fuzzy Backward | AI-powered reverse lookup | Planned |
+
+### Forward Relations (`->`)
+
+A forward relation represents a foreign key pointing to another entity:
+
+```typescript
+const PostSchema = parseSchema({
+  $type: 'Post',
+
+  authorId: 'uuid!',
+  author: '-> User!',           // Required forward relation
+  category: '-> Category?',     // Optional forward relation
+});
+```
+
+### Backward Relations (`<-`)
+
+A backward relation represents the inverse of a forward relation:
+
+```typescript
+const UserSchema = parseSchema({
+  $type: 'User',
+
+  posts: '<- Post.author[]',    // All posts where author = this user
+  comments: '<- Comment.user[]',
+});
+```
+
+The format is: `<- TargetEntity.foreignKeyField[]`
+
+### Fuzzy Relations (`~>`, `<~`)
+
+Fuzzy relations are reserved for future AI-powered semantic matching:
+
+```typescript
+const ProductSchema = parseSchema({
+  $type: 'Product',
+
+  description: 'text',
+  similar: '~> Product[]',      // Semantically similar products
+  relatedTags: '<~ Tag[]',      // Tags semantically related to this product
+});
+```
+
+> **Note:** Fuzzy relations are parsed and stored in schemas but the AI-powered matching functionality is planned for future releases.
+
+## Directives
+
+Directives are special fields prefixed with `$` that configure schema-level behavior:
+
+### `$type` (Required)
+
+The entity/table name:
+
+```typescript
+{
+  $type: 'User',
+}
+```
+
+### `$partitionBy`
+
+Partition keys for data distribution:
+
+```typescript
+{
+  $type: 'Event',
+  $partitionBy: ['tenantId'],           // Single partition key
+  // or
+  $partitionBy: ['year', 'month'],      // Composite partition key
+}
+```
+
+### `$index`
+
+Secondary indexes for query optimization:
+
+```typescript
+{
+  $type: 'User',
+  $index: [
+    ['email'],                    // Single-field index
+    ['lastName', 'firstName'],    // Composite index
+    ['createdAt'],               // Temporal index
+  ],
+}
+```
+
+### `$fts` (Full-Text Search)
+
+Fields to include in full-text search:
+
+```typescript
+{
+  $type: 'Article',
+  $fts: ['title', 'content', 'tags'],
+
+  title: 'string!',
+  content: 'text',
+  tags: 'string[]',
+}
+```
+
+### `$vector`
+
+Fields for vector similarity search:
+
+```typescript
+{
+  $type: 'Document',
+  $vector: 'embedding',
+
+  content: 'text',
+  embedding: 'float[1536]',  // Vector field (e.g., for embeddings)
+}
+```
+
+## Complete Example
+
+Here's a comprehensive example using all features:
+
+```typescript
+import { parseSchema } from 'icetype';
+
+export const UserSchema = parseSchema({
+  $type: 'User',
+  $partitionBy: ['tenantId'],
+  $index: [['email'], ['createdAt']],
+
+  // Primary key
+  id: 'uuid!',
+
+  // Basic fields
+  email: 'string#',
+  name: 'string',
+  bio: 'text?',
+
+  // Typed fields
+  age: 'int?',
+  balance: 'decimal(10,2) = 0.00',
+  isActive: 'bool = true',
+
+  // Arrays
+  tags: 'string[]',
+  permissions: 'string[]?',
+
+  // Temporal
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp?',
+  birthDate: 'date?',
+
+  // Partition key
+  tenantId: 'string!',
+
+  // Relations
+  posts: '<- Post.author[]',
+  organization: '-> Organization?',
+});
+
+export const PostSchema = parseSchema({
+  $type: 'Post',
+  $index: [['authorId'], ['publishedAt']],
+  $fts: ['title', 'content'],
+
+  id: 'uuid!',
+  title: 'string!',
+  slug: 'string#',
+  content: 'text',
+  status: 'string = "draft"',
+
+  authorId: 'uuid!',
+  author: '-> User!',
+
+  publishedAt: 'timestamp?',
+  createdAt: 'timestamp',
+});
+```

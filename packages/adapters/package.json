@@ -27,6 +27,14 @@
   ],
   "author": "Nathan Clevenger",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dot-do/icetype.git"
+  },
+  "homepage": "https://github.com/dot-do/icetype",
+  "bugs": {
+    "url": "https://github.com/dot-do/icetype/issues"
+  },
   "dependencies": {
     "@icetype/core": "workspace:*",
     "@icetype/iceberg": "workspace:*"

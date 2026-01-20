@@ -1,0 +1,161 @@
+---
+title: Getting Started
+description: Learn how to install IceType and define your first schema.
+---
+
+# Getting Started
+
+This guide will help you get started with IceType, from installation to defining your first schema and generating TypeScript types.
+
+## Installation
+
+Install IceType using your preferred package manager:
+
+```bash
+npm install icetype
+# or
+pnpm add icetype
+# or
+yarn add icetype
+```
+
+## Define Your First Schema
+
+Create a new file `schema.ts` (or `schema.js`) with your schema definition:
+
+```typescript
+import { parseSchema } from 'icetype';
+
+// Define a User schema
+export const UserSchema = parseSchema({
+  $type: 'User',
+  $partitionBy: ['tenantId'],
+  $index: [['email'], ['createdAt']],
+
+  // Fields with modifiers
+  id: 'uuid!',              // Required UUID (unique)
+  email: 'string#',         // Indexed string
+  name: 'string',           // Regular string
+  age: 'int?',              // Optional integer
+  isActive: 'bool = true',  // Boolean with default
+  tenantId: 'string!',      // Required partition key
+  createdAt: 'timestamp',   // Timestamp field
+  tags: 'string[]',         // Array of strings
+});
+
+// Define a Post schema with relations
+export const PostSchema = parseSchema({
+  $type: 'Post',
+  $index: [['authorId'], ['publishedAt']],
+  $fts: ['title', 'content'],  // Full-text search fields
+
+  id: 'uuid!',
+  title: 'string!',
+  content: 'text',
+  authorId: 'uuid!',
+  author: '-> User!',           // Forward relation to User
+  publishedAt: 'timestamp?',
+});
+```
+
+## Validate Your Schema
+
+Validate your schema to catch any syntax errors or inconsistencies:
+
+```typescript
+import { validateSchema } from 'icetype';
+
+const result = validateSchema(UserSchema);
+
+if (!result.valid) {
+  console.error('Schema validation errors:', result.errors);
+} else {
+  console.log('Schema is valid!');
+}
+```
+
+## Generate TypeScript Types
+
+Use the CLI to generate TypeScript interfaces from your schema:
+
+```bash
+# Using tsx to run TypeScript directly
+npx tsx node_modules/.bin/ice generate --schema ./schema.ts --output ./types.ts
+
+# Or compile to JS first
+npx tsc schema.ts
+ice generate --schema ./schema.js --output ./types.ts
+```
+
+This generates type-safe TypeScript interfaces:
+
+```typescript
+// Generated types.ts
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  age?: number;
+  isActive: boolean;
+  tenantId: string;
+  createdAt: Date;
+  tags: string[];
+}
+
+export interface Post {
+  id: string;
+  title: string;
+  content?: string;
+  authorId: string;
+  publishedAt?: Date;
+}
+```
+
+## Generate Iceberg Metadata
+
+Export your schema to Apache Iceberg format for data lake integration:
+
+```typescript
+import { generateIcebergMetadata } from 'icetype';
+
+const metadata = generateIcebergMetadata(
+  UserSchema,
+  's3://my-bucket/tables/users',
+  {
+    'write.parquet.compression-codec': 'zstd',
+  }
+);
+
+// Write to storage
+console.log(JSON.stringify(metadata, null, 2));
+```
+
+Or use the CLI:
+
+```bash
+ice iceberg export --schema ./schema.js --output ./metadata.json --location s3://bucket/table
+```
+
+## Type Inference
+
+IceType can automatically infer types from JavaScript values:
+
+```typescript
+import { inferType } from 'icetype';
+
+inferType('hello')                    // 'string'
+inferType(42)                         // 'int'
+inferType(3.14)                       // 'float'
+inferType(true)                       // 'bool'
+inferType('2024-01-15')               // 'date'
+inferType('2024-01-15T10:30:00Z')     // 'timestamp'
+inferType('550e8400-e29b-41d4-a716-446655440000') // 'uuid'
+inferType([1, 2, 3])                  // 'int[]'
+inferType({ foo: 'bar' })             // 'json'
+```
+
+## Next Steps
+
+- [Schema Language Reference](/schema-language) - Learn all field modifiers and directives
+- [CLI Documentation](/cli) - Complete CLI command reference
+- [API Reference](/api/core) - Detailed API documentation

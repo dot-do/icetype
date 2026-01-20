@@ -1,0 +1,63 @@
+---
+title: IceType
+description: A type-safe, concise schema language with Apache Iceberg and Parquet schema generation.
+---
+
+# IceType
+
+IceType is a type-safe, concise schema language that compiles to multiple backends including Apache Iceberg metadata and Parquet schemas.
+
+## Features
+
+- **Concise Syntax** - Define schemas with minimal boilerplate using intuitive field modifiers
+- **Type Safety** - Full TypeScript support with generated types from your schemas
+- **Apache Iceberg** - Generate Iceberg table metadata for data lake architectures
+- **Parquet Schemas** - Create Parquet schema definitions for columnar storage
+- **Extensible Adapters** - Plugin architecture for custom output formats
+
+## Quick Example
+
+```typescript
+import { parseSchema, validateSchema } from 'icetype';
+
+const userSchema = parseSchema({
+  $type: 'User',
+  $partitionBy: ['tenantId'],
+  $index: [['email'], ['createdAt']],
+
+  id: 'uuid!',           // Required UUID
+  email: 'string#',      // Indexed string
+  name: 'string',        // Regular string
+  age: 'int?',           // Optional integer
+  status: 'string = "active"',  // Default value
+  posts: '<- Post.author[]',    // Backward relation
+});
+
+// Validate the schema
+const result = validateSchema(userSchema);
+```
+
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| [`icetype`](https://npmjs.com/package/icetype) | Main entry point - re-exports all packages + CLI |
+| [`@icetype/core`](/api/core) | Parser, types, and validation |
+| [`@icetype/iceberg`](/api/iceberg) | Iceberg metadata and Parquet schema generation |
+| [`@icetype/adapters`](/api/adapters) | Adapter abstraction layer for schema transformations |
+| [`@icetype/cli`](/cli) | CLI tools |
+
+## Installation
+
+```bash
+npm install icetype
+# or
+pnpm add icetype
+```
+
+## Next Steps
+
+- [Getting Started](/getting-started) - Learn how to define your first schema
+- [Schema Language](/schema-language) - Complete reference for IceType syntax
+- [CLI Reference](/cli) - Command-line tools documentation
+- [API Reference](/api/core) - Detailed API documentation

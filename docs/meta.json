@@ -1,0 +1,12 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "getting-started",
+    "---Guides---",
+    "schema-language",
+    "cli",
+    "---API Reference---",
+    "api"
+  ]
+}

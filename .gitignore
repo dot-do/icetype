@@ -29,3 +29,6 @@ pnpm-debug.log
 # Example outputs (generated)
 examples/*/output/
 examples/*/generated/
+# Docs build output
+apps/docs/.next/
+apps/docs/out/
