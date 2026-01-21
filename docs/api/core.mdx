@@ -1,11 +1,11 @@
 ---
 title: "@icetype/core API"
-description: API reference for the @icetype/core package - parser, types, and validation.
+description: API reference for the @icetype/core package - parser, types, validation, migrations, and type mappings.
 ---
 
 # @icetype/core API
 
-The `@icetype/core` package provides the core functionality for IceType: parsing schemas, validating them, and inferring types.
+The `@icetype/core` package provides the core functionality for IceType: parsing schemas, validating them, inferring types, managing migrations, and type mappings to various backends.
 
 ## Installation
 
@@ -15,7 +15,7 @@ npm install @icetype/core
 pnpm add @icetype/core
 ```
 
-## Functions
+## Parsing Functions
 
 ### `parseSchema(definition)`
 
@@ -54,10 +54,13 @@ Parses a single field definition string.
 import { parseField } from '@icetype/core';
 
 const field = parseField('string#');
-// { type: 'string', modifiers: ['indexed'], required: true }
+// { type: 'string', isIndexed: true, isUnique: true }
 
 const optionalArray = parseField('int[]?');
-// { type: 'int', modifiers: ['optional'], isArray: true, required: false }
+// { type: 'int', isArray: true, isOptional: true }
+
+const decimal = parseField('decimal(10,2)');
+// { type: 'decimal', precision: 10, scale: 2 }
 ```
 
 **Parameters:**
@@ -77,11 +80,14 @@ Parses a relation definition string.
 ```typescript
 import { parseRelation } from '@icetype/core';
 
-const forward = parseRelation('-> User!');
-// { operator: '->', target: 'User', required: true }
+const forward = parseRelation('-> User');
+// { operator: '->', targetType: 'User' }
 
-const backward = parseRelation('<- Post.author[]');
-// { operator: '<-', target: 'Post', field: 'author', isArray: true }
+const backward = parseRelation('<- Post.author');
+// { operator: '<-', targetType: 'Post', inverse: 'author' }
+
+const fuzzy = parseRelation('~> Category');
+// { operator: '~>', targetType: 'Category' }
 ```
 
 **Parameters:**
@@ -106,18 +112,48 @@ const directives = parseDirectives({
   $partitionBy: ['tenantId'],
   $index: [['email'], ['createdAt']],
   $fts: ['bio'],
+  $vector: { embedding: 1536 },
 });
 // {
-//   type: 'User',
 //   partitionBy: ['tenantId'],
-//   index: [['email'], ['createdAt']],
-//   fts: ['bio']
+//   index: [{ fields: ['email'], unique: false }, ...],
+//   fts: ['bio'],
+//   vector: [{ field: 'embedding', dimensions: 1536 }]
 // }
 ```
 
 **Returns:** `SchemaDirectives`
 
 ---
+
+### `tokenize(input)`
+
+Tokenizes a field definition string into tokens for advanced parsing.
+
+```typescript
+import { tokenize } from '@icetype/core';
+
+const tokens = tokenize('string# = "default"');
+// [
+//   { type: 'TYPE', value: 'string', line: 1, column: 1 },
+//   { type: 'MODIFIER', value: '#', line: 1, column: 7 },
+//   { type: 'EQUALS', value: '=', line: 1, column: 9 },
+//   { type: 'STRING', value: 'default', line: 1, column: 11 },
+//   { type: 'EOF', value: '', line: 1, column: 21 }
+// ]
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `input` | `string` | String to tokenize |
+
+**Returns:** `Token[]`
+
+---
+
+## Validation Functions
 
 ### `validateSchema(schema)`
 
@@ -130,6 +166,7 @@ const schema = parseSchema({
   $type: 'User',
   id: 'uuid!',
   email: 'string#',
+  $partitionBy: ['nonexistent'], // Invalid: field doesn't exist
 });
 
 const result = validateSchema(schema);
@@ -138,6 +175,7 @@ if (result.valid) {
   console.log('Schema is valid');
 } else {
   console.error('Errors:', result.errors);
+  console.warn('Warnings:', result.warnings);
 }
 ```
 
@@ -153,16 +191,19 @@ if (result.valid) {
 interface ValidationResult {
   valid: boolean;
   errors: ValidationError[];
+  warnings: ValidationError[];
 }
 
 interface ValidationError {
-  field?: string;
+  path: string;
   message: string;
   code: string;
 }
 ```
 
 ---
+
+## Type Inference
 
 ### `inferType(value)`
 
@@ -175,13 +216,14 @@ inferType('hello')                    // 'string'
 inferType(42)                         // 'int'
 inferType(3.14)                       // 'float'
 inferType(true)                       // 'bool'
-inferType(null)                       // 'json'
+inferType(null)                       // 'json?'
 inferType('2024-01-15')               // 'date'
 inferType('2024-01-15T10:30:00Z')     // 'timestamp'
 inferType('550e8400-e29b-41d4-a716-446655440000') // 'uuid'
 inferType([1, 2, 3])                  // 'int[]'
 inferType(['a', 'b'])                 // 'string[]'
 inferType({ foo: 'bar' })             // 'json'
+inferType(9007199254740993n)          // 'bigint'
 ```
 
 **Parameters:**
@@ -194,30 +236,6 @@ inferType({ foo: 'bar' })             // 'json'
 
 ---
 
-### `tokenize(input)`
-
-Tokenizes a field definition string into tokens.
-
-```typescript
-import { tokenize } from '@icetype/core';
-
-const tokens = tokenize('string# = "default"');
-// [
-//   { type: 'identifier', value: 'string' },
-//   { type: 'modifier', value: '#' },
-//   { type: 'equals', value: '=' },
-//   { type: 'string', value: 'default' }
-// ]
-```
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| `input` | `string` | String to tokenize |
-
-**Returns:** `Token[]`
-
 ## Type Guards
 
 ### `isValidPrimitiveType(type)`
@@ -227,9 +245,10 @@ Checks if a string is a valid primitive type.
 ```typescript
 import { isValidPrimitiveType } from '@icetype/core';
 
-isValidPrimitiveType('string')  // true
-isValidPrimitiveType('int')     // true
-isValidPrimitiveType('foo')     // false
+isValidPrimitiveType('string')    // true
+isValidPrimitiveType('int')       // true
+isValidPrimitiveType('timestamp') // true
+isValidPrimitiveType('foo')       // false
 ```
 
 ---
@@ -241,9 +260,10 @@ Checks if a character is a valid field modifier.
 ```typescript
 import { isValidModifier } from '@icetype/core';
 
-isValidModifier('!')  // true
-isValidModifier('#')  // true
-isValidModifier('?')  // true
+isValidModifier('!')  // true (required/unique)
+isValidModifier('#')  // true (indexed/unique)
+isValidModifier('?')  // true (optional)
+isValidModifier('')   // true (no modifier)
 isValidModifier('x')  // false
 ```
 
@@ -256,12 +276,346 @@ Checks if a string is a valid relation operator.
 ```typescript
 import { isValidRelationOperator } from '@icetype/core';
 
-isValidRelationOperator('->')  // true
-isValidRelationOperator('<-')  // true
-isValidRelationOperator('~>')  // true
-isValidRelationOperator('<~')  // true
+isValidRelationOperator('->')  // true (forward relation)
+isValidRelationOperator('<-')  // true (backward relation)
+isValidRelationOperator('~>')  // true (fuzzy forward)
+isValidRelationOperator('<~')  // true (fuzzy backward)
 isValidRelationOperator('=>')  // false
 ```
+
+---
+
+### `isValidParametricType(type)`
+
+Checks if a string is a valid parametric type (types with numeric parameters).
+
+```typescript
+import { isValidParametricType } from '@icetype/core';
+
+isValidParametricType('decimal')  // true
+isValidParametricType('varchar')  // true
+isValidParametricType('char')     // true
+isValidParametricType('fixed')    // true
+isValidParametricType('string')   // false
+```
+
+---
+
+### `isValidGenericType(type)`
+
+Checks if a string is a valid generic type (types with type parameters).
+
+```typescript
+import { isValidGenericType } from '@icetype/core';
+
+isValidGenericType('map')     // true
+isValidGenericType('struct')  // true
+isValidGenericType('enum')    // true
+isValidGenericType('ref')     // true
+isValidGenericType('list')    // true
+isValidGenericType('string')  // false
+```
+
+---
+
+## Schema Diff Functions
+
+### `diffSchemas(oldSchema, newSchema)`
+
+Compare two IceType schemas and detect differences.
+
+```typescript
+import { parseSchema, diffSchemas } from '@icetype/core';
+
+const oldSchema = parseSchema({ $type: 'User', id: 'uuid!', email: 'string#' });
+const newSchema = parseSchema({ $type: 'User', id: 'uuid!', email: 'string#', name: 'string!' });
+
+const diff = diffSchemas(oldSchema, newSchema);
+console.log(diff.changes);
+// [{ type: 'add_field', field: 'name', definition: {...} }]
+console.log(diff.isBreaking); // true (adding required field is breaking)
+```
+
+**Returns:** `SchemaDiff`
+
+```typescript
+interface SchemaDiff {
+  schemaName: string;
+  changes: SchemaChange[];
+  isBreaking: boolean;
+}
+
+type SchemaChange =
+  | { type: 'add_field'; field: string; definition: FieldDefinition }
+  | { type: 'remove_field'; field: string }
+  | { type: 'rename_field'; oldName: string; newName: string }
+  | { type: 'change_type'; field: string; oldType: string; newType: string }
+  | { type: 'change_modifier'; field: string; oldModifier: string; newModifier: string }
+  | { type: 'change_directive'; directive: string; oldValue: unknown; newValue: unknown };
+```
+
+---
+
+## Migration Functions
+
+### `createMigrationFromDiff(diff, fromVersion, toVersion, options?)`
+
+Create a Migration from a SchemaDiff.
+
+```typescript
+import { diffSchemas, createMigrationFromDiff, createSchemaVersion } from '@icetype/core';
+
+const diff = diffSchemas(oldSchema, newSchema);
+const migration = createMigrationFromDiff(
+  diff,
+  createSchemaVersion(1, 0, 0),
+  createSchemaVersion(1, 1, 0),
+  { description: 'Add user name field' }
+);
+
+console.log(migration.operations);
+// [{ op: 'addColumn', table: 'User', column: 'name', type: 'string', nullable: false }]
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `diff` | `SchemaDiff` | The schema diff to convert |
+| `fromVersion` | `SchemaVersion` | The source schema version |
+| `toVersion` | `SchemaVersion` | The target schema version |
+| `options` | `CreateMigrationOptions` | Optional: description, id, timestamp |
+
+**Returns:** `Migration`
+
+---
+
+### `isBreakingMigration(migration)`
+
+Check if a migration contains breaking changes.
+
+```typescript
+import { isBreakingMigration } from '@icetype/core';
+
+if (isBreakingMigration(migration)) {
+  console.warn('This migration may cause data loss!');
+}
+```
+
+Breaking changes include:
+- Dropping columns
+- Making nullable columns required
+- Narrowing type changes (e.g., `long` to `int`)
+- Dropping constraints
+
+---
+
+### `validateMigration(migration)`
+
+Validate a migration for correctness.
+
+```typescript
+import { validateMigration } from '@icetype/core';
+
+const result = validateMigration(migration);
+if (!result.valid) {
+  console.error('Invalid migration:', result.errors);
+}
+```
+
+---
+
+### `mergeMigrations(migrations)`
+
+Merge multiple sequential migrations into a single migration.
+
+```typescript
+import { mergeMigrations } from '@icetype/core';
+
+const merged = mergeMigrations([migration1, migration2, migration3]);
+// merged.fromVersion equals migration1.fromVersion
+// merged.toVersion equals migration3.toVersion
+```
+
+---
+
+## Version Functions
+
+### `createSchemaVersion(major, minor, patch)`
+
+Creates a new SchemaVersion.
+
+```typescript
+import { createSchemaVersion } from '@icetype/core';
+
+const version = createSchemaVersion(1, 2, 3);
+console.log(version.major); // 1
+console.log(version.minor); // 2
+console.log(version.patch); // 3
+```
+
+---
+
+### `parseSchemaVersion(versionString)`
+
+Parses a version string in the format "major.minor.patch".
+
+```typescript
+import { parseSchemaVersion } from '@icetype/core';
+
+const version = parseSchemaVersion('1.2.3');
+console.log(version.major); // 1
+```
+
+---
+
+### `serializeSchemaVersion(version)`
+
+Serializes a SchemaVersion to a string.
+
+```typescript
+import { createSchemaVersion, serializeSchemaVersion } from '@icetype/core';
+
+const version = createSchemaVersion(1, 2, 3);
+console.log(serializeSchemaVersion(version)); // "1.2.3"
+```
+
+---
+
+### `compareVersions(a, b)`
+
+Compares two SchemaVersions.
+
+```typescript
+import { createSchemaVersion, compareVersions } from '@icetype/core';
+
+const v1 = createSchemaVersion(1, 0, 0);
+const v2 = createSchemaVersion(2, 0, 0);
+console.log(compareVersions(v1, v2)); // -1 (v1 < v2)
+console.log(compareVersions(v2, v1)); // 1 (v2 > v1)
+console.log(compareVersions(v1, v1)); // 0 (equal)
+```
+
+---
+
+### `isCompatible(older, newer)`
+
+Checks if a migration from an older version to a newer version is safe.
+
+```typescript
+import { createSchemaVersion, isCompatible } from '@icetype/core';
+
+const v1 = createSchemaVersion(1, 0, 0);
+const v2 = createSchemaVersion(1, 1, 0);
+const v3 = createSchemaVersion(2, 0, 0);
+
+console.log(isCompatible(v1, v2)); // true (minor increment)
+console.log(isCompatible(v1, v3)); // false (major increment = breaking)
+```
+
+---
+
+### `incrementMajor(version)`, `incrementMinor(version)`, `incrementPatch(version)`
+
+Increment version components.
+
+```typescript
+import { createSchemaVersion, incrementMajor, incrementMinor, incrementPatch, serializeSchemaVersion } from '@icetype/core';
+
+const v1 = createSchemaVersion(1, 2, 3);
+
+console.log(serializeSchemaVersion(incrementMajor(v1))); // "2.0.0"
+console.log(serializeSchemaVersion(incrementMinor(v1))); // "1.3.0"
+console.log(serializeSchemaVersion(incrementPatch(v1))); // "1.2.4"
+```
+
+---
+
+## Type Mapping Functions
+
+Get type mappings between IceType and various backend systems.
+
+### `getTypeMapping(iceType)`
+
+Get the complete type mapping for an IceType.
+
+```typescript
+import { getTypeMapping } from '@icetype/core';
+
+const mapping = getTypeMapping('uuid');
+console.log(mapping);
+// {
+//   iceberg: 'uuid',
+//   parquet: 'FIXED_LEN_BYTE_ARRAY',
+//   duckdb: 'UUID',
+//   clickhouse: 'UUID',
+//   postgres: 'UUID'
+// }
+```
+
+---
+
+### Backend-Specific Type Functions
+
+```typescript
+import {
+  getIcebergType,
+  getParquetType,
+  getDuckDBType,
+  getClickHouseType,
+  getPostgresType,
+} from '@icetype/core';
+
+// Get Iceberg type
+getIcebergType('int')       // 'int'
+getIcebergType('timestamp') // 'timestamp'
+
+// Get Parquet type
+getParquetType('int')       // 'INT32'
+getParquetType('string')    // 'BYTE_ARRAY'
+
+// Get DuckDB type
+getDuckDBType('int')        // 'INTEGER'
+getDuckDBType('uuid')       // 'UUID'
+
+// Get ClickHouse type
+getClickHouseType('int')       // 'Int32'
+getClickHouseType('timestamp') // 'DateTime64(3)'
+
+// Get PostgreSQL type
+getPostgresType('int')   // 'INTEGER'
+getPostgresType('json')  // 'JSONB'
+```
+
+---
+
+### `isKnownType(iceType)`
+
+Check if an IceType is a known primitive type with mappings.
+
+```typescript
+import { isKnownType, TYPE_MAPPINGS } from '@icetype/core';
+
+if (isKnownType('string')) {
+  // TypeScript knows 'string' is a valid key
+  const mapping = TYPE_MAPPINGS['string'];
+}
+```
+
+---
+
+### `getSupportedTypes()`
+
+Get all supported IceType primitive types.
+
+```typescript
+import { getSupportedTypes } from '@icetype/core';
+
+const types = getSupportedTypes();
+// ['string', 'text', 'varchar', 'int', 'long', 'bigint', 'float', 'double', ...]
+```
+
+---
 
 ## Classes
 
@@ -281,13 +635,45 @@ const schema = parser.parse({
   email: 'string#',
 });
 
-// Access parser internals
-const fieldDef = parser.parseFieldDefinition('string#');
+// Parse individual components
+const field = parser.parseField('string#');
+const relation = parser.parseRelation('-> User');
+const directives = parser.parseDirectives({ $partitionBy: ['id'] });
+
+// Validate a schema
+const result = parser.validateSchema(schema);
 ```
+
+---
+
+## Error Classes
+
+### `IceTypeError`
+
+Base error class for all IceType errors.
+
+```typescript
+import { IceTypeError } from '@icetype/core';
+
+throw new IceTypeError('Something went wrong', {
+  code: 'ICETYPE_1000',
+  context: { field: 'email', value: 'invalid' },
+});
+```
+
+**Properties:**
+- `code: string` - Error code for programmatic handling
+- `context?: Record<string, unknown>` - Additional error context
+
+**Methods:**
+- `format(): string` - Format error with code and context
+- `toJSON(): Record<string, unknown>` - Serialize error for JSON
+
+---
 
 ### `ParseError`
 
-Error class thrown when parsing fails.
+Error thrown when parsing IceType schema syntax fails.
 
 ```typescript
 import { parseSchema, ParseError } from '@icetype/core';
@@ -295,15 +681,143 @@ import { parseSchema, ParseError } from '@icetype/core';
 try {
   parseSchema({
     $type: 'User',
-    id: 'invalid-type!',
+    id: '?invalid!',
   });
 } catch (error) {
   if (error instanceof ParseError) {
     console.error('Parse error:', error.message);
-    console.error('Position:', error.position);
+    console.error('Line:', error.line);
+    console.error('Column:', error.column);
+    console.error('Path:', error.path);
   }
 }
 ```
+
+**Properties:**
+- `line: number` - Line number where error occurred
+- `column: number` - Column number where error occurred
+- `path?: string` - Field or path that caused the error
+
+**Methods:**
+- `formatWithSource(source?: string): string` - Format error with source context
+
+---
+
+### `SchemaValidationError`
+
+Error thrown when schema validation fails.
+
+```typescript
+import { SchemaValidationError, ErrorCodes } from '@icetype/core';
+
+throw new SchemaValidationError('Unknown field type', {
+  path: 'user.email',
+  value: 'invalidType',
+  code: ErrorCodes.UNKNOWN_TYPE,
+});
+```
+
+---
+
+### `AdapterError`
+
+Error thrown when adapter operations fail.
+
+```typescript
+import { AdapterError, ErrorCodes } from '@icetype/core';
+
+throw new AdapterError('Missing required option: location', {
+  adapterName: 'iceberg',
+  operation: 'transform',
+  code: ErrorCodes.MISSING_ADAPTER_OPTION,
+});
+```
+
+---
+
+### `SchemaLoadError`
+
+Error thrown when schema loading fails, with structured context for helpful error messages.
+
+```typescript
+import { SchemaLoadError, ErrorCodes, SchemaLoadErrorDocs } from '@icetype/core';
+
+throw new SchemaLoadError('Module not found', {
+  filePath: './schema.ts',
+  code: ErrorCodes.MODULE_LOAD_ERROR,
+  errorContext: {
+    errorType: 'import_error',
+    missingModule: '@myapp/shared',
+    isPathAlias: true,
+    suggestions: [
+      { message: 'Check your tsconfig.json paths configuration', docLink: SchemaLoadErrorDocs.PATH_ALIASES },
+    ],
+    docLink: SchemaLoadErrorDocs.MODULE_RESOLUTION,
+  },
+});
+```
+
+**Methods:**
+- `getSuggestions(): SchemaLoadSuggestion[]` - Get suggestions for fixing
+- `getDocLink(): string | undefined` - Get documentation link
+- `hasLocation(): boolean` - Check if line number is available
+- `getLocationString(): string | undefined` - Get `file:line:column` string
+
+---
+
+## Error Type Guards
+
+```typescript
+import {
+  isIceTypeError,
+  isParseError,
+  isSchemaValidationError,
+  isAdapterError,
+  isSchemaLoadError,
+  getErrorMessage,
+} from '@icetype/core';
+
+try {
+  // ... some operation
+} catch (error) {
+  if (isParseError(error)) {
+    console.error('Parse error at line', error.line);
+  } else if (isSchemaValidationError(error)) {
+    console.error('Validation error at', error.path);
+  } else {
+    console.error(getErrorMessage(error));
+  }
+}
+```
+
+---
+
+## Error Codes
+
+All error codes are available via the `ErrorCodes` constant:
+
+```typescript
+import { ErrorCodes } from '@icetype/core';
+
+// Parse errors (1xxx)
+ErrorCodes.PARSE_ERROR              // 'ICETYPE_1000'
+ErrorCodes.EMPTY_TYPE               // 'ICETYPE_1001'
+ErrorCodes.UNKNOWN_TYPE             // 'ICETYPE_1003'
+
+// Schema validation errors (2xxx)
+ErrorCodes.SCHEMA_VALIDATION_ERROR  // 'ICETYPE_2000'
+ErrorCodes.MISSING_SCHEMA_NAME      // 'ICETYPE_2001'
+
+// Adapter errors (3xxx)
+ErrorCodes.ADAPTER_ERROR            // 'ICETYPE_3000'
+ErrorCodes.ADAPTER_NOT_FOUND        // 'ICETYPE_3002'
+
+// Schema loader errors (4xxx)
+ErrorCodes.SCHEMA_LOAD_ERROR        // 'ICETYPE_4000'
+ErrorCodes.FILE_NOT_FOUND           // 'ICETYPE_4001'
+```
+
+---
 
 ## Types
 
@@ -313,13 +827,17 @@ The main schema type returned by `parseSchema()`.
 
 ```typescript
 interface IceTypeSchema {
-  id: SchemaId;
   name: string;
   fields: Map<string, FieldDefinition>;
   relations: Map<string, RelationDefinition>;
   directives: SchemaDirectives;
+  version: number;
+  createdAt: number;
+  updatedAt: number;
 }
 ```
+
+---
 
 ### `FieldDefinition`
 
@@ -327,17 +845,22 @@ Represents a parsed field.
 
 ```typescript
 interface FieldDefinition {
-  id: FieldId;
   name: string;
-  type: PrimitiveType | ParametricType;
-  required: boolean;
-  indexed: boolean;
-  unique: boolean;
+  type: string;
+  modifier: FieldModifier;
   isArray: boolean;
+  isOptional: boolean;
+  isUnique: boolean;
+  isIndexed: boolean;
   defaultValue?: unknown;
-  modifiers: FieldModifier[];
+  relation?: RelationDefinition;
+  precision?: number;  // For decimal types
+  scale?: number;      // For decimal types
+  length?: number;     // For varchar/char types
 }
 ```
+
+---
 
 ### `RelationDefinition`
 
@@ -345,15 +868,14 @@ Represents a parsed relation.
 
 ```typescript
 interface RelationDefinition {
-  id: RelationId;
-  name: string;
   operator: RelationOperator;
-  target: string;
-  targetField?: string;
-  required: boolean;
-  isArray: boolean;
+  targetType: string;
+  inverse?: string;
+  onDelete?: 'cascade' | 'set_null' | 'restrict';
 }
 ```
+
+---
 
 ### `SchemaDirectives`
 
@@ -361,17 +883,94 @@ Schema-level configuration.
 
 ```typescript
 interface SchemaDirectives {
-  type: string;
   partitionBy?: string[];
-  index?: string[][];
+  index?: IndexDirective[];
   fts?: string[];
-  vector?: string;
+  vector?: VectorDirective[];
+}
+
+interface IndexDirective {
+  fields: string[];
+  unique?: boolean;
+  name?: string;
+}
+
+interface VectorDirective {
+  field: string;
+  dimensions: number;
+  metric?: 'cosine' | 'euclidean' | 'dot';
 }
 ```
 
-### `PrimitiveType`
+---
 
-Union of all primitive type names.
+### `SchemaVersion`
+
+Semantic version for schema tracking.
+
+```typescript
+type SchemaVersion = {
+  readonly major: number;
+  readonly minor: number;
+  readonly patch: number;
+} & { readonly __brand: 'SchemaVersion' };
+```
+
+---
+
+### `Migration`
+
+Represents a complete schema migration.
+
+```typescript
+interface Migration {
+  id: string;
+  fromVersion: SchemaVersion;
+  toVersion: SchemaVersion;
+  timestamp: Date;
+  description?: string;
+  operations: MigrationOperation[];
+  isBreaking: boolean;
+}
+```
+
+---
+
+### `MigrationOperation`
+
+Union type for all migration operations.
+
+```typescript
+type MigrationOperation =
+  | { op: 'addColumn'; table: string; column: string; type: string; nullable: boolean; default?: unknown }
+  | { op: 'dropColumn'; table: string; column: string }
+  | { op: 'renameColumn'; table: string; oldName: string; newName: string }
+  | { op: 'alterColumn'; table: string; column: string; changes: ColumnChanges }
+  | { op: 'addIndex'; table: string; columns: string[]; unique: boolean; name?: string }
+  | { op: 'dropIndex'; table: string; indexName: string }
+  | { op: 'addConstraint'; table: string; constraint: Constraint }
+  | { op: 'dropConstraint'; table: string; constraintName: string };
+```
+
+---
+
+### `TypeMapping`
+
+Type mapping to backend systems.
+
+```typescript
+interface TypeMapping {
+  iceberg: string;
+  parquet: string;
+  duckdb: string;
+  clickhouse: string;
+  postgres: string;
+}
+```
+
+---
+
+### Primitive Types
 
 ```typescript
 type PrimitiveType =
@@ -380,17 +979,25 @@ type PrimitiveType =
   | 'float' | 'double'
   | 'bool' | 'boolean'
   | 'uuid'
-  | 'timestamp' | 'date' | 'time'
+  | 'timestamp' | 'timestamptz' | 'date' | 'time'
   | 'json' | 'binary';
+
+type ParametricType = 'decimal' | 'varchar' | 'char' | 'fixed';
+
+type GenericType = 'map' | 'struct' | 'enum' | 'ref' | 'list';
 ```
+
+---
 
 ### `FieldModifier`
 
 Field modifier characters.
 
 ```typescript
-type FieldModifier = '!' | '#' | '?';
+type FieldModifier = '!' | '#' | '?' | '';
 ```
+
+---
 
 ### `RelationOperator`
 
@@ -399,3 +1006,10 @@ Relation operator strings.
 ```typescript
 type RelationOperator = '->' | '<-' | '~>' | '<~';
 ```
+
+| Operator | Description |
+|----------|-------------|
+| `->` | Forward relation (direct foreign key) |
+| `<-` | Backward relation (reverse reference) |
+| `~>` | Fuzzy forward (weak reference, AI-powered matching) |
+| `<~` | Fuzzy backward (AI-powered reverse lookup) |
