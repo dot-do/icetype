@@ -1,14 +1,18 @@
 {
   "title": "API Reference",
+  "icon": "Code",
   "pages": [
     "core",
     "iceberg",
     "adapters",
-    "---SQL Adapters---",
+    "---SQL Databases---",
     "postgres",
+    "mysql",
+    "sqlite",
+    "---Analytics Engines---",
     "clickhouse",
     "duckdb",
-    "---ORM Adapters---",
+    "---ORM Integrations---",
     "drizzle",
     "prisma"
   ]

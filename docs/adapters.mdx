@@ -1,0 +1,254 @@
+---
+title: Adapters Overview
+description: Overview of all IceType adapters for generating output in various formats.
+---
+
+# Adapters Overview
+
+IceType uses **adapters** to transform schemas into different output formats. Each adapter is a separate package that you can install as needed.
+
+<Callout type="info" title="Adapter Architecture">
+Adapters implement a common interface, making it easy to generate consistent output for multiple backends from a single schema definition.
+</Callout>
+
+## How Adapters Work
+
+Adapters implement a simple interface that transforms an IceType schema into a target format:
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { transformToPostgresDDL } from '@icetype/postgres';
+import { generateIcebergMetadata } from '@icetype/iceberg';
+
+// Define your schema once
+const schema = parseSchema({
+  $type: 'User',
+  $partitionBy: ['tenantId'],
+  $index: [['email'], ['createdAt']],
+
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+  tenantId: 'string!',
+  createdAt: 'timestamp',
+});
+
+// Generate PostgreSQL DDL
+const postgresDDL = transformToPostgresDDL(schema, { ifNotExists: true });
+
+// Generate Iceberg metadata
+const icebergMetadata = generateIcebergMetadata(schema, 's3://bucket/tables/users');
+```
+
+## Available Adapters
+
+### Data Lake / Analytics
+
+| Adapter | Package | Description |
+|---------|---------|-------------|
+| [Iceberg](/api/iceberg) | `@icetype/iceberg` | Apache Iceberg table metadata and Parquet schemas |
+| [ClickHouse](/api/clickhouse) | `@icetype/clickhouse` | ClickHouse DDL for real-time analytics |
+| [DuckDB](/api/duckdb) | `@icetype/duckdb` | DuckDB DDL for embedded analytics |
+
+### SQL Databases
+
+| Adapter | Package | Description |
+|---------|---------|-------------|
+| [PostgreSQL](/api/postgres) | `@icetype/postgres` | PostgreSQL DDL with native types |
+| [MySQL](/api/mysql) | `@icetype/mysql` | MySQL DDL for web applications |
+| [SQLite](/api/sqlite) | `@icetype/sqlite` | SQLite DDL for embedded/edge databases |
+
+### ORM Integrations
+
+| Adapter | Package | Description |
+|---------|---------|-------------|
+| [Drizzle](/api/drizzle) | `@icetype/drizzle` | Drizzle ORM schema generation |
+| [Prisma](/api/prisma) | `@icetype/prisma` | Prisma schema generation |
+
+## Installation
+
+Install only the adapters you need:
+
+```bash
+# Core (always required)
+npm install @icetype/core
+
+# Pick your adapters
+npm install @icetype/postgres    # PostgreSQL
+npm install @icetype/mysql       # MySQL
+npm install @icetype/sqlite      # SQLite
+npm install @icetype/iceberg     # Iceberg/Parquet
+npm install @icetype/clickhouse  # ClickHouse
+npm install @icetype/duckdb      # DuckDB
+npm install @icetype/drizzle     # Drizzle ORM
+npm install @icetype/prisma      # Prisma ORM
+```
+
+Or install the main `icetype` package which includes common adapters:
+
+```bash
+npm install icetype
+```
+
+## Adapter Comparison
+
+### Type Support
+
+| Type | PostgreSQL | MySQL | SQLite | ClickHouse | DuckDB | Iceberg |
+|------|------------|-------|--------|------------|--------|---------|
+| `string` | TEXT | VARCHAR(255) | TEXT | String | VARCHAR | string |
+| `int` | INTEGER | INT | INTEGER | Int32 | INTEGER | int |
+| `long` | BIGINT | BIGINT | INTEGER | Int64 | BIGINT | long |
+| `float` | REAL | FLOAT | REAL | Float32 | FLOAT | float |
+| `double` | DOUBLE | DOUBLE | REAL | Float64 | DOUBLE | double |
+| `bool` | BOOLEAN | TINYINT(1) | INTEGER | Bool | BOOLEAN | boolean |
+| `uuid` | UUID | CHAR(36) | TEXT | UUID | UUID | uuid |
+| `timestamp` | TIMESTAMPTZ | DATETIME | TEXT | DateTime | TIMESTAMP | timestamptz |
+| `json` | JSONB | JSON | TEXT | String | JSON | string |
+| `decimal` | NUMERIC | DECIMAL | REAL | Decimal | DECIMAL | decimal |
+| `string[]` | TEXT[] | JSON | TEXT (JSON) | Array(String) | VARCHAR[] | list |
+
+### Feature Support
+
+| Feature | PostgreSQL | MySQL | SQLite | ClickHouse | DuckDB | Iceberg |
+|---------|------------|-------|--------|------------|--------|---------|
+| Partitioning | (manual) | (manual) | No | Yes | (manual) | Yes |
+| Full-text search | Yes | Yes | Yes | Yes | Yes | No |
+| JSON queries | JSONB | JSON | json1 | JSONExtract | JSON | No |
+| Arrays | Native | JSON | JSON | Native | Native | Native |
+| STRICT mode | Yes | Yes | Yes (3.37+) | Yes | Yes | N/A |
+
+## Using Multiple Adapters
+
+A common pattern is to use IceType to maintain schema consistency across different databases:
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { transformToPostgresDDL } from '@icetype/postgres';
+import { transformToClickHouseDDL } from '@icetype/clickhouse';
+import { generateIcebergMetadata } from '@icetype/iceberg';
+
+// Single source of truth
+const eventSchema = parseSchema({
+  $type: 'Event',
+  $partitionBy: ['date'],
+  $index: [['userId'], ['timestamp']],
+
+  id: 'uuid!',
+  userId: 'string!',
+  eventType: 'string!',
+  payload: 'json',
+  timestamp: 'timestamp!',
+  date: 'date!',
+});
+
+// Transactional database (PostgreSQL)
+const postgresDDL = transformToPostgresDDL(eventSchema, {
+  ifNotExists: true,
+});
+
+// Analytics database (ClickHouse)
+const clickhouseDDL = transformToClickHouseDDL(eventSchema, {
+  engine: 'MergeTree',
+  orderBy: ['date', 'timestamp'],
+});
+
+// Data lake (Iceberg)
+const icebergMetadata = generateIcebergMetadata(
+  eventSchema,
+  's3://data-lake/events',
+  { 'write.parquet.compression-codec': 'zstd' }
+);
+```
+
+## Adapter Registry
+
+For programmatic adapter management, use the adapter registry:
+
+```typescript
+import { createAdapterRegistry } from '@icetype/adapters';
+import { PostgresAdapter } from '@icetype/postgres';
+import { MySQLAdapter } from '@icetype/mysql';
+import { IcebergAdapter } from '@icetype/iceberg';
+
+// Create a registry
+const registry = createAdapterRegistry();
+
+// Register adapters
+registry.register(new PostgresAdapter());
+registry.register(new MySQLAdapter());
+registry.register(new IcebergAdapter());
+
+// Use by name
+const adapter = registry.get('postgres');
+const ddl = adapter?.transform(schema, { ifNotExists: true });
+
+// List available adapters
+console.log(registry.list()); // ['postgres', 'mysql', 'iceberg']
+```
+
+## Creating Custom Adapters
+
+You can create custom adapters by implementing the `SchemaAdapter` interface:
+
+```typescript
+import type { SchemaAdapter } from '@icetype/adapters';
+import type { IceTypeSchema } from '@icetype/core';
+
+interface MyOutput {
+  // Your output structure
+}
+
+interface MyOptions {
+  // Your options
+}
+
+class MyCustomAdapter implements SchemaAdapter<MyOutput, MyOptions> {
+  readonly name = 'my-adapter';
+  readonly version = '1.0.0';
+
+  transform(schema: IceTypeSchema, options?: MyOptions): MyOutput {
+    // Transform the schema to your format
+    return {
+      // Your transformation logic
+    };
+  }
+}
+```
+
+See the [Adapters API Reference](/api/adapters) for more details on creating custom adapters.
+
+## Next Steps
+
+<Cards>
+  <Card
+    title="PostgreSQL Adapter"
+    description="Full PostgreSQL DDL generation with native types."
+    href="/api/postgres"
+  />
+  <Card
+    title="MySQL Adapter"
+    description="MySQL DDL for web applications."
+    href="/api/mysql"
+  />
+  <Card
+    title="SQLite Adapter"
+    description="SQLite for embedded/edge databases."
+    href="/api/sqlite"
+  />
+  <Card
+    title="Iceberg Adapter"
+    description="Data lake integration with partition specs."
+    href="/api/iceberg"
+  />
+  <Card
+    title="ClickHouse Adapter"
+    description="Real-time analytics database DDL."
+    href="/api/clickhouse"
+  />
+  <Card
+    title="DuckDB Adapter"
+    description="Embedded analytics database DDL."
+    href="/api/duckdb"
+  />
+</Cards>

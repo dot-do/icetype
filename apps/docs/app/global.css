@@ -1,3 +1,204 @@
 @import 'tailwindcss';
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
+
+/* IceType brand customizations */
+:root {
+  /* Layout width - slightly wider for code-heavy docs */
+  --fd-layout-width: 1400px;
+
+  /* Brand accent colors - Ice blue theme */
+  --fd-primary: 199 89% 48%;
+  --fd-primary-foreground: 0 0% 100%;
+
+  /* Better code block styling */
+  --fd-code-block-bg: 220 14% 10%;
+}
+
+.dark {
+  /* Dark mode accent */
+  --fd-primary: 199 89% 58%;
+  --fd-primary-foreground: 220 14% 10%;
+}
+
+/* Enhanced typography for better readability */
+.prose {
+  /* Slightly larger base font for better readability */
+  font-size: 1.0625rem;
+  line-height: 1.75;
+}
+
+/* Better heading hierarchy */
+.prose h1 {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.prose h2 {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin-top: 2.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid hsl(var(--fd-border));
+}
+
+.prose h3 {
+  font-weight: 600;
+  margin-top: 2rem;
+}
+
+/* Enhanced code blocks */
+.prose pre {
+  border: 1px solid hsl(var(--fd-border));
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Inline code styling */
+.prose :not(pre) > code {
+  background-color: hsl(var(--fd-muted));
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.875em;
+  font-weight: 500;
+}
+
+/* Better table styling */
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+.prose table th {
+  background-color: hsl(var(--fd-muted));
+  font-weight: 600;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border: 1px solid hsl(var(--fd-border));
+}
+
+.prose table td {
+  padding: 0.75rem 1rem;
+  border: 1px solid hsl(var(--fd-border));
+}
+
+.prose table tr:nth-child(even) {
+  background-color: hsl(var(--fd-muted) / 0.5);
+}
+
+/* Callouts/alerts styling enhancement */
+.prose blockquote {
+  border-left-width: 4px;
+  border-left-color: hsl(var(--fd-primary));
+  background-color: hsl(var(--fd-primary) / 0.05);
+  padding: 1rem 1.25rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+  font-style: normal;
+}
+
+.prose blockquote > p {
+  margin: 0;
+}
+
+/* Links with better visibility */
+.prose a {
+  color: hsl(var(--fd-primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+
+.prose a:hover {
+  color: hsl(var(--fd-primary) / 0.8);
+}
+
+/* Navigation sidebar improvements */
+.fd-sidebar-item {
+  border-radius: 0.5rem;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+/* Better list styling */
+.prose ul, .prose ol {
+  padding-left: 1.5rem;
+}
+
+.prose li {
+  margin-top: 0.375rem;
+  margin-bottom: 0.375rem;
+}
+
+/* Feature cards for landing page sections */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.feature-card {
+  padding: 1.5rem;
+  border: 1px solid hsl(var(--fd-border));
+  border-radius: 0.75rem;
+  background-color: hsl(var(--fd-card));
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.feature-card:hover {
+  border-color: hsl(var(--fd-primary));
+  box-shadow: 0 4px 12px hsl(var(--fd-primary) / 0.1);
+}
+
+/* Hero section for main docs page */
+.docs-hero {
+  text-align: center;
+  padding: 3rem 1rem;
+  margin-bottom: 2rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, hsl(var(--fd-primary) / 0.1) 0%, hsl(var(--fd-muted)) 100%);
+}
+
+.docs-hero h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.75rem;
+}
+
+.docs-hero p {
+  font-size: 1.25rem;
+  color: hsl(var(--fd-muted-foreground));
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Mobile responsiveness for code blocks */
+@media (max-width: 768px) {
+  .prose pre {
+    border-radius: 0;
+    margin-left: -1rem;
+    margin-right: -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .prose {
+    font-size: 1rem;
+  }
+
+  .prose table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .docs-hero h1 {
+    font-size: 2rem;
+  }
+
+  .docs-hero p {
+    font-size: 1.125rem;
+  }
+}

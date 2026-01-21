@@ -1,0 +1,9 @@
+{
+  "title": "Tutorials",
+  "icon": "BookOpen",
+  "pages": [
+    "migration-workflow",
+    "drizzle-integration",
+    "iceberg-analytics"
+  ]
+}

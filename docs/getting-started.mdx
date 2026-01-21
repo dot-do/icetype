@@ -7,17 +7,31 @@ description: Learn how to install IceType and define your first schema.
 
 This guide will help you get started with IceType, from installation to defining your first schema and generating TypeScript types.
 
+<Callout type="info">
+IceType works with Node.js 18+ and supports both CommonJS and ES modules.
+</Callout>
+
 ## Installation
 
 Install IceType using your preferred package manager:
 
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">
 ```bash
 npm install icetype
-# or
+```
+  </Tab>
+  <Tab value="pnpm">
+```bash
 pnpm add icetype
-# or
+```
+  </Tab>
+  <Tab value="yarn">
+```bash
 yarn add icetype
 ```
+  </Tab>
+</Tabs>
 
 ## Define Your First Schema
 
@@ -156,6 +170,20 @@ inferType({ foo: 'bar' })             // 'json'
 
 ## Next Steps
 
-- [Schema Language Reference](/schema-language) - Learn all field modifiers and directives
-- [CLI Documentation](/cli) - Complete CLI command reference
-- [API Reference](/api/core) - Detailed API documentation
+<Cards>
+  <Card
+    title="Schema Language Reference"
+    description="Learn all field modifiers, relations, and directives."
+    href="/schema-language"
+  />
+  <Card
+    title="CLI Documentation"
+    description="Complete CLI command reference for code generation."
+    href="/cli"
+  />
+  <Card
+    title="API Reference"
+    description="Detailed API documentation for all functions."
+    href="/api/core"
+  />
+</Cards>

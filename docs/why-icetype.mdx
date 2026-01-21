@@ -7,7 +7,9 @@ description: Understanding when and why to choose IceType over other schema solu
 
 Modern data engineering suffers from **schema proliferation**: you define your data model once for your application, again for your database, again for your data warehouse, and again for your analytics tools. Each definition drifts over time, creating maintenance burden and data quality issues.
 
+<Callout type="info" title="Single Source of Truth">
 IceType solves this by providing a **single source of truth** that compiles to multiple backends, with first-class support for analytical data formats like Apache Iceberg and Parquet.
+</Callout>
 
 ## The Schema Proliferation Problem
 
@@ -263,9 +265,23 @@ If you're building analytics pipelines on existing data without an application l
 
 Ready to try IceType? Start with the [Getting Started](/getting-started) guide to define your first schema.
 
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">
 ```bash
 npm install icetype
 ```
+  </Tab>
+  <Tab value="pnpm">
+```bash
+pnpm add icetype
+```
+  </Tab>
+  <Tab value="yarn">
+```bash
+yarn add icetype
+```
+  </Tab>
+</Tabs>
 
 ```typescript
 import { parseSchema, validateSchema } from 'icetype';
@@ -280,3 +296,21 @@ const schema = parseSchema({
 const result = validateSchema(schema);
 console.log(result.valid ? 'Schema is valid!' : result.errors);
 ```
+
+<Cards>
+  <Card
+    title="Getting Started Guide"
+    description="Install IceType and define your first schema in minutes."
+    href="/getting-started"
+  />
+  <Card
+    title="Compare vs Prisma"
+    description="Detailed comparison with Prisma ORM."
+    href="/vs-prisma"
+  />
+  <Card
+    title="Compare vs Drizzle"
+    description="Detailed comparison with Drizzle ORM."
+    href="/vs-drizzle"
+  />
+</Cards>

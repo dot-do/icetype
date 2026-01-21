@@ -7,6 +7,10 @@ description: Complete reference for IceType schema syntax, field modifiers, rela
 
 IceType uses a concise, expressive syntax for defining schemas. This reference covers all features of the schema language.
 
+<Callout type="info">
+IceType syntax is designed to be familiar to TypeScript developers while being more concise than alternatives like Prisma or Drizzle.
+</Callout>
+
 ## Basic Schema Structure
 
 A schema is defined using `parseSchema()` with an object containing field definitions and directives:
@@ -165,7 +169,9 @@ const ProductSchema = parseSchema({
 });
 ```
 
-> **Note:** Fuzzy relations are parsed and stored in schemas but the AI-powered matching functionality is planned for future releases.
+<Callout type="warn" title="Coming Soon">
+Fuzzy relations are parsed and stored in schemas but the AI-powered matching functionality is planned for future releases.
+</Callout>
 
 ## Directives
 

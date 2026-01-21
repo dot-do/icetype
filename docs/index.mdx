@@ -7,13 +7,34 @@ description: A type-safe, concise schema language with Apache Iceberg and Parque
 
 IceType is a type-safe, concise schema language that compiles to multiple backends including Apache Iceberg metadata and Parquet schemas.
 
+<Callout type="info" title="One Schema, Many Outputs">
+Define your data model once and generate TypeScript types, SQL DDL, Iceberg metadata, and more.
+</Callout>
+
 ## Features
 
-- **Concise Syntax** - Define schemas with minimal boilerplate using intuitive field modifiers
-- **Type Safety** - Full TypeScript support with generated types from your schemas
-- **Apache Iceberg** - Generate Iceberg table metadata for data lake architectures
-- **Parquet Schemas** - Create Parquet schema definitions for columnar storage
-- **Extensible Adapters** - Plugin architecture for custom output formats
+<Cards>
+  <Card
+    title="Concise Syntax"
+    description="Define schemas with minimal boilerplate using intuitive field modifiers like ! for required and # for indexed."
+    href="/schema-language"
+  />
+  <Card
+    title="Type Safety"
+    description="Full TypeScript support with generated types from your schemas for compile-time safety."
+    href="/getting-started"
+  />
+  <Card
+    title="Apache Iceberg"
+    description="Generate Iceberg table metadata for data lake architectures with partition specs and schema evolution."
+    href="/api/iceberg"
+  />
+  <Card
+    title="Multiple Adapters"
+    description="PostgreSQL, MySQL, SQLite, ClickHouse, DuckDB, Drizzle, Prisma, and more adapters available."
+    href="/adapters"
+  />
+</Cards>
 
 ## Quick Example
 
@@ -49,16 +70,45 @@ const result = validateSchema(userSchema);
 
 ## Installation
 
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">
 ```bash
 npm install icetype
-# or
+```
+  </Tab>
+  <Tab value="pnpm">
+```bash
 pnpm add icetype
 ```
+  </Tab>
+  <Tab value="yarn">
+```bash
+yarn add icetype
+```
+  </Tab>
+</Tabs>
 
 ## Next Steps
 
-- [Why IceType?](/why-icetype) - Learn when and why to choose IceType over alternatives
-- [Getting Started](/getting-started) - Learn how to define your first schema
-- [Schema Language](/schema-language) - Complete reference for IceType syntax
-- [CLI Reference](/cli) - Command-line tools documentation
-- [API Reference](/api/core) - Detailed API documentation
+<Cards>
+  <Card
+    title="Why IceType?"
+    description="Learn when and why to choose IceType over alternatives like Prisma, Drizzle, or plain SQL."
+    href="/why-icetype"
+  />
+  <Card
+    title="Getting Started"
+    description="Install IceType and define your first schema in minutes."
+    href="/getting-started"
+  />
+  <Card
+    title="Schema Language"
+    description="Complete reference for IceType syntax including field modifiers, relations, and directives."
+    href="/schema-language"
+  />
+  <Card
+    title="API Reference"
+    description="Detailed API documentation for all IceType functions and types."
+    href="/api/core"
+  />
+</Cards>

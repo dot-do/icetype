@@ -1,0 +1,1058 @@
+---
+title: Examples
+description: Practical examples of IceType schema definitions and code generation.
+---
+
+# Examples
+
+This page contains practical examples demonstrating common IceType patterns and use cases.
+
+<Callout type="info" title="Copy Examples">
+All code examples on this page can be copied directly into your project. Click the copy button on any code block to copy to clipboard.
+</Callout>
+
+## Basic Schema Definition
+
+### Simple Entity
+
+A basic entity with various field types:
+
+```typescript
+import { parseSchema } from 'icetype';
+
+export const UserSchema = parseSchema({
+  $type: 'User',
+
+  // Primary key - required and unique
+  id: 'uuid!',
+
+  // Required fields
+  email: 'string!',
+  name: 'string!',
+
+  // Optional fields
+  bio: 'text?',
+  age: 'int?',
+  avatarUrl: 'string?',
+
+  // Boolean with default
+  isActive: 'bool = true',
+
+  // Timestamps
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp?',
+});
+```
+
+### Indexed Fields
+
+Use the `#` modifier for frequently queried fields:
+
+```typescript
+export const ProductSchema = parseSchema({
+  $type: 'Product',
+
+  id: 'uuid!',
+  sku: 'string#',           // Indexed for fast lookups
+  name: 'string!',
+  price: 'decimal!',
+  category: 'string#',      // Indexed for filtering
+  inStock: 'bool = true',
+});
+```
+
+### Schema with Directives
+
+Use directives for advanced schema configuration:
+
+```typescript
+export const EventSchema = parseSchema({
+  $type: 'Event',
+  $partitionBy: ['date'],                    // Partition by date
+  $index: [['userId'], ['timestamp']],       // Secondary indexes
+  $fts: ['title', 'description'],            // Full-text search
+
+  id: 'uuid!',
+  userId: 'string!',
+  title: 'string!',
+  description: 'text?',
+  payload: 'json',
+  timestamp: 'timestamp!',
+  date: 'date!',
+});
+```
+
+## Relations Between Entities
+
+### One-to-Many Relationship
+
+A user has many posts:
+
+```typescript
+export const UserSchema = parseSchema({
+  $type: 'User',
+
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+
+  // Backward relation - all posts by this user
+  posts: '<- Post.author[]',
+});
+
+export const PostSchema = parseSchema({
+  $type: 'Post',
+  $index: [['authorId'], ['publishedAt']],
+
+  id: 'uuid!',
+  title: 'string!',
+  content: 'text',
+  authorId: 'uuid!',
+
+  // Forward relation - the post's author
+  author: '-> User!',
+
+  publishedAt: 'timestamp?',
+});
+```
+
+### Many-to-Many Relationship
+
+Users can belong to multiple organizations:
+
+```typescript
+export const UserSchema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+  memberships: '<- Membership.user[]',
+});
+
+export const OrganizationSchema = parseSchema({
+  $type: 'Organization',
+  id: 'uuid!',
+  name: 'string!',
+  slug: 'string#',
+  members: '<- Membership.organization[]',
+});
+
+export const MembershipSchema = parseSchema({
+  $type: 'Membership',
+  $index: [['userId'], ['organizationId']],
+
+  id: 'uuid!',
+  userId: 'uuid!',
+  organizationId: 'uuid!',
+  role: 'string = "member"',
+
+  user: '-> User!',
+  organization: '-> Organization!',
+
+  joinedAt: 'timestamp',
+});
+```
+
+### Self-Referential Relationship
+
+Categories with parent-child hierarchy:
+
+```typescript
+export const CategorySchema = parseSchema({
+  $type: 'Category',
+  $index: [['parentId']],
+
+  id: 'uuid!',
+  name: 'string!',
+  slug: 'string#',
+
+  parentId: 'uuid?',
+  parent: '-> Category?',
+  children: '<- Category.parent[]',
+});
+```
+
+## Generating TypeScript Types
+
+### Using the CLI
+
+```bash
+# Generate types from a TypeScript schema file
+npx tsx node_modules/.bin/ice generate \
+  --schema ./schema.ts \
+  --output ./generated/types.ts
+
+# Generate types from a JavaScript schema file
+npx ice generate \
+  --schema ./schema.js \
+  --output ./generated/types.ts
+```
+
+### Programmatic Generation
+
+```typescript
+import { parseSchema } from 'icetype';
+import { generateTypeScript } from 'icetype';
+
+const schema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  email: 'string!',
+  name: 'string',
+  age: 'int?',
+  isActive: 'bool = true',
+  tags: 'string[]',
+});
+
+const typescript = generateTypeScript(schema);
+console.log(typescript);
+// export interface User {
+//   id: string;
+//   email: string;
+//   name: string;
+//   age?: number;
+//   isActive: boolean;
+//   tags: string[];
+// }
+```
+
+## Generating SQL DDL
+
+### PostgreSQL
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { transformToPostgresDDL } from '@icetype/postgres';
+
+const schema = parseSchema({
+  $type: 'User',
+  $index: [['email']],
+
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+  age: 'int?',
+  metadata: 'json',
+  createdAt: 'timestamp',
+});
+
+const ddl = transformToPostgresDDL(schema, {
+  ifNotExists: true,
+  includeSystemFields: true,
+});
+
+console.log(ddl);
+// CREATE TABLE IF NOT EXISTS "User" (
+//   "$id" TEXT NOT NULL PRIMARY KEY,
+//   "$type" TEXT NOT NULL,
+//   "$version" INTEGER NOT NULL DEFAULT 1,
+//   "$createdAt" BIGINT NOT NULL,
+//   "$updatedAt" BIGINT NOT NULL,
+//   "id" UUID NOT NULL,
+//   "email" TEXT UNIQUE,
+//   "name" TEXT,
+//   "age" INTEGER,
+//   "metadata" JSONB,
+//   "createdAt" TIMESTAMPTZ
+// );
+// CREATE INDEX "idx_User_email" ON "User" ("email");
+```
+
+### MySQL
+
+```typescript
+import { transformToMySQLDDL } from '@icetype/mysql';
+
+const ddl = transformToMySQLDDL(schema, {
+  ifNotExists: true,
+  charset: 'utf8mb4',
+  collation: 'utf8mb4_unicode_ci',
+  engine: 'InnoDB',
+});
+```
+
+### SQLite
+
+```typescript
+import { transformToSQLiteDDL } from '@icetype/sqlite';
+
+const ddl = transformToSQLiteDDL(schema, {
+  ifNotExists: true,
+  strict: true,        // Enable STRICT mode (SQLite 3.37+)
+  withoutRowid: false, // Optional: use WITHOUT ROWID
+});
+```
+
+## Generating Iceberg Metadata
+
+### Basic Iceberg Table
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { generateIcebergMetadata } from '@icetype/iceberg';
+
+const schema = parseSchema({
+  $type: 'Event',
+  $partitionBy: ['year', 'month'],
+
+  id: 'uuid!',
+  eventType: 'string!',
+  userId: 'string!',
+  payload: 'json',
+  timestamp: 'timestamp!',
+  year: 'int!',
+  month: 'int!',
+});
+
+const metadata = generateIcebergMetadata(
+  schema,
+  's3://data-lake/events',
+  {
+    'write.parquet.compression-codec': 'zstd',
+    'write.metadata.compression-codec': 'gzip',
+  }
+);
+
+// Write metadata to file
+import { writeFileSync } from 'fs';
+writeFileSync('metadata.json', JSON.stringify(metadata, null, 2));
+```
+
+### Parquet Schema
+
+```typescript
+import { generateParquetSchemaString } from '@icetype/iceberg';
+
+const parquetSchema = generateParquetSchemaString(schema);
+console.log(parquetSchema);
+// message Event {
+//   REQUIRED BYTE_ARRAY id (UTF8);
+//   REQUIRED BYTE_ARRAY eventType (UTF8);
+//   REQUIRED BYTE_ARRAY userId (UTF8);
+//   OPTIONAL BYTE_ARRAY payload (JSON);
+//   REQUIRED INT96 timestamp;
+//   REQUIRED INT32 year;
+//   REQUIRED INT32 month;
+// }
+```
+
+## Analytics Database DDL
+
+### ClickHouse
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { transformToClickHouseDDL } from '@icetype/clickhouse';
+
+const schema = parseSchema({
+  $type: 'PageView',
+  $partitionBy: ['toYYYYMM(timestamp)'],
+
+  id: 'uuid!',
+  sessionId: 'string!',
+  userId: 'string?',
+  url: 'string!',
+  referrer: 'string?',
+  userAgent: 'string',
+  timestamp: 'timestamp!',
+  metadata: 'json',
+});
+
+const ddl = transformToClickHouseDDL(schema, {
+  engine: 'MergeTree',
+  orderBy: ['timestamp', 'sessionId'],
+  ifNotExists: true,
+});
+```
+
+### DuckDB
+
+```typescript
+import { transformToDuckDBDDL } from '@icetype/duckdb';
+
+const ddl = transformToDuckDBDDL(schema, {
+  ifNotExists: true,
+});
+```
+
+## Multi-Database Schema Consistency
+
+Use one schema definition across multiple databases:
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { transformToPostgresDDL } from '@icetype/postgres';
+import { transformToClickHouseDDL } from '@icetype/clickhouse';
+import { transformToSQLiteDDL } from '@icetype/sqlite';
+import { generateIcebergMetadata } from '@icetype/iceberg';
+
+// Single source of truth
+const orderSchema = parseSchema({
+  $type: 'Order',
+  $partitionBy: ['orderDate'],
+  $index: [['customerId'], ['status']],
+
+  id: 'uuid!',
+  customerId: 'uuid!',
+  items: 'json!',
+  totalAmount: 'decimal!',
+  status: 'string = "pending"',
+  orderDate: 'date!',
+  createdAt: 'timestamp!',
+});
+
+// Production database (PostgreSQL)
+const postgresDDL = transformToPostgresDDL(orderSchema);
+
+// Development database (SQLite)
+const sqliteDDL = transformToSQLiteDDL(orderSchema, { strict: true });
+
+// Analytics database (ClickHouse)
+const clickhouseDDL = transformToClickHouseDDL(orderSchema, {
+  engine: 'MergeTree',
+  orderBy: ['orderDate', 'createdAt'],
+});
+
+// Data lake (Iceberg)
+const icebergMetadata = generateIcebergMetadata(
+  orderSchema,
+  's3://data-lake/orders'
+);
+```
+
+## Validation
+
+### Validate Schema Structure
+
+```typescript
+import { parseSchema, validateSchema } from 'icetype';
+
+const schema = parseSchema({
+  $type: 'User',
+  email: 'string#',
+  name: 'string',
+});
+
+const result = validateSchema(schema);
+
+if (!result.valid) {
+  console.error('Schema validation errors:');
+  for (const error of result.errors) {
+    console.error(`  - [${error.code}] ${error.message}`);
+  }
+} else {
+  console.log('Schema is valid!');
+}
+```
+
+### Type Inference
+
+```typescript
+import { inferType } from 'icetype';
+
+// Automatically detect types from values
+console.log(inferType('hello'));                    // 'string'
+console.log(inferType(42));                         // 'int'
+console.log(inferType(3.14));                       // 'float'
+console.log(inferType(true));                       // 'bool'
+console.log(inferType('2024-01-15'));               // 'date'
+console.log(inferType('2024-01-15T10:30:00Z'));     // 'timestamp'
+console.log(inferType('550e8400-e29b-41d4-a716-446655440000')); // 'uuid'
+console.log(inferType([1, 2, 3]));                  // 'int[]'
+console.log(inferType({ foo: 'bar' }));             // 'json'
+```
+
+## Integration with Build Tools
+
+### npm Scripts
+
+```json
+{
+  "scripts": {
+    "schema:validate": "tsx node_modules/.bin/ice validate -s ./schema.ts",
+    "schema:generate": "tsx node_modules/.bin/ice generate -s ./schema.ts -o ./generated/types.ts",
+    "schema:export": "tsx node_modules/.bin/ice iceberg export -s ./schema.ts -o ./metadata.json",
+    "schema:all": "npm run schema:validate && npm run schema:generate && npm run schema:export"
+  }
+}
+```
+
+### CI/CD Integration
+
+```yaml
+# GitHub Actions
+name: Schema Validation
+
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run schema:validate
+      - run: npm run schema:generate
+      - name: Check for uncommitted changes
+        run: git diff --exit-code generated/
+```
+
+## Advanced Schema Patterns
+
+### Multi-Tenant SaaS Application
+
+A complete multi-tenant architecture with proper isolation:
+
+```typescript
+// Tenant management
+export const TenantSchema = parseSchema({
+  $type: 'Tenant',
+  $index: [['slug']],
+
+  id: 'uuid!',
+  name: 'string!',
+  slug: 'string#',
+  plan: 'string = "free"',          // 'free' | 'pro' | 'enterprise'
+  settings: 'json',
+  billingEmail: 'string?',
+  stripeCustomerId: 'string?',
+  maxUsers: 'int = 5',
+  maxStorage: 'long = 1073741824',  // 1GB default
+  isActive: 'bool = true',
+  createdAt: 'timestamp',
+});
+
+// User belongs to tenant
+export const UserSchema = parseSchema({
+  $type: 'User',
+  $partitionBy: ['tenantId'],
+  $index: [['tenantId', 'email'], ['tenantId', 'role']],
+
+  id: 'uuid!',
+  tenantId: 'uuid!',
+  tenant: '-> Tenant!',
+  email: 'string!',
+  name: 'string',
+  role: 'string = "member"',        // 'owner' | 'admin' | 'member' | 'viewer'
+  permissions: 'string[]',
+  lastLoginAt: 'timestamp?',
+  createdAt: 'timestamp',
+});
+
+// Resources scoped to tenant
+export const ProjectSchema = parseSchema({
+  $type: 'Project',
+  $partitionBy: ['tenantId'],
+  $index: [['tenantId', 'status'], ['ownerId']],
+  $fts: ['name', 'description'],
+
+  id: 'uuid!',
+  tenantId: 'uuid!',
+  tenant: '-> Tenant!',
+  ownerId: 'uuid!',
+  owner: '-> User!',
+  name: 'string!',
+  description: 'text?',
+  status: 'string = "active"',
+  settings: 'json',
+  members: '<- ProjectMember.project[]',
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp?',
+});
+
+// Many-to-many: users can be members of multiple projects
+export const ProjectMemberSchema = parseSchema({
+  $type: 'ProjectMember',
+  $index: [['projectId'], ['userId']],
+
+  id: 'uuid!',
+  projectId: 'uuid!',
+  project: '-> Project!',
+  userId: 'uuid!',
+  user: '-> User!',
+  role: 'string = "contributor"',   // 'admin' | 'contributor' | 'viewer'
+  joinedAt: 'timestamp',
+});
+```
+
+### E-Commerce Platform
+
+Complete e-commerce data model:
+
+```typescript
+// Product catalog
+export const ProductSchema = parseSchema({
+  $type: 'Product',
+  $index: [['categoryId'], ['status'], ['price']],
+  $fts: ['name', 'description', 'tags'],
+
+  id: 'uuid!',
+  sku: 'string#',
+  name: 'string!',
+  slug: 'string#',
+  description: 'text?',
+  price: 'decimal!',
+  compareAtPrice: 'decimal?',
+  costPrice: 'decimal?',
+  categoryId: 'uuid?',
+  category: '-> Category?',
+  tags: 'string[]',
+  images: 'json',                   // Array of image URLs
+  attributes: 'json',               // Color, size, etc.
+  status: 'string = "draft"',       // 'draft' | 'active' | 'archived'
+  inventory: 'int = 0',
+  lowStockThreshold: 'int = 10',
+  weight: 'float?',
+  dimensions: 'json?',              // { length, width, height }
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp?',
+});
+
+// Customer information
+export const CustomerSchema = parseSchema({
+  $type: 'Customer',
+  $index: [['email'], ['createdAt']],
+  $fts: ['firstName', 'lastName', 'email'],
+
+  id: 'uuid!',
+  email: 'string#',
+  firstName: 'string',
+  lastName: 'string',
+  phone: 'string?',
+  addresses: 'json',                // Array of addresses
+  defaultAddressId: 'string?',
+  tags: 'string[]',
+  notes: 'text?',
+  totalOrders: 'int = 0',
+  totalSpent: 'decimal = 0',
+  acceptsMarketing: 'bool = false',
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp?',
+});
+
+// Order management
+export const OrderSchema = parseSchema({
+  $type: 'Order',
+  $partitionBy: ['orderDate'],
+  $index: [['customerId'], ['status'], ['orderDate']],
+
+  id: 'uuid!',
+  orderNumber: 'string#',
+  customerId: 'uuid!',
+  customer: '-> Customer!',
+  status: 'string = "pending"',     // 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
+  paymentStatus: 'string = "pending"',
+  fulfillmentStatus: 'string = "unfulfilled"',
+  lineItems: 'json!',               // Array of { productId, quantity, price }
+  subtotal: 'decimal!',
+  taxAmount: 'decimal = 0',
+  shippingAmount: 'decimal = 0',
+  discountAmount: 'decimal = 0',
+  totalAmount: 'decimal!',
+  currency: 'string = "USD"',
+  shippingAddress: 'json',
+  billingAddress: 'json',
+  notes: 'text?',
+  orderDate: 'date!',
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp?',
+});
+
+// Order items for analytics
+export const OrderItemSchema = parseSchema({
+  $type: 'OrderItem',
+  $partitionBy: ['orderDate'],
+  $index: [['orderId'], ['productId']],
+
+  id: 'uuid!',
+  orderId: 'uuid!',
+  order: '-> Order!',
+  productId: 'uuid!',
+  product: '-> Product!',
+  productName: 'string!',           // Snapshot at time of order
+  sku: 'string!',
+  quantity: 'int!',
+  unitPrice: 'decimal!',
+  totalPrice: 'decimal!',
+  orderDate: 'date!',
+});
+```
+
+### Analytics Event Tracking
+
+High-volume event tracking schema:
+
+```typescript
+// Generic event tracking
+export const EventSchema = parseSchema({
+  $type: 'Event',
+  $partitionBy: ['date'],
+  $index: [['userId'], ['sessionId'], ['eventType'], ['timestamp']],
+
+  id: 'uuid!',
+  eventType: 'string!',
+  userId: 'string?',
+  sessionId: 'string!',
+  anonymousId: 'string?',
+  properties: 'json',
+  context: 'json',                  // Device, browser, location
+  timestamp: 'timestamp!',
+  date: 'date!',
+  receivedAt: 'timestamp!',
+});
+
+// Page view events
+export const PageViewSchema = parseSchema({
+  $type: 'PageView',
+  $partitionBy: ['date'],
+  $index: [['sessionId'], ['path']],
+
+  id: 'uuid!',
+  sessionId: 'string!',
+  userId: 'string?',
+  path: 'string!',
+  title: 'string?',
+  referrer: 'string?',
+  queryParams: 'json',
+  utm: 'json',                      // UTM parameters
+  timestamp: 'timestamp!',
+  date: 'date!',
+  loadTimeMs: 'int?',
+  timeOnPageMs: 'int?',
+});
+
+// User sessions
+export const SessionSchema = parseSchema({
+  $type: 'Session',
+  $partitionBy: ['startDate'],
+  $index: [['userId'], ['startedAt']],
+
+  id: 'string!',                    // Session ID
+  userId: 'string?',
+  anonymousId: 'string?',
+  startedAt: 'timestamp!',
+  endedAt: 'timestamp?',
+  startDate: 'date!',
+  duration: 'int?',                 // Seconds
+  pageViews: 'int = 0',
+  events: 'int = 0',
+  device: 'json',
+  browser: 'json',
+  location: 'json',
+  landingPage: 'string?',
+  exitPage: 'string?',
+  referrer: 'string?',
+  utm: 'json',
+});
+
+// Aggregated daily metrics
+export const DailyMetricsSchema = parseSchema({
+  $type: 'DailyMetrics',
+  $partitionBy: ['date'],
+
+  id: 'uuid!',
+  date: 'date!',
+  totalSessions: 'long!',
+  uniqueUsers: 'long!',
+  newUsers: 'long!',
+  totalPageViews: 'long!',
+  totalEvents: 'long!',
+  avgSessionDuration: 'float!',
+  bounceRate: 'float!',
+  topPages: 'json',
+  topReferrers: 'json',
+  deviceBreakdown: 'json',
+  countryBreakdown: 'json',
+});
+```
+
+### Content Management System
+
+CMS with versioning and workflow:
+
+```typescript
+// Content types
+export const ContentTypeSchema = parseSchema({
+  $type: 'ContentType',
+
+  id: 'uuid!',
+  name: 'string!',
+  slug: 'string#',
+  description: 'text?',
+  fields: 'json!',                  // Field definitions
+  displayField: 'string?',
+  createdAt: 'timestamp',
+});
+
+// Content entries with versioning
+export const ContentEntrySchema = parseSchema({
+  $type: 'ContentEntry',
+  $index: [['contentTypeId'], ['status'], ['publishedAt']],
+  $fts: ['title'],
+
+  id: 'uuid!',
+  contentTypeId: 'uuid!',
+  contentType: '-> ContentType!',
+  title: 'string!',
+  slug: 'string#',
+  status: 'string = "draft"',       // 'draft' | 'review' | 'published' | 'archived'
+  currentVersionId: 'uuid?',
+  publishedVersionId: 'uuid?',
+  authorId: 'uuid!',
+  author: '-> User!',
+  publishedAt: 'timestamp?',
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp?',
+});
+
+// Version history
+export const ContentVersionSchema = parseSchema({
+  $type: 'ContentVersion',
+  $index: [['entryId', 'version']],
+
+  id: 'uuid!',
+  entryId: 'uuid!',
+  entry: '-> ContentEntry!',
+  version: 'int!',
+  fields: 'json!',                  // Actual content data
+  changelog: 'text?',
+  authorId: 'uuid!',
+  author: '-> User!',
+  createdAt: 'timestamp',
+});
+
+// Media assets
+export const MediaSchema = parseSchema({
+  $type: 'Media',
+  $index: [['type'], ['createdAt']],
+  $fts: ['title', 'alt', 'tags'],
+
+  id: 'uuid!',
+  title: 'string!',
+  alt: 'string?',
+  type: 'string!',                  // 'image' | 'video' | 'document'
+  mimeType: 'string!',
+  url: 'string!',
+  thumbnailUrl: 'string?',
+  width: 'int?',
+  height: 'int?',
+  size: 'long!',                    // Bytes
+  metadata: 'json',
+  tags: 'string[]',
+  uploadedById: 'uuid!',
+  uploadedBy: '-> User!',
+  createdAt: 'timestamp',
+});
+```
+
+## Common Pitfalls and Solutions
+
+### Pitfall: Missing Indexes on Foreign Keys
+
+**Problem:** Slow queries when filtering by foreign key.
+
+```typescript
+// Bad: No index on authorId
+const PostSchema = parseSchema({
+  $type: 'Post',
+  id: 'uuid!',
+  authorId: 'uuid!',
+  author: '-> User!',
+  title: 'string!',
+});
+
+// Good: Index on authorId for efficient lookups
+const PostSchema = parseSchema({
+  $type: 'Post',
+  $index: [['authorId']],  // Add index
+  id: 'uuid!',
+  authorId: 'uuid!',
+  author: '-> User!',
+  title: 'string!',
+});
+```
+
+### Pitfall: Over-indexing
+
+**Problem:** Too many indexes slow down writes and increase storage.
+
+```typescript
+// Bad: Index on every field
+const UserSchema = parseSchema({
+  $type: 'User',
+  $index: [['email'], ['name'], ['createdAt'], ['updatedAt'], ['status']],
+  // ...
+});
+
+// Good: Only index fields used in WHERE/ORDER BY clauses
+const UserSchema = parseSchema({
+  $type: 'User',
+  $index: [['email'], ['createdAt']],  // Only frequently queried fields
+  email: 'string#',                     // Unique constraint implies index
+  // ...
+});
+```
+
+### Pitfall: High-Cardinality Partition Keys
+
+**Problem:** Using high-cardinality fields as partition keys creates too many partitions.
+
+```typescript
+// Bad: userId has too many unique values
+const EventSchema = parseSchema({
+  $type: 'Event',
+  $partitionBy: ['userId'],  // Millions of partitions!
+  // ...
+});
+
+// Good: Use time-based partitioning
+const EventSchema = parseSchema({
+  $type: 'Event',
+  $partitionBy: ['date'],    // One partition per day
+  $index: [['userId']],      // Index for user lookups
+  // ...
+});
+```
+
+### Pitfall: Missing Required Modifier on Primary Key
+
+**Problem:** Primary keys should always be required and unique.
+
+```typescript
+// Bad: Optional primary key
+const UserSchema = parseSchema({
+  $type: 'User',
+  id: 'uuid',    // Missing !
+  // ...
+});
+
+// Good: Required and unique primary key
+const UserSchema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',   // Required + unique
+  // ...
+});
+```
+
+### Pitfall: Storing Computed Values
+
+**Problem:** Storing values that can be computed from other fields.
+
+```typescript
+// Bad: Redundant computed field
+const OrderSchema = parseSchema({
+  $type: 'Order',
+  subtotal: 'decimal!',
+  tax: 'decimal!',
+  shipping: 'decimal!',
+  total: 'decimal!',     // Redundant: subtotal + tax + shipping
+});
+
+// Good: Compute in application or use database computed column
+const OrderSchema = parseSchema({
+  $type: 'Order',
+  subtotal: 'decimal!',
+  taxAmount: 'decimal!',
+  shippingAmount: 'decimal!',
+  // total computed at query time or in application
+});
+```
+
+### Pitfall: Large JSON Blobs Without Structure
+
+**Problem:** Storing large unstructured JSON makes querying difficult.
+
+```typescript
+// Bad: Everything in one JSON field
+const UserSchema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  data: 'json',  // Everything dumped here
+});
+
+// Good: Structured fields with JSON for truly dynamic data
+const UserSchema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+  role: 'string',
+  preferences: 'json',    // Only for user preferences
+  metadata: 'json?',      // Only for extension data
+});
+```
+
+## Real-World Workflow Example
+
+### Schema-First Development
+
+```typescript
+// 1. Define schemas first
+// src/schema/index.ts
+import { parseSchema } from 'icetype';
+
+export const UserSchema = parseSchema({
+  $type: 'User',
+  $index: [['email']],
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+  createdAt: 'timestamp',
+});
+
+// 2. Generate all outputs
+// scripts/generate.ts
+import { UserSchema } from '../src/schema';
+import { transformToPostgresDDL } from '@icetype/postgres';
+import { transformToDrizzle } from '@icetype/drizzle';
+import { generateIcebergMetadata } from '@icetype/iceberg';
+
+// PostgreSQL for production
+const ddl = transformToPostgresDDL(UserSchema);
+
+// Drizzle for ORM
+const drizzle = transformToDrizzle(UserSchema, { dialect: 'pg' });
+
+// Iceberg for analytics
+const iceberg = generateIcebergMetadata(UserSchema, 's3://lake/users');
+
+// 3. Use generated code in application
+// src/app.ts
+import { db } from './db';
+import { user } from './db/schema';
+
+const users = await db.select().from(user);
+```
+
+## Next Steps
+
+<Cards>
+  <Card
+    title="Schema Language Reference"
+    description="Complete syntax documentation for all IceType features."
+    href="/schema-language"
+  />
+  <Card
+    title="CLI Reference"
+    description="All CLI commands and options for code generation."
+    href="/cli"
+  />
+  <Card
+    title="Adapters Overview"
+    description="Available output adapters for different backends."
+    href="/adapters"
+  />
+  <Card
+    title="API Reference"
+    description="Detailed API documentation for all packages."
+    href="/api/core"
+  />
+  <Card
+    title="Tutorials"
+    description="Step-by-step guides for common workflows."
+    href="/tutorials/migration-workflow"
+  />
+</Cards>

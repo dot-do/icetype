@@ -1,13 +1,21 @@
 {
-  "title": "Documentation",
+  "title": "IceType Documentation",
   "pages": [
     "index",
     "why-icetype",
     "getting-started",
-    "---Guides---",
+    "---Core Concepts---",
     "schema-language",
+    "adapters",
     "cli",
+    "---Guides---",
+    "examples",
     "errors",
+    "---Tutorials---",
+    "tutorials",
+    "---Comparisons---",
+    "vs-prisma",
+    "vs-drizzle",
     "---API Reference---",
     "api"
   ]
