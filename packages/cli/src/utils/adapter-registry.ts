@@ -9,8 +9,9 @@
  * @packageDocumentation
  */
 
-import { globalRegistry, IcebergAdapter } from '@icetype/adapters';
+import { globalRegistry } from '@icetype/adapters';
 import type { SchemaAdapter } from '@icetype/adapters';
+import { IcebergAdapter } from '@icetype/iceberg';
 import { PostgresAdapter } from '@icetype/postgres';
 import { DuckDBAdapter } from '@icetype/duckdb';
 import { ClickHouseAdapter } from '@icetype/clickhouse';

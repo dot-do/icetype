@@ -92,7 +92,8 @@ class AdapterRegistryImpl implements AdapterRegistry {
  *
  * @example
  * ```typescript
- * import { createAdapterRegistry, IcebergAdapter, ParquetAdapter } from '@icetype/adapters';
+ * import { createAdapterRegistry } from '@icetype/adapters';
+ * import { IcebergAdapter, ParquetAdapter } from '@icetype/iceberg';
  *
  * const registry = createAdapterRegistry();
  *
@@ -124,7 +125,8 @@ export function createAdapterRegistry(): AdapterRegistry {
  *
  * @example
  * ```typescript
- * import { globalRegistry, IcebergAdapter } from '@icetype/adapters';
+ * import { globalRegistry } from '@icetype/adapters';
+ * import { IcebergAdapter } from '@icetype/iceberg';
  *
  * // Register an adapter globally
  * globalRegistry.register(new IcebergAdapter());

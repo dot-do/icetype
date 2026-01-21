@@ -9,8 +9,8 @@ import { parseSchema, AdapterError, ErrorCodes } from '@icetype/core';
 import {
   IcebergAdapter,
   createIcebergAdapter,
-} from '../iceberg.js';
-import type { IcebergTableMetadata } from '@icetype/iceberg';
+} from '../adapter.js';
+import type { IcebergTableMetadata } from '../types.js';
 import type { IceTypeSchema } from '@icetype/core';
 
 // =============================================================================

@@ -4,16 +4,14 @@
  * Adapter abstraction layer for IceType schema transformations.
  *
  * This package provides a unified interface for transforming IceType schemas
- * to various output formats like Apache Iceberg metadata and Parquet schemas.
+ * to various output formats. Specific adapter implementations (like IcebergAdapter
+ * and ParquetAdapter) are provided by their respective packages.
  *
  * @example
  * ```typescript
  * import { parseSchema } from '@icetype/core';
- * import {
- *   createAdapterRegistry,
- *   IcebergAdapter,
- *   ParquetAdapter,
- * } from '@icetype/adapters';
+ * import { createAdapterRegistry, globalRegistry } from '@icetype/adapters';
+ * import { IcebergAdapter, ParquetAdapter } from '@icetype/iceberg';
  *
  * // Parse an IceType schema
  * const schema = parseSchema({
@@ -58,31 +56,3 @@ export type {
 // =============================================================================
 
 export { createAdapterRegistry, globalRegistry } from './registry.js';
-
-// =============================================================================
-// Iceberg Adapter
-// =============================================================================
-
-export { IcebergAdapter, createIcebergAdapter } from './iceberg.js';
-
-// =============================================================================
-// Parquet Adapter
-// =============================================================================
-
-export {
-  ParquetAdapter,
-  createParquetAdapter,
-  transformToParquetString,
-} from './parquet.js';
-
-// =============================================================================
-// Re-export relevant types from @icetype/iceberg for convenience
-// =============================================================================
-
-export type {
-  IcebergTableMetadata,
-  IcebergSchema,
-  IcebergField,
-  ParquetSchema,
-  ParquetField,
-} from '@icetype/iceberg';

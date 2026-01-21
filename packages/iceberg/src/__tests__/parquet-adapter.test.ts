@@ -10,7 +10,7 @@ import {
   ParquetAdapter,
   createParquetAdapter,
   transformToParquetString,
-} from '../parquet.js';
+} from '../parquet-adapter.js';
 import type { IceTypeSchema } from '@icetype/core';
 
 // =============================================================================

@@ -35,7 +35,8 @@
     "url": "https://github.com/dot-do/icetype/issues"
   },
   "dependencies": {
-    "@icetype/core": "workspace:*"
+    "@icetype/core": "workspace:*",
+    "@icetype/adapters": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

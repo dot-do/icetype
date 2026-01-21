@@ -71,3 +71,15 @@ export {
   generateParquetSchemaString,
   documentToParquetRow,
 } from './parquet.js';
+
+// Re-export adapters
+export {
+  IcebergAdapter,
+  createIcebergAdapter,
+} from './adapter.js';
+
+export {
+  ParquetAdapter,
+  createParquetAdapter,
+  transformToParquetString,
+} from './parquet-adapter.js';

@@ -8,13 +8,10 @@
  */
 
 import type { IceTypeSchema } from '@icetype/core';
-import {
-  generateParquetSchema,
-  generateParquetSchemaString,
-  type ParquetSchema,
-} from '@icetype/iceberg';
+import type { SchemaAdapter, ParquetAdapterOptions } from '@icetype/adapters';
 
-import type { SchemaAdapter, ParquetAdapterOptions } from './types.js';
+import { generateParquetSchema, generateParquetSchemaString } from './parquet.js';
+import type { ParquetSchema } from './types.js';
 
 // =============================================================================
 // Parquet Adapter
@@ -26,7 +23,7 @@ import type { SchemaAdapter, ParquetAdapterOptions } from './types.js';
  * @example
  * ```typescript
  * import { parseSchema } from '@icetype/core';
- * import { ParquetAdapter } from '@icetype/adapters';
+ * import { ParquetAdapter } from '@icetype/iceberg';
  *
  * const schema = parseSchema({
  *   $type: 'User',
@@ -160,7 +157,7 @@ export function createParquetAdapter(): ParquetAdapter {
  *
  * @example
  * ```typescript
- * import { transformToParquetString } from '@icetype/adapters';
+ * import { transformToParquetString } from '@icetype/iceberg';
  *
  * const schemaString = transformToParquetString(schema);
  * console.log(schemaString);

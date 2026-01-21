@@ -12,11 +12,8 @@ import { describe, it, expect } from 'vitest';
 // Import from package exports (not internal paths)
 import { parseSchema, validateSchema } from '@icetype/core';
 import { generateIcebergMetadata, generateParquetSchema, generateParquetSchemaString } from '@icetype/iceberg';
-import {
-  createAdapterRegistry,
-  IcebergAdapter,
-  ParquetAdapter,
-} from '@icetype/adapters';
+import { createAdapterRegistry } from '@icetype/adapters';
+import { IcebergAdapter, ParquetAdapter } from '@icetype/iceberg';
 import { ClickHouseAdapter } from '@icetype/clickhouse';
 import { DuckDBAdapter, transformToDuckDBDDL } from '@icetype/duckdb';
 import { PostgresAdapter, transformToPostgresDDL, createPostgresAdapter } from '@icetype/postgres';

@@ -8,12 +8,10 @@
  */
 
 import { AdapterError, ErrorCodes, type IceTypeSchema } from '@icetype/core';
-import {
-  generateIcebergMetadata,
-  type IcebergTableMetadata,
-} from '@icetype/iceberg';
+import type { SchemaAdapter, IcebergAdapterOptions } from '@icetype/adapters';
 
-import type { SchemaAdapter, IcebergAdapterOptions } from './types.js';
+import { generateIcebergMetadata } from './metadata.js';
+import type { IcebergTableMetadata } from './types.js';
 
 // =============================================================================
 // Iceberg Adapter
@@ -25,7 +23,7 @@ import type { SchemaAdapter, IcebergAdapterOptions } from './types.js';
  * @example
  * ```typescript
  * import { parseSchema } from '@icetype/core';
- * import { IcebergAdapter } from '@icetype/adapters';
+ * import { IcebergAdapter } from '@icetype/iceberg';
  *
  * const schema = parseSchema({
  *   $type: 'User',

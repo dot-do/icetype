@@ -6,7 +6,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
-import type { IcebergAdapter, IcebergTableMetadata } from '@icetype/adapters';
+import type { IcebergAdapter, IcebergTableMetadata } from '@icetype/iceberg';
 import { getAdapter } from '../utils/adapter-registry.js';
 import { loadSchemaFile } from '../utils/schema-loader.js';
 import { generateHelpText, hasHelpFlag, type HelpCommand } from '../utils/help.js';
