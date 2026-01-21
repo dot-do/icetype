@@ -37,7 +37,6 @@
   },
   "dependencies": {
     "@icetype/core": "workspace:*",
-    "@icetype/adapters": "workspace:*",
     "@icetype/sql-common": "workspace:*"
   },
   "devDependencies": {

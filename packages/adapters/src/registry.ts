@@ -9,7 +9,7 @@
  */
 
 import { AdapterError, ErrorCodes } from '@icetype/core';
-import type { SchemaAdapter, AdapterRegistry } from './types.js';
+import type { SchemaAdapter, AdapterRegistry } from '@icetype/core';
 
 // =============================================================================
 // Registry Implementation

@@ -8,7 +8,7 @@
  * @packageDocumentation
  */
 
-import type { SchemaAdapter } from './types.js';
+import type { SchemaAdapter } from '@icetype/core';
 
 // =============================================================================
 // Types
@@ -130,44 +130,17 @@ export async function lazyLoadAdapter(name: string): Promise<SchemaAdapter> {
     );
   }
 
-  // Dynamically import the adapter package
+  // Dynamically import the adapter package using the package name from config
+  // We use a variable to avoid TypeScript checking the module existence at compile time
   let module: Record<string, unknown>;
   try {
-    // Use dynamic import to load the adapter package
-    // Each adapter needs an explicit import path for bundler tree-shaking
-    switch (name) {
-      case 'postgres':
-        module = await import('@icetype/postgres');
-        break;
-      case 'mysql':
-        module = await import('@icetype/mysql');
-        break;
-      case 'sqlite':
-        module = await import('@icetype/sqlite');
-        break;
-      case 'clickhouse':
-        module = await import('@icetype/clickhouse');
-        break;
-      case 'duckdb':
-        module = await import('@icetype/duckdb');
-        break;
-      case 'iceberg':
-      case 'parquet':
-        // Both iceberg and parquet adapters are in @icetype/iceberg package
-        module = await import('@icetype/iceberg');
-        break;
-      case 'drizzle':
-        module = await import('@icetype/drizzle');
-        break;
-      case 'prisma':
-        module = await import('@icetype/prisma');
-        break;
-      default:
-        throw new Error(`Adapter '${name}' is registered but no import path is configured`);
-    }
+    // Use generic dynamic import with package name from config
+    // This allows the adapters to be optional peer dependencies
+    module = await import(/* @vite-ignore */ config.packageName);
   } catch (error) {
     throw new Error(
-      `Failed to load adapter '${name}': ${error instanceof Error ? error.message : String(error)}`
+      `Failed to load adapter '${name}': ${error instanceof Error ? error.message : String(error)}. ` +
+      `Make sure '${config.packageName}' is installed.`
     );
   }
 

@@ -6,9 +6,8 @@
  * @packageDocumentation
  */
 
-import type { IceTypeSchema, FieldDefinition } from '@icetype/core';
+import type { IceTypeSchema, FieldDefinition, SchemaAdapter } from '@icetype/core';
 import { SYSTEM_COLUMNS } from '@icetype/core';
-import type { SchemaAdapter } from '@icetype/adapters';
 
 import type {
   DrizzleSchema,

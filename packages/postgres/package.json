@@ -40,7 +40,6 @@
   },
   "dependencies": {
     "@icetype/core": "workspace:*",
-    "@icetype/adapters": "workspace:*",
     "@icetype/migrations": "workspace:*",
     "@icetype/sql-common": "workspace:*"
   },

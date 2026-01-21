@@ -7,8 +7,7 @@
  * @packageDocumentation
  */
 
-import { AdapterError, ErrorCodes, type IceTypeSchema } from '@icetype/core';
-import type { SchemaAdapter, IcebergAdapterOptions } from '@icetype/adapters';
+import { AdapterError, ErrorCodes, type IceTypeSchema, type SchemaAdapter, type IcebergAdapterOptions } from '@icetype/core';
 
 import { generateIcebergMetadata } from './metadata.js';
 import type { IcebergTableMetadata } from './types.js';

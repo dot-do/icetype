@@ -21,7 +21,7 @@ import {
 } from '../plugin-system.js';
 
 // Type imports for SchemaAdapter - these should be compatible with Plugin
-import type { SchemaAdapter, AdapterRegistry } from '@icetype/adapters';
+import type { SchemaAdapter, AdapterRegistry } from '../adapter-types.js';
 import type { IceTypeSchema } from '../types.js';
 
 // =============================================================================

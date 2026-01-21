@@ -6,8 +6,7 @@
  * @packageDocumentation
  */
 
-import type { IceTypeSchema } from '@icetype/core';
-import type { SchemaAdapter } from '@icetype/adapters';
+import type { IceTypeSchema, SchemaAdapter } from '@icetype/core';
 
 import type {
   DuckDBDDL,

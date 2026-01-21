@@ -7,8 +7,7 @@
  * @packageDocumentation
  */
 
-import type { IceTypeSchema } from '@icetype/core';
-import type { SchemaAdapter, ParquetAdapterOptions } from '@icetype/adapters';
+import type { IceTypeSchema, SchemaAdapter, ParquetAdapterOptions } from '@icetype/core';
 
 import { generateParquetSchema, generateParquetSchemaString } from './parquet.js';
 import type { ParquetSchema } from './types.js';

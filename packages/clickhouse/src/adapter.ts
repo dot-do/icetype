@@ -7,8 +7,7 @@
  * @packageDocumentation
  */
 
-import type { IceTypeSchema, FieldDefinition } from '@icetype/core';
-import type { SchemaAdapter } from '@icetype/adapters';
+import type { IceTypeSchema, FieldDefinition, SchemaAdapter } from '@icetype/core';
 
 import type {
   ClickHouseDDL,
