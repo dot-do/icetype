@@ -26,6 +26,7 @@ import {
   serializeColumn,
   serializeDDL,
   generateIndexStatements,
+  InvalidSchemaNameError,
   ICETYPE_TO_DUCKDB,
 } from '../index.js';
 
@@ -913,5 +914,75 @@ describe('Edge Cases', () => {
     expect(columnNames).toContain('select');
     expect(columnNames).toContain('from');
     expect(columnNames).toContain('where');
+  });
+});
+
+// =============================================================================
+// Schema Name Validation Security Tests
+// =============================================================================
+
+describe('DuckDBAdapter schema name validation', () => {
+  let adapter: DuckDBAdapter;
+
+  beforeEach(() => {
+    adapter = new DuckDBAdapter();
+  });
+
+  it('should accept valid schema names', () => {
+    const schema = parseSchema({
+      $type: 'User',
+      id: 'uuid!',
+    });
+
+    expect(() => {
+      const ddl = adapter.transform(schema, { schema: 'main' });
+      adapter.serialize(ddl);
+    }).not.toThrow();
+
+    expect(() => {
+      const ddl = adapter.transform(schema, { schema: 'analytics' });
+      adapter.serialize(ddl);
+    }).not.toThrow();
+  });
+
+  it('should reject SQL injection attempts in schema name', () => {
+    const schema = parseSchema({
+      $type: 'User',
+      id: 'uuid!',
+    });
+
+    expect(() => {
+      const ddl = adapter.transform(schema, { schema: "main'; DROP TABLE users; --" });
+      adapter.serialize(ddl);
+    }).toThrow(InvalidSchemaNameError);
+  });
+
+  it('should reject schema names with semicolons', () => {
+    const schema = parseSchema({
+      $type: 'User',
+      id: 'uuid!',
+    });
+
+    expect(() => {
+      const ddl = adapter.transform(schema, { schema: 'main; DROP SCHEMA main; --' });
+      adapter.serialize(ddl);
+    }).toThrow(InvalidSchemaNameError);
+  });
+
+  it('should reject schema names with comment markers', () => {
+    const schema = parseSchema({
+      $type: 'User',
+      id: 'uuid!',
+    });
+
+    expect(() => {
+      const ddl = adapter.transform(schema, { schema: 'main--malicious' });
+      adapter.serialize(ddl);
+    }).toThrow(InvalidSchemaNameError);
+
+    expect(() => {
+      const ddl = adapter.transform(schema, { schema: 'main/*malicious*/' });
+      adapter.serialize(ddl);
+    }).toThrow(InvalidSchemaNameError);
   });
 });

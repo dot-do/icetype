@@ -16,6 +16,7 @@ import {
   formatDefaultValue as formatDefaultValueBase,
   generateSystemColumns as generateSystemColumnsBase,
   serializeColumn as serializeColumnBase,
+  validateSchemaName,
   type SqlColumn,
 } from '@icetype/sql-common';
 
@@ -293,7 +294,9 @@ export function generateCreateTableDDL(ddl: ClickHouseDDL): string {
 
   // CREATE TABLE line
   const tableNameParts: string[] = [];
+  // Validate database name to prevent SQL injection
   if (ddl.database) {
+    validateSchemaName(ddl.database);
     tableNameParts.push(escapeIdentifier(ddl.database));
   }
   tableNameParts.push(escapeIdentifier(ddl.tableName));
@@ -372,7 +375,9 @@ export function generateDropTableDDL(
   ifExists = true
 ): string {
   const tableNameParts: string[] = [];
+  // Validate database name to prevent SQL injection
   if (database) {
+    validateSchemaName(database);
     tableNameParts.push(escapeIdentifier(database));
   }
   tableNameParts.push(escapeIdentifier(tableName));
@@ -403,7 +408,9 @@ export function generateAddColumnDDL(
   after?: string
 ): string {
   const tableNameParts: string[] = [];
+  // Validate database name to prevent SQL injection
   if (database) {
+    validateSchemaName(database);
     tableNameParts.push(escapeIdentifier(database));
   }
   tableNameParts.push(escapeIdentifier(tableName));
@@ -432,7 +439,9 @@ export function generateDropColumnDDL(
   database?: string
 ): string {
   const tableNameParts: string[] = [];
+  // Validate database name to prevent SQL injection
   if (database) {
+    validateSchemaName(database);
     tableNameParts.push(escapeIdentifier(database));
   }
   tableNameParts.push(escapeIdentifier(tableName));

@@ -40,6 +40,60 @@ export interface SqlColumn {
 }
 
 // =============================================================================
+// Schema Name Validation
+// =============================================================================
+
+/**
+ * Error thrown when a schema name is invalid.
+ */
+export class InvalidSchemaNameError extends Error {
+  constructor(name: string) {
+    super(`Invalid schema name: "${name}". Schema names must contain only alphanumeric characters, underscores, and dots (for qualified names), and must start with a letter or underscore.`);
+    this.name = 'InvalidSchemaNameError';
+  }
+}
+
+/**
+ * Validate a SQL schema name to prevent SQL injection.
+ *
+ * Schema names must:
+ * - Be non-empty
+ * - Contain only alphanumeric characters, underscores, and optionally dots (for qualified names like "catalog.schema")
+ * - Start with a letter or underscore (not a number or dot)
+ * - Each segment (split by dots) must start with a letter or underscore
+ *
+ * This validation is intentionally strict to prevent any SQL injection vectors.
+ *
+ * @param name - The schema name to validate
+ * @throws InvalidSchemaNameError if the name contains dangerous characters
+ */
+export function validateSchemaName(name: string): void {
+  if (!name || name.length === 0) {
+    throw new InvalidSchemaNameError(name);
+  }
+
+  // Check for common SQL injection patterns first
+  if (name.includes(';') || name.includes('--') || name.includes('/*') || name.includes("'") || name.includes('"')) {
+    throw new InvalidSchemaNameError(name);
+  }
+
+  // Split by dots to handle qualified names like "catalog.schema"
+  const segments = name.split('.');
+
+  for (const segment of segments) {
+    // Each segment must be non-empty
+    if (!segment || segment.length === 0) {
+      throw new InvalidSchemaNameError(name);
+    }
+
+    // Each segment must match: starts with letter or underscore, followed by alphanumeric or underscore
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(segment)) {
+      throw new InvalidSchemaNameError(name);
+    }
+  }
+}
+
+// =============================================================================
 // SQL Reserved Keywords (for PostgreSQL)
 // =============================================================================
 

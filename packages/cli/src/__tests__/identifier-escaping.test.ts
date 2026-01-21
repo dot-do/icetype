@@ -336,8 +336,8 @@ describe('ClickHouse identifier escaping', () => {
       expect(sql).toContain('`user-events`');
     });
 
-    it('should generate safe DDL for databases with special characters', async () => {
-      const { ClickHouseAdapter } = await import('@icetype/clickhouse');
+    it('should reject databases with special characters for security', async () => {
+      const { ClickHouseAdapter, InvalidSchemaNameError } = await import('@icetype/clickhouse');
       const adapter = new ClickHouseAdapter();
 
       const schema = createSchemaWithName('User');
@@ -345,10 +345,24 @@ describe('ClickHouse identifier escaping', () => {
         engine: 'MergeTree',
         database: 'my-analytics',
       });
+
+      // Database names with special characters should be rejected for security
+      expect(() => adapter.serialize(ddl)).toThrow(InvalidSchemaNameError);
+    });
+
+    it('should accept databases with underscores', async () => {
+      const { ClickHouseAdapter } = await import('@icetype/clickhouse');
+      const adapter = new ClickHouseAdapter();
+
+      const schema = createSchemaWithName('User');
+      const ddl = adapter.transform(schema, {
+        engine: 'MergeTree',
+        database: 'my_analytics',
+      });
       const sql = adapter.serialize(ddl);
 
-      // Database name should be properly escaped
-      expect(sql).toContain('`my-analytics`');
+      // Database name with underscores should work
+      expect(sql).toContain('my_analytics');
     });
   });
 });
@@ -420,18 +434,31 @@ describe('DuckDB identifier escaping', () => {
       expect(sql).toContain('"user-events"');
     });
 
-    it('should generate safe DDL for schemas with special characters', async () => {
-      const { DuckDBAdapter } = await import('@icetype/duckdb');
+    it('should reject schemas with special characters for security', async () => {
+      const { DuckDBAdapter, InvalidSchemaNameError } = await import('@icetype/duckdb');
       const adapter = new DuckDBAdapter();
 
       const schema = createSchemaWithName('User');
       const ddl = adapter.transform(schema, {
         schema: 'my-analytics',
       });
+
+      // Schema names with special characters should be rejected for security
+      expect(() => adapter.serialize(ddl)).toThrow(InvalidSchemaNameError);
+    });
+
+    it('should accept schemas with underscores', async () => {
+      const { DuckDBAdapter } = await import('@icetype/duckdb');
+      const adapter = new DuckDBAdapter();
+
+      const schema = createSchemaWithName('User');
+      const ddl = adapter.transform(schema, {
+        schema: 'my_analytics',
+      });
       const sql = adapter.serialize(ddl);
 
-      // Schema name should be properly escaped
-      expect(sql).toContain('"my-analytics"');
+      // Schema name with underscores should work (unquoted is fine for simple identifiers)
+      expect(sql).toContain('my_analytics');
     });
   });
 });

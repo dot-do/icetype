@@ -15,6 +15,7 @@ import {
   serializeColumn as serializeColumnBase,
   generateSystemColumns as generateSystemColumnsBase,
   generateIndexStatements as generateIndexStatementsBase,
+  validateSchemaName,
   type SqlColumn,
 } from '@icetype/sql-common';
 
@@ -210,6 +211,10 @@ export function serializeDDL(ddl: DuckDBDDL): string {
   }
 
   // Table name with optional schema
+  // Validate schema name to prevent SQL injection
+  if (ddl.schemaName) {
+    validateSchemaName(ddl.schemaName);
+  }
   const tableName = ddl.schemaName
     ? `${escapeIdentifier(ddl.schemaName)}.${escapeIdentifier(ddl.tableName)}`
     : escapeIdentifier(ddl.tableName);

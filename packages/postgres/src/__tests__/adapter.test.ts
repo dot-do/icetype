@@ -22,6 +22,7 @@ import {
   serializeColumn,
   serializeDDL,
   generateIndexStatements,
+  InvalidSchemaNameError,
   ICETYPE_TO_POSTGRES,
 } from '../index.js';
 
@@ -974,5 +975,75 @@ describe('postgres.do Compatibility', () => {
 
     expect(valuesCol?.type).toBe('TEXT[]');
     expect(countsCol?.type).toBe('INTEGER[]');
+  });
+});
+
+// =============================================================================
+// Schema Name Validation Security Tests
+// =============================================================================
+
+describe('PostgresAdapter schema name validation', () => {
+  let adapter: PostgresAdapter;
+
+  beforeEach(() => {
+    adapter = new PostgresAdapter();
+  });
+
+  it('should accept valid schema names', () => {
+    const schema = parseSchema({
+      $type: 'User',
+      id: 'uuid!',
+    });
+
+    expect(() => {
+      const ddl = adapter.transform(schema, { schema: 'public' });
+      adapter.serialize(ddl);
+    }).not.toThrow();
+
+    expect(() => {
+      const ddl = adapter.transform(schema, { schema: 'my_schema' });
+      adapter.serialize(ddl);
+    }).not.toThrow();
+  });
+
+  it('should reject SQL injection attempts in schema name', () => {
+    const schema = parseSchema({
+      $type: 'User',
+      id: 'uuid!',
+    });
+
+    expect(() => {
+      const ddl = adapter.transform(schema, { schema: "public'; DROP TABLE users; --" });
+      adapter.serialize(ddl);
+    }).toThrow(InvalidSchemaNameError);
+  });
+
+  it('should reject schema names with semicolons', () => {
+    const schema = parseSchema({
+      $type: 'User',
+      id: 'uuid!',
+    });
+
+    expect(() => {
+      const ddl = adapter.transform(schema, { schema: 'public; DROP SCHEMA public; --' });
+      adapter.serialize(ddl);
+    }).toThrow(InvalidSchemaNameError);
+  });
+
+  it('should reject schema names with comment markers', () => {
+    const schema = parseSchema({
+      $type: 'User',
+      id: 'uuid!',
+    });
+
+    expect(() => {
+      const ddl = adapter.transform(schema, { schema: 'public--malicious' });
+      adapter.serialize(ddl);
+    }).toThrow(InvalidSchemaNameError);
+
+    expect(() => {
+      const ddl = adapter.transform(schema, { schema: 'public/*malicious*/' });
+      adapter.serialize(ddl);
+    }).toThrow(InvalidSchemaNameError);
   });
 });

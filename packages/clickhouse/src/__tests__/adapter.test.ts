@@ -22,6 +22,7 @@ import {
   escapeSettingValue,
   InvalidSettingKeyError,
   InvalidSettingValueError,
+  InvalidSchemaNameError,
   generateColumnDDL,
   generateEngineDDL,
   generateCreateTableDDL,
@@ -1083,5 +1084,105 @@ describe('generateClickHouseDDL', () => {
     expect(ddl.engine).toBe('ReplacingMergeTree');
     expect(ddl.orderBy).toEqual(['id']);
     expect(ddl.database).toBe('analytics');
+  });
+});
+
+// =============================================================================
+// Database Name Validation Security Tests
+// =============================================================================
+
+describe('ClickHouse database name validation', () => {
+  it('should accept valid database names', () => {
+    const ddl: ClickHouseDDL = {
+      tableName: 'users',
+      database: 'analytics',
+      columns: [{ name: 'id', type: 'UUID', nullable: false }],
+      engine: 'MergeTree',
+      orderBy: ['id'],
+    };
+
+    expect(() => generateCreateTableDDL(ddl)).not.toThrow();
+  });
+
+  it('should accept database names with underscores', () => {
+    const ddl: ClickHouseDDL = {
+      tableName: 'users',
+      database: 'my_analytics_db',
+      columns: [{ name: 'id', type: 'UUID', nullable: false }],
+      engine: 'MergeTree',
+      orderBy: ['id'],
+    };
+
+    expect(() => generateCreateTableDDL(ddl)).not.toThrow();
+  });
+
+  it('should reject SQL injection attempts in database name', () => {
+    const ddl: ClickHouseDDL = {
+      tableName: 'users',
+      database: "analytics'; DROP DATABASE analytics; --",
+      columns: [{ name: 'id', type: 'UUID', nullable: false }],
+      engine: 'MergeTree',
+      orderBy: ['id'],
+    };
+
+    expect(() => generateCreateTableDDL(ddl)).toThrow(InvalidSchemaNameError);
+  });
+
+  it('should reject database names with semicolons', () => {
+    const ddl: ClickHouseDDL = {
+      tableName: 'users',
+      database: 'analytics; DROP DATABASE analytics; --',
+      columns: [{ name: 'id', type: 'UUID', nullable: false }],
+      engine: 'MergeTree',
+      orderBy: ['id'],
+    };
+
+    expect(() => generateCreateTableDDL(ddl)).toThrow(InvalidSchemaNameError);
+  });
+
+  it('should reject database names with comment markers', () => {
+    const ddl1: ClickHouseDDL = {
+      tableName: 'users',
+      database: 'analytics--malicious',
+      columns: [{ name: 'id', type: 'UUID', nullable: false }],
+      engine: 'MergeTree',
+      orderBy: ['id'],
+    };
+
+    expect(() => generateCreateTableDDL(ddl1)).toThrow(InvalidSchemaNameError);
+
+    const ddl2: ClickHouseDDL = {
+      tableName: 'users',
+      database: 'analytics/*malicious*/',
+      columns: [{ name: 'id', type: 'UUID', nullable: false }],
+      engine: 'MergeTree',
+      orderBy: ['id'],
+    };
+
+    expect(() => generateCreateTableDDL(ddl2)).toThrow(InvalidSchemaNameError);
+  });
+
+  it('should reject database names in DROP TABLE', () => {
+    expect(() => {
+      generateDropTableDDL('users', "analytics'; DROP DATABASE analytics; --");
+    }).toThrow(InvalidSchemaNameError);
+  });
+
+  it('should reject database names in ADD COLUMN', () => {
+    const column: ClickHouseColumn = {
+      name: 'email',
+      type: 'String',
+      nullable: false,
+    };
+
+    expect(() => {
+      generateAddColumnDDL('users', column, "analytics'; DROP DATABASE analytics; --");
+    }).toThrow(InvalidSchemaNameError);
+  });
+
+  it('should reject database names in DROP COLUMN', () => {
+    expect(() => {
+      generateDropColumnDDL('users', 'email', "analytics'; DROP DATABASE analytics; --");
+    }).toThrow(InvalidSchemaNameError);
   });
 });

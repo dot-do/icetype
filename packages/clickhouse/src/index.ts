@@ -97,6 +97,12 @@ export {
   inferOrderBy,
 } from './ddl.js';
 
+// Re-export schema validation from sql-common
+export {
+  validateSchemaName,
+  InvalidSchemaNameError,
+} from '@icetype/sql-common';
+
 // =============================================================================
 // Adapter
 // =============================================================================

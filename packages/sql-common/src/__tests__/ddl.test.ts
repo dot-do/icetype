@@ -15,6 +15,8 @@ import {
   serializeColumn,
   generateSystemColumns,
   generateIndexStatements,
+  validateSchemaName,
+  InvalidSchemaNameError,
   type SqlDialect,
   type SqlColumn,
 } from '../index.js';
@@ -392,6 +394,101 @@ describe('generateIndexStatements()', () => {
       expect(statements[0]).toContain('idx_users__email');
       // But the column reference in the statement still uses the escaped column name
       expect(statements[0]).toContain('"$email"');
+    });
+  });
+});
+
+// =============================================================================
+// validateSchemaName() Tests
+// =============================================================================
+
+describe('validateSchemaName()', () => {
+  describe('valid schema names', () => {
+    it('should accept simple schema names', () => {
+      expect(() => validateSchemaName('public')).not.toThrow();
+      expect(() => validateSchemaName('main')).not.toThrow();
+      expect(() => validateSchemaName('analytics')).not.toThrow();
+      expect(() => validateSchemaName('my_schema')).not.toThrow();
+    });
+
+    it('should accept schema names starting with underscore', () => {
+      expect(() => validateSchemaName('_private')).not.toThrow();
+      expect(() => validateSchemaName('_internal_schema')).not.toThrow();
+    });
+
+    it('should accept schema names with numbers', () => {
+      expect(() => validateSchemaName('schema1')).not.toThrow();
+      expect(() => validateSchemaName('v2_schema')).not.toThrow();
+      expect(() => validateSchemaName('my_schema_123')).not.toThrow();
+    });
+
+    it('should accept qualified names with dots', () => {
+      expect(() => validateSchemaName('catalog.schema')).not.toThrow();
+      expect(() => validateSchemaName('my_catalog.my_schema')).not.toThrow();
+      expect(() => validateSchemaName('db.schema.table')).not.toThrow();
+    });
+
+    it('should accept uppercase schema names', () => {
+      expect(() => validateSchemaName('PUBLIC')).not.toThrow();
+      expect(() => validateSchemaName('MySchema')).not.toThrow();
+    });
+  });
+
+  describe('invalid schema names', () => {
+    it('should reject empty schema names', () => {
+      expect(() => validateSchemaName('')).toThrow(InvalidSchemaNameError);
+    });
+
+    it('should reject schema names starting with numbers', () => {
+      expect(() => validateSchemaName('123schema')).toThrow(InvalidSchemaNameError);
+      expect(() => validateSchemaName('1_schema')).toThrow(InvalidSchemaNameError);
+    });
+
+    it('should reject schema names with special characters', () => {
+      expect(() => validateSchemaName('my-schema')).toThrow(InvalidSchemaNameError);
+      expect(() => validateSchemaName('my schema')).toThrow(InvalidSchemaNameError);
+      expect(() => validateSchemaName('schema@name')).toThrow(InvalidSchemaNameError);
+      expect(() => validateSchemaName('schema$name')).toThrow(InvalidSchemaNameError);
+    });
+
+    it('should reject trailing or leading dots', () => {
+      expect(() => validateSchemaName('.schema')).toThrow(InvalidSchemaNameError);
+      expect(() => validateSchemaName('schema.')).toThrow(InvalidSchemaNameError);
+      expect(() => validateSchemaName('.schema.')).toThrow(InvalidSchemaNameError);
+    });
+
+    it('should reject consecutive dots', () => {
+      expect(() => validateSchemaName('catalog..schema')).toThrow(InvalidSchemaNameError);
+    });
+  });
+
+  describe('SQL injection prevention', () => {
+    it('should reject SQL injection with semicolon', () => {
+      expect(() => validateSchemaName('public; DROP TABLE users; --')).toThrow(InvalidSchemaNameError);
+      expect(() => validateSchemaName('schema;DELETE')).toThrow(InvalidSchemaNameError);
+    });
+
+    it('should reject SQL injection with comment markers', () => {
+      expect(() => validateSchemaName('public--comment')).toThrow(InvalidSchemaNameError);
+      expect(() => validateSchemaName('public/*comment*/')).toThrow(InvalidSchemaNameError);
+      expect(() => validateSchemaName('schema/* DROP TABLE */')).toThrow(InvalidSchemaNameError);
+    });
+
+    it('should reject SQL injection with quotes', () => {
+      expect(() => validateSchemaName("public'; DROP TABLE users; --")).toThrow(InvalidSchemaNameError);
+      expect(() => validateSchemaName('public"; DROP TABLE users; --')).toThrow(InvalidSchemaNameError);
+      expect(() => validateSchemaName("schema' OR '1'='1")).toThrow(InvalidSchemaNameError);
+    });
+
+    it('should reject control characters and unicode attacks', () => {
+      expect(() => validateSchemaName('schema\u0000')).toThrow(InvalidSchemaNameError);
+      expect(() => validateSchemaName('schema\n')).toThrow(InvalidSchemaNameError);
+      expect(() => validateSchemaName('schema\t')).toThrow(InvalidSchemaNameError);
+      expect(() => validateSchemaName('schema\r')).toThrow(InvalidSchemaNameError);
+    });
+
+    it('should reject backtick injection (ClickHouse)', () => {
+      expect(() => validateSchemaName('schema`; DROP TABLE users; --')).toThrow(InvalidSchemaNameError);
     });
   });
 });

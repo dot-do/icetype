@@ -55,7 +55,7 @@ export interface ClickHouseTableOptions {
   /** Expression for PARTITION BY clause */
   partitionBy?: string;
   /** Additional table settings */
-  settings?: Record<string, string>;
+  settings?: Record<string, string | number | boolean>;
   /** Version column for ReplacingMergeTree */
   versionColumn?: string;
   /** Sign column for CollapsingMergeTree */
@@ -148,7 +148,7 @@ export interface ClickHouseDDL {
   /** PRIMARY KEY columns (if different from orderBy) */
   primaryKey?: string[];
   /** Table settings */
-  settings?: Record<string, string>;
+  settings?: Record<string, string | number | boolean>;
   /** TTL expression */
   ttl?: string;
   /** Version column for ReplacingMergeTree */
