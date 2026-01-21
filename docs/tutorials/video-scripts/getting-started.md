@@ -361,3 +361,164 @@ const newPost: Post = {
 - Ensure code is readable (minimum 16pt font)
 - Describe visual elements in narration
 - Provide transcript in video description
+
+---
+
+## Video Production Requirements
+
+> **Note:** This script is complete and ready for recording. Actual video production requires human work and cannot be automated.
+
+### Recommended Recording Tools
+
+| Tool | Type | Platform | Notes |
+|------|------|----------|-------|
+| **OBS Studio** | Free | Windows/Mac/Linux | Best for screen recording, highly customizable |
+| **Camtasia** | Paid | Windows/Mac | All-in-one recording + editing, beginner-friendly |
+| **ScreenFlow** | Paid | Mac | Professional Mac screen recording |
+| **DaVinci Resolve** | Free/Paid | Windows/Mac/Linux | Professional video editing |
+| **Adobe Premiere** | Paid | Windows/Mac | Industry standard video editing |
+| **Loom** | Free/Paid | Web/Desktop | Quick recordings, easy sharing |
+
+### Pre-Recording Checklist
+
+- [ ] Review script thoroughly
+- [ ] Set up development environment with sample project
+- [ ] Test all commands in script work correctly
+- [ ] Prepare VS Code with appropriate theme and font size (16pt+)
+- [ ] Close unnecessary applications and notifications
+- [ ] Set screen resolution to 1920x1080 or 2560x1440
+- [ ] Test microphone audio levels
+- [ ] Prepare all code snippets for copy/paste during recording
+
+### Recording Checklist
+
+- [ ] Record introduction and talking head segments
+- [ ] Record terminal demos (each command separately for easy editing)
+- [ ] Record VS Code editing sequences
+- [ ] Capture any additional B-roll footage
+- [ ] Record alternative takes for complex sections
+
+### Post-Production Checklist
+
+- [ ] Assemble all clips in editing software
+- [ ] Add chapter markers at timestamps from script
+- [ ] Insert on-screen graphics and callouts
+- [ ] Add background music (if desired)
+- [ ] Color grade and normalize audio
+- [ ] Add closed captions/subtitles
+- [ ] Export in multiple resolutions (1080p, 4K)
+- [ ] Create thumbnail image
+- [ ] Write video description with timestamps and links
+- [ ] Export final video file
+
+---
+
+## Publishing Checklist
+
+> **Note:** This section requires human action. Video production and publishing cannot be automated.
+
+### Pre-Publishing Preparation
+
+- [ ] Final video file exported (1080p minimum, 4K preferred)
+- [ ] Thumbnail created (1280x720 or higher)
+- [ ] Video title finalized: "Getting Started with IceType - Type-Safe Schema Language"
+- [ ] Video description written with:
+  - [ ] Brief summary (2-3 sentences)
+  - [ ] Timestamps for each chapter
+  - [ ] Links to IceType documentation
+  - [ ] Links to GitHub repository
+  - [ ] Relevant hashtags
+- [ ] Tags/keywords prepared
+- [ ] Closed captions reviewed and corrected
+- [ ] End screen and cards prepared (if applicable)
+
+### Publishing Steps
+
+1. **Upload to primary platform** (YouTube recommended)
+   - [ ] Upload video file
+   - [ ] Add title, description, and tags
+   - [ ] Upload custom thumbnail
+   - [ ] Add end screen elements
+   - [ ] Add video cards linking to documentation
+   - [ ] Set visibility (public/unlisted initially for review)
+   - [ ] Schedule publish time if desired
+
+2. **Cross-platform distribution**
+   - [ ] Upload to secondary platforms (see list below)
+   - [ ] Ensure consistent branding across platforms
+   - [ ] Link back to primary video in descriptions
+
+3. **Documentation integration**
+   - [ ] Embed video in IceType documentation site
+   - [ ] Add video link to README.md
+   - [ ] Update any "getting started" guides to reference video
+
+---
+
+## Suggested Platforms and Promotion Channels
+
+### Primary Video Platforms
+
+| Platform | Priority | Notes |
+|----------|----------|-------|
+| **YouTube** | High | Largest developer audience, SEO benefits, long-form content |
+| **Vimeo** | Medium | Higher quality player, professional image |
+
+### Social Media Promotion
+
+| Platform | Content Type | Best Practices |
+|----------|--------------|----------------|
+| **Twitter/X** | Short clip + link | Post 30-60 second teaser clip, thread with key points |
+| **LinkedIn** | Professional announcement | Focus on productivity benefits, tag relevant companies |
+| **Bluesky** | Developer-focused | Growing developer community, early adopter audience |
+| **Mastodon** | Tech-focused instances | Post to tech/developer instances |
+
+### Developer Communities
+
+| Community | How to Share |
+|-----------|--------------|
+| **Reddit** | Post to r/typescript, r/programming, r/webdev, r/node |
+| **Hacker News** | Submit as "Show HN" if appropriate |
+| **Dev.to** | Write companion article embedding the video |
+| **Hashnode** | Cross-post article with video embed |
+| **Discord servers** | Share in TypeScript, Node.js, and database-focused servers |
+| **Slack communities** | Share in relevant channels (TypeScript, JavaScript, etc.) |
+
+### Content Repurposing Ideas
+
+- [ ] **Blog post**: Write a companion article covering the same content
+- [ ] **Short clips**: Create 30-60 second clips for social media
+- [ ] **GIF demos**: Create animated GIFs of key commands
+- [ ] **Carousel posts**: Create visual slides for LinkedIn/Instagram
+- [ ] **Newsletter**: Include in project newsletter or relevant dev newsletters
+- [ ] **Podcast mention**: Mention in relevant podcasts or tech shows
+
+### Promotion Timeline
+
+| Day | Action |
+|-----|--------|
+| **Day 0** | Publish video, share on Twitter/X with teaser |
+| **Day 1** | Post to Reddit communities, LinkedIn |
+| **Day 2** | Share in Discord/Slack communities |
+| **Day 3** | Publish companion blog post |
+| **Week 2** | Follow up with "tips" content derived from video |
+| **Month 1** | Share highlights in newsletter, evaluate metrics |
+
+### SEO and Discoverability
+
+- **Keywords to target**: "IceType tutorial", "TypeScript schema", "type-safe schema", "schema to TypeScript", "database schema generator"
+- **Hashtags**: #TypeScript #IceType #WebDev #DatabaseSchema #OpenSource #Tutorial
+- **Cross-link**: Reference from documentation, README, and other videos
+
+---
+
+## Metrics to Track
+
+| Metric | Platform | Goal |
+|--------|----------|------|
+| Views | YouTube | 1,000+ in first month |
+| Watch time | YouTube | 50%+ average retention |
+| Engagement | All | Comments, likes, shares |
+| Click-through | YouTube | 4%+ CTR on thumbnail |
+| Referral traffic | Analytics | Track visitors from video to docs |
+| GitHub stars | GitHub | Correlate with video publish dates |
