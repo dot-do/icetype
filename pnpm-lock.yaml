@@ -28,7 +28,7 @@ importers:
         version: 16.0.3(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.0.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       fumadocs-mdx:
         specifier: 13.0.1
-        version: 13.0.1(fumadocs-core@16.0.3(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.0.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(next@16.0.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)(vite@5.4.21(@types/node@24.10.9)(lightningcss@1.30.2))
+        version: 13.0.1(fumadocs-core@16.0.3(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.0.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(next@16.0.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
       fumadocs-ui:
         specifier: 16.0.3
         version: 16.0.3(@types/react-dom@19.2.3(@types/react@19.2.9))(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.0.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)
@@ -333,6 +333,22 @@ importers:
       '@icetype/postgres':
         specifier: workspace:*
         version: link:../postgres
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@24.10.9)(lightningcss@1.30.2)
+
+  packages/mysql:
+    dependencies:
+      '@icetype/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@icetype/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -4097,6 +4113,14 @@ snapshots:
       chai: 5.3.3
       tinyrainbow: 1.2.0
 
+  '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@22.19.7)(lightningcss@1.30.2))':
+    dependencies:
+      '@vitest/spy': 2.1.9
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 5.4.21(@types/node@22.19.7)(lightningcss@1.30.2)
+
   '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@24.10.9)(lightningcss@1.30.2))':
     dependencies:
       '@vitest/spy': 2.1.9
@@ -4436,7 +4460,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  fumadocs-mdx@13.0.1(fumadocs-core@16.0.3(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.0.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(next@16.0.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)(vite@5.4.21(@types/node@24.10.9)(lightningcss@1.30.2)):
+  fumadocs-mdx@13.0.1(fumadocs-core@16.0.3(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.0.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(next@16.0.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3):
     dependencies:
       '@mdx-js/mdx': 3.1.1
       '@standard-schema/spec': 1.1.0
@@ -4459,7 +4483,6 @@ snapshots:
     optionalDependencies:
       next: 16.0.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react: 19.2.3
-      vite: 5.4.21(@types/node@24.10.9)(lightningcss@1.30.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -5735,7 +5758,7 @@ snapshots:
   vitest@2.1.9(@types/node@22.19.7)(lightningcss@1.30.2):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@24.10.9)(lightningcss@1.30.2))
+      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@22.19.7)(lightningcss@1.30.2))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9
