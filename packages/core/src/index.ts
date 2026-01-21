@@ -133,6 +133,11 @@ export {
   // Utilities
   tokenize,
   inferType,
+  parseTypeString,
+  parseRelationString,
+  isRelationString,
+  parseDefaultValue,
+  splitGenericParams,
 
   // Type guards
   isValidPrimitiveType,
@@ -140,6 +145,21 @@ export {
   isValidRelationOperator,
   isValidParametricType,
   isValidGenericType,
+
+  // Constants
+  PRIMITIVE_TYPES,
+  PARAMETRIC_TYPES,
+  GENERIC_TYPES,
+  TYPE_ALIASES,
+  RELATION_OPERATORS,
+  KNOWN_DIRECTIVES,
+} from './parser.js';
+
+// Re-export parser types
+export type {
+  SchemaDirectivesExtended,
+  ParseTypeOptions,
+  ParseRelationOptions,
 } from './parser.js';
 
 // Re-export type mappings
@@ -323,6 +343,11 @@ export type {
   PluginManagerConfig,
   DiscoveredAdapter,
   DiscoverOptions,
+  SchemaAdapterCompat,
+  DiscoveredItem,
+  TypedPlugin,
+  TypedPluginHooks,
+  TypedPluginConfig,
 } from './plugin-system.js';
 
 // Re-export plugin config functions

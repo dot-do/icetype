@@ -39,7 +39,7 @@ import {
  * Extended schema directives interface with projection fields.
  * This extends SchemaDirectives to include projection-specific directives.
  */
-interface SchemaDirectivesExtended extends SchemaDirectives {
+export interface SchemaDirectivesExtended extends SchemaDirectives {
   /** Type of projection: oltp, olap, or both */
   projection?: 'oltp' | 'olap' | 'both';
   /** Source entity name to project from */
@@ -55,7 +55,7 @@ interface SchemaDirectivesExtended extends SchemaDirectives {
 // =============================================================================
 
 /** Known primitive types */
-const PRIMITIVE_TYPES = new Set<string>([
+export const PRIMITIVE_TYPES = new Set<string>([
   'string',
   'int',
   'float',
@@ -75,18 +75,18 @@ const PRIMITIVE_TYPES = new Set<string>([
 ]);
 
 /** Parametric types that take numeric arguments */
-const PARAMETRIC_TYPES = new Set<string>(['decimal', 'varchar', 'char', 'fixed']);
+export const PARAMETRIC_TYPES = new Set<string>(['decimal', 'varchar', 'char', 'fixed']);
 
 /** Generic types that use angle brackets */
-const GENERIC_TYPES = new Set<string>(['map', 'struct', 'enum', 'ref', 'list']);
+export const GENERIC_TYPES = new Set<string>(['map', 'struct', 'enum', 'ref', 'list']);
 
 /** Type aliases mapping to canonical forms */
-const TYPE_ALIASES: Record<string, string> = {
+export const TYPE_ALIASES: Record<string, string> = {
   bool: 'boolean',
 };
 
 /** Relation operators */
-const RELATION_OPERATORS: RelationOperator[] = ['->', '~>', '<-', '<~'];
+export const RELATION_OPERATORS: RelationOperator[] = ['->', '~>', '<-', '<~'];
 
 /** Valid field modifiers */
 const VALID_MODIFIERS: FieldModifier[] = ['!', '#', '?', ''];
@@ -146,7 +146,7 @@ export function isValidGenericType(type: string): type is GenericType {
 }
 
 /** Known directives */
-const KNOWN_DIRECTIVES = new Set<string>([
+export const KNOWN_DIRECTIVES = new Set<string>([
   '$type',
   '$id',
   '$context',
@@ -460,7 +460,7 @@ export function inferType(value: unknown): string {
 /**
  * Parse a default value string into the appropriate type.
  */
-function parseDefaultValue(value: string): unknown {
+export function parseDefaultValue(value: string): unknown {
   const trimmed = value.trim();
 
   // Function call: now(), uuid(), gen_random_uuid()
@@ -508,7 +508,7 @@ function parseDefaultValue(value: string): unknown {
 // Type String Parser
 // =============================================================================
 
-interface ParseTypeOptions {
+export interface ParseTypeOptions {
   throwOnUnknownType?: boolean;
   /** Field name for better error context */
   fieldName?: string;
@@ -527,7 +527,7 @@ interface ParseTypeOptions {
  * @param options - Parsing options
  * @returns The parsed type
  */
-function parseTypeString(input: string, options: ParseTypeOptions = {}): ParsedType {
+export function parseTypeString(input: string, options: ParseTypeOptions = {}): ParsedType {
   const { throwOnUnknownType = true, fieldName, line = 1, column = 1 } = options;
   let str = input.trim();
 
@@ -725,7 +725,7 @@ function parseTypeString(input: string, options: ParseTypeOptions = {}): ParsedT
 /**
  * Split generic parameters by comma, respecting nested angle brackets.
  */
-function splitGenericParams(content: string): string[] {
+export function splitGenericParams(content: string): string[] {
   const parts: string[] = [];
   let current = '';
   let depth = 0;
@@ -756,7 +756,7 @@ function splitGenericParams(content: string): string[] {
 // Relation Parser
 // =============================================================================
 
-function isRelationString(input: string): boolean {
+export function isRelationString(input: string): boolean {
   if (!input || typeof input !== 'string') return false;
   const trimmed = input.trim();
   if (!trimmed) return false;
@@ -778,7 +778,7 @@ function findOperator(input: string): { operator: RelationOperator; index: numbe
   return bestMatch;
 }
 
-interface ParseRelationOptions {
+export interface ParseRelationOptions {
   /** Field name for better error context */
   fieldName?: string;
   /** Line number for error reporting */
@@ -800,7 +800,7 @@ interface ParseRelationOptions {
  * @param options - Parsing options for error context
  * @returns The parsed relation definition
  */
-function parseRelationString(
+export function parseRelationString(
   input: string,
   options: ParseRelationOptions = {}
 ): RelationDefinition & { array?: boolean; optional?: boolean } {
