@@ -1,0 +1,88 @@
+{
+  "name": "icetype-vscode",
+  "displayName": "IceType",
+  "description": "Syntax highlighting and language support for IceType schema language",
+  "version": "0.1.0",
+  "publisher": "icetype",
+  "author": "Nathan Clevenger",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dot-do/icetype.git",
+    "directory": "editors/vscode"
+  },
+  "homepage": "https://github.com/dot-do/icetype",
+  "bugs": {
+    "url": "https://github.com/dot-do/icetype/issues"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "keywords": [
+    "icetype",
+    "schema",
+    "typescript",
+    "iceberg",
+    "parquet"
+  ],
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#0f172a",
+    "theme": "dark"
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "languages": [
+      {
+        "id": "icetype",
+        "aliases": ["IceType", "icetype"],
+        "extensions": [".ice", ".icetype"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "icetype",
+        "scopeName": "source.icetype",
+        "path": "./syntaxes/icetype.tmLanguage.json"
+      },
+      {
+        "scopeName": "source.icetype.injection",
+        "path": "./syntaxes/icetype.injection.json",
+        "injectTo": [
+          "source.ts",
+          "source.tsx",
+          "source.js",
+          "source.jsx"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.icetype": "icetype"
+        }
+      }
+    ],
+    "configurationDefaults": {
+      "[icetype]": {
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.formatOnSave": true
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.75.0",
+    "@vscode/vsce": "^2.22.0",
+    "typescript": "^5.7.0"
+  }
+}
