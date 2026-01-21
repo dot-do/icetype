@@ -1,0 +1,28 @@
+{
+  "name": "@icetype/benchmarks",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Performance benchmarks for IceType",
+  "type": "module",
+  "scripts": {
+    "bench": "vitest bench --run",
+    "bench:watch": "vitest bench",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "icetype",
+    "benchmarks",
+    "performance"
+  ],
+  "author": "Nathan Clevenger",
+  "license": "MIT",
+  "devDependencies": {
+    "@icetype/core": "workspace:*",
+    "@icetype/postgres": "workspace:*",
+    "@icetype/mysql": "workspace:*",
+    "@icetype/sqlite": "workspace:*",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}
