@@ -134,7 +134,6 @@ export function fieldToSQLiteColumn(
       message: `SQLite does not have native array support. Array type '${arrayTypeName}' will be stored as JSON in a TEXT column. Use JSON functions (json_each, json_extract, etc.) to query array data.`,
       code: 'SQLITE_ARRAY_AS_JSON',
     };
-    console.warn(`[icetype/sqlite] Warning: Field '${fieldName}' has array type '${arrayTypeName}'. SQLite stores arrays as JSON in TEXT columns.`);
   } else {
     const typeMapping = mapIceTypeToSQLite(field.type, field);
     typeString = getSQLiteTypeString(typeMapping);
@@ -259,6 +258,10 @@ export function serializeColumn(column: SQLiteColumn): string {
 /**
  * Serialize a SQLite DDL structure to a CREATE TABLE statement.
  *
+ * Note: SQLite uses its own implementation instead of the shared serializeDDL
+ * because SQLite has unique column-level features (inline PRIMARY KEY with
+ * AUTOINCREMENT) that require custom column serialization.
+ *
  * @param ddl - The DDL structure
  * @returns The CREATE TABLE SQL statement
  */
@@ -276,7 +279,7 @@ export function serializeDDL(ddl: SQLiteDDL): string {
   header += ` ${tableName} (`;
   lines.push(header);
 
-  // Column definitions
+  // Column definitions (using SQLite-specific serializeColumn)
   const columnDefs = ddl.columns.map(col => `  ${serializeColumn(col)}`);
 
   // Primary key constraint (only if not defined inline on a column)
