@@ -401,3 +401,27 @@ export function generateIndexStatements(
 
   return statements;
 }
+
+// =============================================================================
+// Foreign Key Re-exports
+// =============================================================================
+
+export {
+  extractForeignKeys,
+  serializeForeignKey,
+  type ForeignKeyDefinition,
+  type ReferentialAction,
+  type ExtractForeignKeysOptions,
+} from './foreign-keys.js';
+
+// =============================================================================
+// DDL Serialization Re-exports
+// =============================================================================
+
+export {
+  serializeDDL,
+  type DDLStructure,
+  type ForeignKey,
+  type ForeignKeyAction,
+  type CheckConstraint,
+} from './serialize.js';

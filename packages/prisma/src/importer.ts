@@ -334,13 +334,18 @@ function getAttributeArgs(field: PrismaField, attrName: string): string[] | unde
   return attr?.args;
 }
 
+/** Prisma scalar type names that can be converted to IceType */
+type PrismaScalarType = keyof typeof PRISMA_TO_ICETYPE_MAP;
+
 /**
  * Check if a type is a Prisma scalar type
+ *
+ * This is a type guard that narrows the type to PrismaScalarType.
  *
  * @param type - Type name
  * @returns True if type is a scalar
  */
-function isScalarType(type: string): boolean {
+function isScalarType(type: string): type is PrismaScalarType {
   return type in PRISMA_TO_ICETYPE_MAP;
 }
 

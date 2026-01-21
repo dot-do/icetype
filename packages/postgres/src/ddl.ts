@@ -15,8 +15,9 @@ import {
   serializeColumn as serializeColumnBase,
   generateSystemColumns as generateSystemColumnsBase,
   generateIndexStatements as generateIndexStatementsBase,
-  validateSchemaName,
+  serializeDDL as serializeDDLBase,
   type SqlColumn,
+  type DDLStructure,
 } from '@icetype/sql-common';
 
 import type {
@@ -203,86 +204,26 @@ export function serializeColumn(column: PostgresColumn): string {
 /**
  * Serialize a PostgreSQL DDL structure to a CREATE TABLE statement.
  *
+ * Uses the shared serializeDDL from @icetype/sql-common.
+ *
  * @param ddl - The DDL structure
  * @returns The CREATE TABLE SQL statement
  */
 export function serializeDDL(ddl: PostgresDDL): string {
-  const lines: string[] = [];
+  // Convert PostgresDDL to the common DDLStructure format
+  const commonDDL: DDLStructure = {
+    tableName: ddl.tableName,
+    schemaName: ddl.schemaName,
+    columns: ddl.columns as SqlColumn[],
+    primaryKey: ddl.primaryKey,
+    uniqueConstraints: ddl.uniqueConstraints,
+    checkConstraints: ddl.checkConstraints,
+    foreignKeys: ddl.foreignKeys,
+    ifNotExists: ddl.ifNotExists,
+    unlogged: ddl.unlogged,
+  };
 
-  // CREATE TABLE header
-  let header = 'CREATE';
-  if (ddl.unlogged) {
-    header += ' UNLOGGED';
-  }
-  header += ' TABLE';
-  if (ddl.ifNotExists) {
-    header += ' IF NOT EXISTS';
-  }
-
-  // Table name with optional schema
-  // Validate schema name to prevent SQL injection
-  if (ddl.schemaName) {
-    validateSchemaName(ddl.schemaName);
-  }
-  const tableName = ddl.schemaName
-    ? `${escapeIdentifier(ddl.schemaName)}.${escapeIdentifier(ddl.tableName)}`
-    : escapeIdentifier(ddl.tableName);
-
-  header += ` ${tableName} (`;
-  lines.push(header);
-
-  // Column definitions
-  const columnDefs = ddl.columns.map(col => `  ${serializeColumn(col)}`);
-
-  // Primary key constraint
-  if (ddl.primaryKey && ddl.primaryKey.length > 0) {
-    const pkCols = ddl.primaryKey.map(escapeIdentifier).join(', ');
-    columnDefs.push(`  PRIMARY KEY (${pkCols})`);
-  }
-
-  // Unique constraints
-  if (ddl.uniqueConstraints) {
-    for (const uniqueCols of ddl.uniqueConstraints) {
-      const cols = uniqueCols.map(escapeIdentifier).join(', ');
-      columnDefs.push(`  UNIQUE (${cols})`);
-    }
-  }
-
-  // Check constraints
-  if (ddl.checkConstraints) {
-    for (const check of ddl.checkConstraints) {
-      if (check.name) {
-        columnDefs.push(`  CONSTRAINT ${escapeIdentifier(check.name)} CHECK (${check.expression})`);
-      } else {
-        columnDefs.push(`  CHECK (${check.expression})`);
-      }
-    }
-  }
-
-  // Foreign key constraints
-  if (ddl.foreignKeys) {
-    for (const fk of ddl.foreignKeys) {
-      const fkCols = fk.columns.map(escapeIdentifier).join(', ');
-      const refTable = escapeIdentifier(fk.references.table);
-      const refCols = fk.references.columns.map(escapeIdentifier).join(', ');
-
-      let fkDef = `  FOREIGN KEY (${fkCols}) REFERENCES ${refTable} (${refCols})`;
-
-      if (fk.onDelete) {
-        fkDef += ` ON DELETE ${fk.onDelete}`;
-      }
-      if (fk.onUpdate) {
-        fkDef += ` ON UPDATE ${fk.onUpdate}`;
-      }
-
-      columnDefs.push(fkDef);
-    }
-  }
-
-  lines.push(columnDefs.join(',\n'));
-  lines.push(');');
-
-  return lines.join('\n');
+  return serializeDDLBase(commonDDL, 'postgres');
 }
 
 /**

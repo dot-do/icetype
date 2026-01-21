@@ -83,3 +83,31 @@ export {
   createParquetAdapter,
   transformToParquetString,
 } from './parquet-adapter.js';
+
+// Re-export Iceberg schema evolution/migrations
+export type {
+  IcebergAddColumn,
+  IcebergDropColumn,
+  IcebergRenameColumn,
+  IcebergUpdateType,
+  IcebergMakeOptional,
+  IcebergMakeRequired,
+  IcebergOperation,
+  IcebergSchemaUpdate,
+} from './migrations.js';
+
+export {
+  IcebergMigrationGenerator,
+  createIcebergMigrationGenerator,
+  generateIcebergSchemaUpdate,
+} from './migrations.js';
+
+// Re-export projection schema generation
+export {
+  ProjectionSchemaGenerator,
+  createProjectionSchemaGenerator,
+  generateProjectionSchema,
+} from './projection-generator.js';
+
+// Re-export projection types
+export type { ProjectionDefinition } from './projection-generator.js';

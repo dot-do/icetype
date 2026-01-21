@@ -28,9 +28,16 @@ import { ICETYPE_TO_SQLITE } from './types.js';
 // =============================================================================
 
 /**
+ * Branded type for array type strings (strings ending with `[]`).
+ * Use isArrayType() to narrow a string to this type.
+ */
+export type ArrayTypeString = string & { readonly __brand: 'ArrayTypeString' };
+
+/**
  * Check if a field type string represents an array type.
  *
  * Array types are denoted by `[]` suffix (e.g., `string[]`, `int[]`).
+ * This is a type guard that narrows the string to ArrayTypeString.
  *
  * Note: When working with parsed FieldDefinition objects, use the
  * `field.isArray` property instead for accurate detection, since
@@ -38,8 +45,17 @@ import { ICETYPE_TO_SQLITE } from './types.js';
  *
  * @param fieldType - The IceType field type string
  * @returns True if the type string ends with `[]`
+ *
+ * @example
+ * ```typescript
+ * const type = 'string[]';
+ * if (isArrayType(type)) {
+ *   // TypeScript knows type is ArrayTypeString
+ *   const elementType = type.slice(0, -2); // Extract element type
+ * }
+ * ```
  */
-export function isArrayType(fieldType: string): boolean {
+export function isArrayType(fieldType: string): fieldType is ArrayTypeString {
   // Must have at least one character before []
   return fieldType.length > 2 && fieldType.endsWith('[]');
 }

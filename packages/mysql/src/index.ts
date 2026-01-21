@@ -96,3 +96,13 @@ export {
   transformToMySQLDDL,
   generateMySQLDDL,
 } from './adapter.js';
+
+// =============================================================================
+// Migrations
+// =============================================================================
+
+export {
+  MySQLMigrationGenerator,
+  createMySQLMigrationGenerator,
+  type MySQLGeneratorOptions,
+} from './migrations.js';

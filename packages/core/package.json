@@ -11,7 +11,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
@@ -35,6 +37,7 @@
     "url": "https://github.com/dot-do/icetype/issues"
   },
   "devDependencies": {
+    "fast-check": "^4.5.3",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
   }

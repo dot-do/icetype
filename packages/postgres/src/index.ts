@@ -105,3 +105,13 @@ export {
   transformToPostgresDDL,
   generatePostgresDDL,
 } from './adapter.js';
+
+// =============================================================================
+// Migrations
+// =============================================================================
+
+export {
+  PostgresMigrationGenerator,
+  createPostgresMigrationGenerator,
+  type PostgresMigrationOptions,
+} from './migrations.js';

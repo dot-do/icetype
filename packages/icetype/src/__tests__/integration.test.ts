@@ -702,3 +702,159 @@ describe('Main icetype Package Exports', () => {
     expect(sql).toContain('UUID');
   });
 });
+
+// =============================================================================
+// Subpath Exports Tests
+// =============================================================================
+
+// Import from subpath exports
+import { parseSchema as parseSchemaFromCore, IceTypeSchema } from 'icetype/core';
+import { PostgresAdapter as PostgresAdapterFromSubpath } from 'icetype/postgres';
+import { MySQLAdapter } from 'icetype/mysql';
+import { SQLiteAdapter } from 'icetype/sqlite';
+import { DrizzleAdapter } from 'icetype/drizzle';
+import { PrismaAdapter } from 'icetype/prisma';
+import { IcebergMetadataGenerator } from 'icetype/iceberg';
+import { createAdapterRegistry as createAdapterRegistryFromSubpath } from 'icetype/adapters';
+
+describe('Subpath Exports', () => {
+  describe('icetype/core', () => {
+    it('should export parseSchema from icetype/core', () => {
+      expect(parseSchemaFromCore).toBeDefined();
+      expect(parseSchemaFromCore).toBe(parseSchema);
+    });
+
+    it('should work with IceTypeSchema type', () => {
+      const schema: IceTypeSchema = parseSchemaFromCore({
+        $type: 'TestEntity',
+        id: 'uuid!',
+        name: 'string',
+      });
+      expect(schema.name).toBe('TestEntity');
+    });
+  });
+
+  describe('icetype/postgres', () => {
+    it('should export PostgresAdapter from icetype/postgres', () => {
+      expect(PostgresAdapterFromSubpath).toBeDefined();
+      expect(PostgresAdapterFromSubpath).toBe(PostgresAdapter);
+    });
+
+    it('should be able to create and use PostgresAdapter', () => {
+      const adapter = new PostgresAdapterFromSubpath();
+      const schema = parseSchema({
+        $type: 'TestEntity',
+        id: 'uuid!',
+        name: 'string',
+      });
+      const ddl = adapter.transform(schema);
+      const sql = adapter.serialize(ddl);
+      expect(sql).toContain('CREATE TABLE');
+    });
+  });
+
+  describe('icetype/mysql', () => {
+    it('should export MySQLAdapter from icetype/mysql', () => {
+      expect(MySQLAdapter).toBeDefined();
+    });
+
+    it('should be able to create and use MySQLAdapter', () => {
+      const adapter = new MySQLAdapter();
+      const schema = parseSchema({
+        $type: 'TestEntity',
+        id: 'uuid!',
+        name: 'string',
+      });
+      const ddl = adapter.transform(schema);
+      const sql = adapter.serialize(ddl);
+      expect(sql).toContain('CREATE TABLE');
+    });
+  });
+
+  describe('icetype/sqlite', () => {
+    it('should export SQLiteAdapter from icetype/sqlite', () => {
+      expect(SQLiteAdapter).toBeDefined();
+    });
+
+    it('should be able to create and use SQLiteAdapter', () => {
+      const adapter = new SQLiteAdapter();
+      const schema = parseSchema({
+        $type: 'TestEntity',
+        id: 'uuid!',
+        name: 'string',
+      });
+      const ddl = adapter.transform(schema);
+      const sql = adapter.serialize(ddl);
+      expect(sql).toContain('CREATE TABLE');
+    });
+  });
+
+  describe('icetype/drizzle', () => {
+    it('should export DrizzleAdapter from icetype/drizzle', () => {
+      expect(DrizzleAdapter).toBeDefined();
+    });
+
+    it('should be able to create and use DrizzleAdapter', () => {
+      const adapter = new DrizzleAdapter();
+      const schema = parseSchema({
+        $type: 'TestEntity',
+        id: 'uuid!',
+        name: 'string',
+      });
+      const drizzleSchema = adapter.transform(schema, { dialect: 'pg' });
+      expect(drizzleSchema.tables).toHaveLength(1);
+    });
+  });
+
+  describe('icetype/prisma', () => {
+    it('should export PrismaAdapter from icetype/prisma', () => {
+      expect(PrismaAdapter).toBeDefined();
+    });
+
+    it('should be able to create and use PrismaAdapter', () => {
+      const adapter = new PrismaAdapter();
+      const schema = parseSchema({
+        $type: 'TestEntity',
+        id: 'uuid!',
+        name: 'string',
+      });
+      const prismaModel = adapter.transform(schema);
+      expect(prismaModel.name).toBe('TestEntity');
+      expect(prismaModel.fields.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('icetype/iceberg', () => {
+    it('should export IcebergMetadataGenerator from icetype/iceberg', () => {
+      expect(IcebergMetadataGenerator).toBeDefined();
+    });
+
+    it('should be able to create and use IcebergMetadataGenerator', () => {
+      const generator = new IcebergMetadataGenerator();
+      const schema = parseSchema({
+        $type: 'TestEntity',
+        id: 'uuid!',
+        name: 'string',
+      });
+      const icebergSchema = generator.generateSchema(schema);
+      expect(icebergSchema).toBeDefined();
+      expect(icebergSchema.fields.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('icetype/adapters', () => {
+    it('should export createAdapterRegistry from icetype/adapters', () => {
+      expect(createAdapterRegistryFromSubpath).toBeDefined();
+      expect(createAdapterRegistryFromSubpath).toBe(createAdapterRegistry);
+    });
+
+    it('should be able to create and use adapter registry', () => {
+      const registry = createAdapterRegistryFromSubpath();
+      registry.register(new PostgresAdapterFromSubpath());
+
+      const adapter = registry.get('postgres');
+      expect(adapter).toBeDefined();
+      expect(adapter).toBeInstanceOf(PostgresAdapterFromSubpath);
+    });
+  });
+});

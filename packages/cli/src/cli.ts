@@ -24,6 +24,8 @@ import { prismaExport } from './commands/prisma.js';
 import { prismaImport } from './commands/prisma-import.js';
 import { drizzleImport } from './commands/drizzle-import.js';
 import { diff } from './commands/diff.js';
+import { migrate } from './commands/migrate.js';
+import { project } from './commands/project.js';
 import { generateHelpText, hasHelpFlag, type HelpCommand } from './utils/help.js';
 import { formatCliError } from './utils/cli-error.js';
 
@@ -48,6 +50,8 @@ Commands:
   generate           Generate TypeScript types from schema
   validate           Validate schema syntax
   diff               Compare schemas and generate migration SQL
+  migrate            Generate and manage database migrations
+  project generate   Generate OLAP schemas from projection definitions
   clickhouse export  Export to ClickHouse DDL format
   duckdb export      Export to DuckDB DDL format
   iceberg export     Export to Iceberg metadata format
@@ -66,6 +70,10 @@ Examples:
   ice generate --schema ./schema.ts --output ./types.ts --watch
   ice validate --schema ./schema.ts
   ice diff --old ./schema-v1.ts --new ./schema-v2.ts --dialect postgres
+  ice migrate generate --schema ./schema.ts --from 1 --to 2 --dialect postgres
+  ice migrate diff --old ./schema-v1.ts --new ./schema-v2.ts
+  ice migrate plan --schema ./schema.ts
+  ice project generate --schema ./schema.ts --output ./olap-schema.json
   ice clickhouse export --schema ./schema.ts --output ./tables.sql
   ice duckdb export --schema ./schema.ts --output ./tables.sql
   ice iceberg export --schema ./schema.ts --output ./metadata.json
@@ -153,6 +161,38 @@ const DRIZZLE_HELP: HelpCommand = {
     'ice drizzle import --input ./drizzle-schema.ts --output ./icetype-schema.ts',
     'ice drizzle import -i ./schema.ts -f json',
     'ice drizzle import -i ./schema.ts --verbose',
+  ],
+};
+
+const MIGRATE_HELP: HelpCommand = {
+  name: 'migrate',
+  description: 'Generate and manage database migrations',
+  usage: 'ice migrate <subcommand> [options]',
+  options: [],
+  subcommands: [
+    { name: 'generate', description: 'Generate migration from schema diff' },
+    { name: 'diff', description: 'Show diff between two schemas' },
+    { name: 'plan', description: 'Show migration plan without executing' },
+  ],
+  examples: [
+    'ice migrate generate --schema ./schema.ts --from 1 --to 2 --dialect postgres',
+    'ice migrate diff --old ./schema-v1.ts --new ./schema-v2.ts',
+    'ice migrate plan --schema ./schema.ts --dialect postgres',
+  ],
+};
+
+const PROJECT_HELP: HelpCommand = {
+  name: 'project',
+  description: 'OLAP projection schema operations',
+  usage: 'ice project <subcommand> [options]',
+  options: [],
+  subcommands: [
+    { name: 'generate', description: 'Generate OLAP schemas from projection definitions' },
+  ],
+  examples: [
+    'ice project generate --schema ./schema.ts --output ./olap-schema.json',
+    'ice project generate -s ./schema.ts -f parquet',
+    'ice project generate --schema ./schema.ts --projection OrdersFlat',
   ],
 };
 
@@ -271,6 +311,29 @@ async function main() {
           console.error(`Unknown drizzle subcommand: ${commandArgs[0]}`);
           console.log('Available: ice drizzle import');
           process.exit(1);
+        }
+        break;
+
+      case 'migrate':
+        if (
+          hasHelpFlag(commandArgs) &&
+          commandArgs[0] !== 'generate' &&
+          commandArgs[0] !== 'diff' &&
+          commandArgs[0] !== 'plan'
+        ) {
+          console.log(generateHelpText(MIGRATE_HELP));
+          process.exit(0);
+        } else {
+          await migrate(commandArgs);
+        }
+        break;
+
+      case 'project':
+        if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'generate') {
+          console.log(generateHelpText(PROJECT_HELP));
+          process.exit(0);
+        } else {
+          await project(commandArgs);
         }
         break;
 

@@ -390,8 +390,14 @@ export function getTypeMapping(iceType: string): TypeMapping | undefined {
   return TYPE_MAPPINGS[normalized];
 }
 
+/** Known IceType primitive type names that have mappings */
+export type KnownIceType = keyof typeof TYPE_MAPPINGS;
+
 /**
  * Check if an IceType is a known primitive type.
+ *
+ * This is a type guard that narrows the type to KnownIceType,
+ * which is the union of all known primitive type names.
  *
  * @param iceType - The type string to check
  * @returns true if the type has a mapping, false otherwise
@@ -401,9 +407,16 @@ export function getTypeMapping(iceType: string): TypeMapping | undefined {
  * isKnownType('string')   // true
  * isKnownType('uuid')     // true
  * isKnownType('custom')   // false
+ *
+ * // With type narrowing:
+ * const type = 'string';
+ * if (isKnownType(type)) {
+ *   // TypeScript knows type is KnownIceType
+ *   const mapping = TYPE_MAPPINGS[type]; // No type error
+ * }
  * ```
  */
-export function isKnownType(iceType: string): boolean {
+export function isKnownType(iceType: string): iceType is KnownIceType {
   const normalized = iceType.toLowerCase();
   return normalized in TYPE_MAPPINGS;
 }

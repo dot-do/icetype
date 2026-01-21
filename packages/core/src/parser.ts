@@ -26,7 +26,29 @@ import {
   type ValidationResult,
   type ValidationError,
   type SchemaDefinition,
+  type PrimitiveType,
+  type ParametricType,
+  type GenericType,
 } from './types.js';
+
+// =============================================================================
+// Extended Types
+// =============================================================================
+
+/**
+ * Extended schema directives interface with projection fields.
+ * This extends SchemaDirectives to include projection-specific directives.
+ */
+interface SchemaDirectivesExtended extends SchemaDirectives {
+  /** Type of projection: oltp, olap, or both */
+  projection?: 'oltp' | 'olap' | 'both';
+  /** Source entity name to project from */
+  from?: string;
+  /** Relations to expand/flatten */
+  expand?: string[];
+  /** Explicit field mappings */
+  flatten?: Record<string, string>;
+}
 
 // =============================================================================
 // Constants
@@ -79,7 +101,7 @@ const VALID_MODIFIERS: FieldModifier[] = ['!', '#', '?', ''];
  * @param type - The type string to check
  * @returns True if the type is a valid primitive type
  */
-export function isValidPrimitiveType(type: string): boolean {
+export function isValidPrimitiveType(type: string): type is PrimitiveType {
   return PRIMITIVE_TYPES.has(type.toLowerCase());
 }
 
@@ -109,7 +131,7 @@ export function isValidRelationOperator(op: string): op is RelationOperator {
  * @param type - The type string to check
  * @returns True if the type is a valid parametric type
  */
-export function isValidParametricType(type: string): boolean {
+export function isValidParametricType(type: string): type is ParametricType {
   return PARAMETRIC_TYPES.has(type.toLowerCase());
 }
 
@@ -119,7 +141,7 @@ export function isValidParametricType(type: string): boolean {
  * @param type - The type string to check
  * @returns True if the type is a valid generic type
  */
-export function isValidGenericType(type: string): boolean {
+export function isValidGenericType(type: string): type is GenericType {
   return GENERIC_TYPES.has(type.toLowerCase());
 }
 
@@ -136,6 +158,11 @@ const KNOWN_DIRECTIVES = new Set<string>([
   '$readonly',
   '$fts',
   '$vector',
+  // Projection directives
+  '$projection',
+  '$from',
+  '$expand',
+  '$flatten',
 ]);
 
 // =============================================================================
@@ -1047,6 +1074,43 @@ export class IceTypeParser {
               }
             }
             directives.vector = vectorDirs;
+          }
+          break;
+
+        // Projection directives
+        case '$projection':
+          if (typeof value === 'string' && ['oltp', 'olap', 'both'].includes(value)) {
+            (directives as SchemaDirectivesExtended).projection = value as 'oltp' | 'olap' | 'both';
+          }
+          break;
+
+        case '$from':
+          if (typeof value === 'string') {
+            (directives as SchemaDirectivesExtended).from = value;
+          }
+          break;
+
+        case '$expand':
+          if (Array.isArray(value) && value.every((v): v is string => typeof v === 'string')) {
+            (directives as SchemaDirectivesExtended).expand = value;
+          }
+          break;
+
+        case '$flatten':
+          if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+            const flattenObj: Record<string, string> = {};
+            let valid = true;
+            for (const [k, v] of Object.entries(value)) {
+              if (typeof v === 'string') {
+                flattenObj[k] = v;
+              } else {
+                valid = false;
+                break;
+              }
+            }
+            if (valid) {
+              (directives as SchemaDirectivesExtended).flatten = flattenObj;
+            }
           }
           break;
       }

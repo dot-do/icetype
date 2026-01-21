@@ -88,6 +88,7 @@ export {
 } from './ddl.js';
 
 export type {
+  ArrayTypeString,
   DDLWarning,
   FieldToColumnResult,
 } from './ddl.js';
@@ -102,3 +103,19 @@ export {
   transformToSQLiteDDL,
   generateSQLiteDDL,
 } from './adapter.js';
+
+// =============================================================================
+// Migrations
+// =============================================================================
+
+export {
+  SQLiteMigrationGenerator,
+  createSQLiteMigrationGenerator,
+} from './migrations.js';
+
+export type {
+  SQLiteMigrationOptions,
+  TableColumn,
+  TableSchema,
+  MigrationGenerator,
+} from './migrations.js';

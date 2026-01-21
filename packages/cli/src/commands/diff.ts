@@ -6,7 +6,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
-import { diffSchemas, generateMigrationPlan, type SqlDialect } from '@icetype/core';
+import { diffSchemasLegacy as diffSchemas, generateMigrationPlan, type SqlDialect } from '@icetype/core';
 import { loadSchemaFile } from '../utils/schema-loader.js';
 import { generateHelpText, hasHelpFlag, type HelpCommand } from '../utils/help.js';
 import {

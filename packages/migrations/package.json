@@ -1,0 +1,44 @@
+{
+  "name": "@icetype/migrations",
+  "version": "0.1.0",
+  "description": "IceType migration generation and management infrastructure",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "icetype",
+    "migrations",
+    "schema",
+    "database",
+    "typescript"
+  ],
+  "author": "Nathan Clevenger",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dot-do/icetype.git"
+  },
+  "homepage": "https://github.com/dot-do/icetype",
+  "bugs": {
+    "url": "https://github.com/dot-do/icetype/issues"
+  },
+  "dependencies": {
+    "@icetype/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

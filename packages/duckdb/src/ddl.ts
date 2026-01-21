@@ -15,8 +15,9 @@ import {
   serializeColumn as serializeColumnBase,
   generateSystemColumns as generateSystemColumnsBase,
   generateIndexStatements as generateIndexStatementsBase,
-  validateSchemaName,
+  serializeDDL as serializeDDLBase,
   type SqlColumn,
+  type DDLStructure,
 } from '@icetype/sql-common';
 
 import type {
@@ -194,55 +195,24 @@ export function serializeColumn(column: DuckDBColumn): string {
 /**
  * Serialize a DuckDB DDL structure to a CREATE TABLE statement.
  *
+ * Uses the shared serializeDDL from @icetype/sql-common.
+ *
  * @param ddl - The DDL structure
  * @returns The CREATE TABLE SQL statement
  */
 export function serializeDDL(ddl: DuckDBDDL): string {
-  const lines: string[] = [];
+  // Convert DuckDBDDL to the common DDLStructure format
+  const commonDDL: DDLStructure = {
+    tableName: ddl.tableName,
+    schemaName: ddl.schemaName,
+    columns: ddl.columns as SqlColumn[],
+    primaryKey: ddl.primaryKey,
+    uniqueConstraints: ddl.uniqueConstraints,
+    ifNotExists: ddl.ifNotExists,
+    temporary: ddl.temporary,
+  };
 
-  // CREATE TABLE header
-  let header = 'CREATE';
-  if (ddl.temporary) {
-    header += ' TEMPORARY';
-  }
-  header += ' TABLE';
-  if (ddl.ifNotExists) {
-    header += ' IF NOT EXISTS';
-  }
-
-  // Table name with optional schema
-  // Validate schema name to prevent SQL injection
-  if (ddl.schemaName) {
-    validateSchemaName(ddl.schemaName);
-  }
-  const tableName = ddl.schemaName
-    ? `${escapeIdentifier(ddl.schemaName)}.${escapeIdentifier(ddl.tableName)}`
-    : escapeIdentifier(ddl.tableName);
-
-  header += ` ${tableName} (`;
-  lines.push(header);
-
-  // Column definitions
-  const columnDefs = ddl.columns.map(col => `  ${serializeColumn(col)}`);
-
-  // Primary key constraint
-  if (ddl.primaryKey && ddl.primaryKey.length > 0) {
-    const pkCols = ddl.primaryKey.map(escapeIdentifier).join(', ');
-    columnDefs.push(`  PRIMARY KEY (${pkCols})`);
-  }
-
-  // Unique constraints
-  if (ddl.uniqueConstraints) {
-    for (const uniqueCols of ddl.uniqueConstraints) {
-      const cols = uniqueCols.map(escapeIdentifier).join(', ');
-      columnDefs.push(`  UNIQUE (${cols})`);
-    }
-  }
-
-  lines.push(columnDefs.join(',\n'));
-  lines.push(');');
-
-  return lines.join('\n');
+  return serializeDDLBase(commonDDL, 'duckdb');
 }
 
 /**

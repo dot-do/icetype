@@ -154,17 +154,102 @@ export {
 } from './type-mappings.js';
 
 // Re-export type mapping types
-export type { TypeMapping } from './type-mappings.js';
+export type { TypeMapping, KnownIceType } from './type-mappings.js';
+
+// Re-export schema diff functions (new interface)
+export { diffSchemas } from './diff.js';
+
+// Re-export schema diff types (new interface)
+export type { SchemaDiff, SchemaChange } from './diff.js';
 
 // Re-export migration functions
-export { diffSchemas, generateMigrationPlan } from './migrations.js';
+export { diffSchemas as diffSchemasLegacy, generateMigrationPlan } from './migrations.js';
 
 // Re-export migration types
 export type {
   FieldChange,
   FieldChangeType,
-  SchemaDiff,
+  SchemaDiff as SchemaDiffLegacy,
   MigrationPlan,
   MigrationPlanOptions,
   SqlDialect,
 } from './migrations.js';
+
+// Re-export projection functions
+export {
+  parseProjectionDirectives,
+  isProjection,
+  validateProjection,
+  getProjectionSource,
+} from './projection.js';
+
+// Re-export projection types
+export type {
+  ProjectionType,
+  ProjectionDirectives,
+  ProjectionSchemaDefinition,
+  ProjectionSchema,
+} from './projection.js';
+
+// Re-export version functions
+export {
+  createSchemaVersion,
+  parseSchemaVersion,
+  serializeSchemaVersion,
+  compareVersions,
+  isCompatible,
+  incrementMajor,
+  incrementMinor,
+  incrementPatch,
+} from './version.js';
+
+// Re-export version types
+export type { SchemaVersion } from './version.js';
+
+// Re-export Migration functions
+export {
+  createMigrationFromDiff,
+  isBreakingMigration,
+  mergeMigrations,
+  validateMigration,
+} from './migration.js';
+
+// Re-export Migration types
+export type {
+  Migration,
+  MigrationOperation,
+  ColumnChanges,
+  Constraint,
+  MigrationValidationError,
+  MigrationValidationResult,
+  CreateMigrationOptions,
+} from './migration.js';
+
+// Re-export relation expansion functions
+export {
+  expandRelations,
+  ExpandError,
+  isExpandError,
+  ExpandErrorCodes,
+} from './expand.js';
+
+// Re-export relation expansion types
+export type {
+  ExpandedSchema,
+  ExpandErrorCode,
+  ExpandErrorOptions,
+} from './expand.js';
+
+// Re-export History functions
+export {
+  createSchemaHistory,
+  addHistoryEntry,
+  getHistoryEntry,
+  getLatestEntry,
+  serializeHistory,
+  parseHistory,
+  computeSchemaChecksum,
+} from './history.js';
+
+// Re-export History types
+export type { SchemaHistory, SchemaHistoryEntry } from './history.js';

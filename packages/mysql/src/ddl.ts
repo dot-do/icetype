@@ -12,8 +12,10 @@ import {
   escapeIdentifier as escapeIdentifierCommon,
   formatDefaultValue as formatDefaultValueCommon,
   generateSystemColumns as generateSystemColumnsCommon,
+  serializeDDL as serializeDDLCommon,
   validateSchemaName,
   type SqlColumn,
+  type DDLStructure,
 } from '@icetype/sql-common';
 
 import type {
@@ -209,104 +211,28 @@ export function serializeColumn(column: MySQLColumn): string {
 /**
  * Serialize a MySQL DDL structure to a CREATE TABLE statement.
  *
+ * Uses the shared serializeDDL from @icetype/sql-common.
+ *
  * @param ddl - The DDL structure
  * @returns The CREATE TABLE SQL statement
  */
 export function serializeDDL(ddl: MySQLDDL): string {
-  const lines: string[] = [];
+  // Convert MySQLDDL to the common DDLStructure format
+  const commonDDL: DDLStructure = {
+    tableName: ddl.tableName,
+    columns: ddl.columns as SqlColumn[],
+    primaryKey: ddl.primaryKey,
+    uniqueConstraints: ddl.uniqueConstraints,
+    checkConstraints: ddl.checkConstraints,
+    foreignKeys: ddl.foreignKeys,
+    ifNotExists: ddl.ifNotExists,
+    engine: ddl.engine ?? 'InnoDB',
+    charset: ddl.charset,
+    collation: ddl.collation,
+    comment: ddl.comment,
+  };
 
-  // CREATE TABLE header
-  let header = 'CREATE TABLE';
-  if (ddl.ifNotExists) {
-    header += ' IF NOT EXISTS';
-  }
-
-  // Table name
-  const tableName = escapeIdentifier(ddl.tableName);
-  header += ` ${tableName} (`;
-  lines.push(header);
-
-  // Column definitions
-  const columnDefs = ddl.columns.map(col => `  ${serializeColumn(col)}`);
-
-  // Primary key constraint
-  if (ddl.primaryKey && ddl.primaryKey.length > 0) {
-    const pkCols = ddl.primaryKey.map(escapeIdentifier).join(', ');
-    columnDefs.push(`  PRIMARY KEY (${pkCols})`);
-  }
-
-  // Unique constraints
-  if (ddl.uniqueConstraints) {
-    for (const uniqueCols of ddl.uniqueConstraints) {
-      const cols = uniqueCols.map(escapeIdentifier).join(', ');
-      columnDefs.push(`  UNIQUE (${cols})`);
-    }
-  }
-
-  // Check constraints
-  if (ddl.checkConstraints) {
-    for (const check of ddl.checkConstraints) {
-      if (check.name) {
-        columnDefs.push(`  CONSTRAINT ${escapeIdentifier(check.name)} CHECK (${check.expression})`);
-      } else {
-        columnDefs.push(`  CHECK (${check.expression})`);
-      }
-    }
-  }
-
-  // Foreign key constraints
-  if (ddl.foreignKeys) {
-    for (const fk of ddl.foreignKeys) {
-      const fkCols = fk.columns.map(escapeIdentifier).join(', ');
-      const refTable = escapeIdentifier(fk.references.table);
-      const refCols = fk.references.columns.map(escapeIdentifier).join(', ');
-
-      let fkDef = `  FOREIGN KEY (${fkCols}) REFERENCES ${refTable} (${refCols})`;
-
-      if (fk.onDelete) {
-        fkDef += ` ON DELETE ${fk.onDelete}`;
-      }
-      if (fk.onUpdate) {
-        fkDef += ` ON UPDATE ${fk.onUpdate}`;
-      }
-
-      columnDefs.push(fkDef);
-    }
-  }
-
-  lines.push(columnDefs.join(',\n'));
-  lines.push(')');
-
-  // Table options
-  const tableOptions: string[] = [];
-
-  // Engine (default to InnoDB)
-  const engine = ddl.engine ?? 'InnoDB';
-  tableOptions.push(`ENGINE=${engine}`);
-
-  // Character set
-  if (ddl.charset) {
-    tableOptions.push(`CHARACTER SET ${ddl.charset}`);
-  }
-
-  // Collation
-  if (ddl.collation) {
-    tableOptions.push(`COLLATE ${ddl.collation}`);
-  }
-
-  // Comment
-  if (ddl.comment) {
-    const escapedComment = ddl.comment.replace(/'/g, "''");
-    tableOptions.push(`COMMENT='${escapedComment}'`);
-  }
-
-  if (tableOptions.length > 0) {
-    lines[lines.length - 1] += ' ' + tableOptions.join(' ');
-  }
-
-  lines[lines.length - 1] += ';';
-
-  return lines.join('\n');
+  return serializeDDLCommon(commonDDL, 'mysql');
 }
 
 /**

@@ -14,12 +14,44 @@
       "import": "./dist/index.js"
     },
     "./core": {
-      "types": "./node_modules/@icetype/core/dist/index.d.ts",
-      "import": "@icetype/core"
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
     },
     "./iceberg": {
-      "types": "./node_modules/@icetype/iceberg/dist/index.d.ts",
-      "import": "@icetype/iceberg"
+      "types": "./dist/iceberg.d.ts",
+      "import": "./dist/iceberg.js"
+    },
+    "./adapters": {
+      "types": "./dist/adapters.d.ts",
+      "import": "./dist/adapters.js"
+    },
+    "./postgres": {
+      "types": "./dist/postgres.d.ts",
+      "import": "./dist/postgres.js"
+    },
+    "./mysql": {
+      "types": "./dist/mysql.d.ts",
+      "import": "./dist/mysql.js"
+    },
+    "./sqlite": {
+      "types": "./dist/sqlite.d.ts",
+      "import": "./dist/sqlite.js"
+    },
+    "./drizzle": {
+      "types": "./dist/drizzle.d.ts",
+      "import": "./dist/drizzle.js"
+    },
+    "./prisma": {
+      "types": "./dist/prisma.d.ts",
+      "import": "./dist/prisma.js"
+    },
+    "./clickhouse": {
+      "types": "./dist/clickhouse.d.ts",
+      "import": "./dist/clickhouse.js"
+    },
+    "./duckdb": {
+      "types": "./dist/duckdb.d.ts",
+      "import": "./dist/duckdb.js"
     }
   },
   "files": ["dist"],

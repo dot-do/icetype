@@ -113,3 +113,14 @@ export {
   transformToClickHouseDDL,
   generateClickHouseDDL,
 } from './adapter.js';
+
+// =============================================================================
+// Migrations
+// =============================================================================
+
+export type { ClickHouseMigrationOptions } from './migrations.js';
+
+export {
+  ClickHouseMigrationGenerator,
+  createClickHouseMigrationGenerator,
+} from './migrations.js';
