@@ -10,6 +10,8 @@
     "test:integration": "pnpm --filter @icetype/integration-tests test",
     "test:integration:postgres": "pnpm --filter @icetype/integration-tests test:postgres",
     "test:integration:mysql": "pnpm --filter @icetype/integration-tests test:mysql",
+    "bench": "pnpm --filter @icetype/benchmarks bench",
+    "bench:json": "pnpm --filter @icetype/benchmarks bench:json",
     "lint": "turbo run lint",
     "clean": "turbo run clean"
   },

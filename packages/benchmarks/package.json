@@ -7,8 +7,10 @@
   "scripts": {
     "bench": "vitest bench --run",
     "bench:watch": "vitest bench",
+    "bench:json": "vitest bench --run --reporter=json --outputFile=benchmark-results.json",
+    "bench:verbose": "vitest bench --run --reporter=verbose",
     "test": "vitest run",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist benchmark-results.json"
   },
   "keywords": [
     "icetype",

@@ -13,6 +13,11 @@
       "dependsOn": ["build"],
       "outputs": ["coverage/**"]
     },
+    "bench": {
+      "dependsOn": ["build"],
+      "outputs": ["benchmark-results.json"],
+      "cache": false
+    },
     "lint": {
       "outputs": []
     },
