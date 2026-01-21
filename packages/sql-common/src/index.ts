@@ -122,8 +122,17 @@ export function validateSchemaName(name: string): void {
 /**
  * Common SQL reserved keywords that should always be quoted when used as identifiers.
  * These keywords are reserved across most SQL dialects and could cause issues if not quoted.
+ *
+ * This list includes keywords from:
+ * - SQL:2023 ANSI/ISO standard
+ * - PostgreSQL (https://www.postgresql.org/docs/current/sql-keywords-appendix.html)
+ * - MySQL 8.0 (https://dev.mysql.com/doc/refman/8.0/en/keywords.html)
+ * - ClickHouse
+ * - SQLite
+ * - DuckDB
  */
 const SQL_RESERVED_KEYWORDS = new Set([
+  // Core SQL reserved keywords (ANSI SQL)
   'select', 'from', 'where', 'insert', 'update', 'delete', 'drop', 'create',
   'alter', 'table', 'index', 'view', 'database', 'schema', 'column', 'constraint',
   'primary', 'foreign', 'key', 'references', 'unique', 'check', 'default',
@@ -134,6 +143,55 @@ const SQL_RESERVED_KEYWORDS = new Set([
   'into', 'values', 'set', 'grant', 'revoke', 'begin', 'commit', 'rollback',
   'transaction', 'true', 'false', 'user', 'role', 'public', 'current_user',
   'current_date', 'current_time', 'current_timestamp', 'localtime', 'localtimestamp',
+  // Additional SQL standard keywords
+  'with', 'recursive', 'using', 'natural', 'fetch', 'first', 'next', 'only',
+  'rows', 'row', 'window', 'over', 'partition', 'range', 'unbounded', 'preceding',
+  'following', 'current', 'no', 'action', 'cascade', 'restrict', 'nulls',
+  // Data types that are reserved
+  'int', 'integer', 'smallint', 'bigint', 'float', 'real', 'double', 'precision',
+  'numeric', 'decimal', 'char', 'character', 'varchar', 'text', 'boolean', 'bool',
+  'date', 'time', 'timestamp', 'interval', 'blob', 'binary', 'varbinary',
+  // MySQL-specific reserved keywords (MySQL 8.0+)
+  'accessible', 'analyze', 'asensitive', 'both', 'call', 'change', 'condition',
+  'continue', 'convert', 'cube', 'cume_dist', 'cursor', 'databases', 'day_hour',
+  'day_microsecond', 'day_minute', 'day_second', 'declare', 'delayed',
+  'dense_rank', 'describe', 'deterministic', 'distinctrow', 'div', 'dual',
+  'each', 'elseif', 'empty', 'enclosed', 'escaped', 'exit', 'explain',
+  'first_value', 'for', 'force', 'function', 'generated', 'get', 'groups',
+  'high_priority', 'hour_microsecond', 'hour_minute', 'hour_second', 'if',
+  'ignore', 'infile', 'inout', 'insensitive', 'iterate', 'keys', 'kill',
+  'lag', 'last_value', 'lead', 'leading', 'leave', 'lines', 'linear', 'load',
+  'localtime', 'localtimestamp', 'lock', 'long', 'loop', 'low_priority',
+  'master_bind', 'master_ssl_verify_server_cert', 'match', 'maxvalue', 'mediumint',
+  'minute_microsecond', 'minute_second', 'mod', 'modifies', 'nth_value', 'ntile',
+  'of', 'optimize', 'optimizer_costs', 'option', 'optionally', 'out', 'outfile',
+  'percent_rank', 'procedure', 'purge', 'rank', 'read', 'reads', 'read_write',
+  'regexp', 'release', 'rename', 'repeat', 'replace', 'require', 'resignal',
+  'return', 'rlike', 'second_microsecond', 'sensitive', 'separator', 'show',
+  'signal', 'spatial', 'specific', 'sql', 'sqlexception', 'sqlstate', 'sqlwarning',
+  'sql_big_result', 'sql_calc_found_rows', 'sql_small_result', 'ssl', 'starting',
+  'stored', 'straight_join', 'system', 'terminated', 'tinyint', 'to', 'trailing',
+  'trigger', 'undo', 'unlock', 'unsigned', 'usage', 'use', 'utc_date', 'utc_time',
+  'utc_timestamp', 'varcharacter', 'varying', 'virtual', 'while', 'write',
+  'xor', 'year_month', 'zerofill',
+  // PostgreSQL-specific reserved keywords
+  'analyse', 'array', 'asymmetric', 'authorization', 'collate', 'concurrently',
+  'deferrable', 'do', 'freeze', 'ilike', 'initially', 'isnull', 'lateral',
+  'leading', 'limit', 'notnull', 'offset', 'placing', 'returning', 'similar',
+  'some', 'symmetric', 'tablesample', 'trailing', 'variadic', 'verbose',
+  // ClickHouse-specific keywords
+  'alias', 'async', 'attach', 'cluster', 'codec', 'deduplicate', 'detach',
+  'dictionaries', 'dictionary', 'engine', 'events', 'final', 'format', 'global',
+  'granularity', 'live', 'materialize', 'materialized', 'mutations', 'optimize',
+  'outfile', 'populate', 'prewhere', 'projection', 'sample', 'settings', 'sync',
+  'totals', 'ttl', 'watch',
+  // SQLite-specific keywords
+  'abort', 'autoincrement', 'conflict', 'detach', 'fail', 'glob', 'indexed',
+  'instead', 'notnull', 'plan', 'pragma', 'query', 'raise', 'reindex', 'temp',
+  'temporary', 'vacuum', 'without',
+  // DuckDB-specific keywords
+  'anti', 'asof', 'copy', 'export', 'import', 'macro', 'pivot', 'positional',
+  'qualify', 'semi', 'unpivot',
 ]);
 
 /**

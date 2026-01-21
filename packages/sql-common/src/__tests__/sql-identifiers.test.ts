@@ -327,11 +327,56 @@ describe('Very Long Identifiers', () => {
   });
 
   describe('validate identifier length function', () => {
-    // This tests a function that should exist but may not yet
-    it.todo('should validate identifier length for PostgreSQL (max 63 bytes)');
-    it.todo('should validate identifier length for MySQL (max 64 characters)');
-    it.todo('should handle multibyte UTF-8 in length validation');
-    it.todo('should provide appropriate error messages for too-long identifiers');
+    it('should validate identifier length for PostgreSQL (max 63 bytes)', async () => {
+      const { validateIdentifier, IdentifierTooLongError } = await import('../index.js');
+
+      // Exactly 63 bytes should be valid
+      const maxIdentifier = 'a'.repeat(63);
+      expect(() => validateIdentifier(maxIdentifier, 'postgres')).not.toThrow();
+
+      // 64 bytes should throw
+      const tooLongIdentifier = 'a'.repeat(64);
+      expect(() => validateIdentifier(tooLongIdentifier, 'postgres')).toThrow(IdentifierTooLongError);
+    });
+
+    it('should validate identifier length for MySQL (max 64 characters)', async () => {
+      const { validateIdentifier, IdentifierTooLongError } = await import('../index.js');
+
+      // Exactly 64 characters should be valid
+      const maxIdentifier = 'a'.repeat(64);
+      expect(() => validateIdentifier(maxIdentifier, 'mysql')).not.toThrow();
+
+      // 65 characters should throw
+      const tooLongIdentifier = 'a'.repeat(65);
+      expect(() => validateIdentifier(tooLongIdentifier, 'mysql')).toThrow(IdentifierTooLongError);
+    });
+
+    it('should handle multibyte UTF-8 in length validation', async () => {
+      const { validateIdentifier, IdentifierTooLongError } = await import('../index.js');
+
+      // Each emoji is 4 bytes in UTF-8
+      // 16 emojis = 64 bytes (exceeds PostgreSQL's 63 byte limit)
+      const emojiIdentifier = '\u{1F600}'.repeat(16);
+      expect(() => validateIdentifier(emojiIdentifier, 'postgres')).toThrow(IdentifierTooLongError);
+
+      // But should be valid for MySQL which counts characters (16 chars < 64)
+      expect(() => validateIdentifier(emojiIdentifier, 'mysql')).not.toThrow();
+    });
+
+    it('should provide appropriate error messages for too-long identifiers', async () => {
+      const { validateIdentifier, IdentifierTooLongError } = await import('../index.js');
+
+      const longIdentifier = 'a'.repeat(100);
+      try {
+        validateIdentifier(longIdentifier, 'postgres');
+        expect.fail('Should have thrown');
+      } catch (e) {
+        expect(e).toBeInstanceOf(IdentifierTooLongError);
+        expect((e as Error).message).toContain('postgres');
+        expect((e as Error).message).toContain('63');
+        expect((e as Error).message).toContain('bytes');
+      }
+    });
   });
 });
 
@@ -616,20 +661,19 @@ describe('Edge Cases and Corner Cases', () => {
 });
 
 // =============================================================================
-// Validate Identifier Function Tests - RED PHASE
+// Validate Identifier Function Tests
 // =============================================================================
 
 /**
- * These tests are for a validateIdentifier function that DOES NOT YET EXIST.
- * They should FAIL until the function is implemented (GREEN phase).
+ * Tests for the validateIdentifier function.
  *
- * The validateIdentifier function should:
- * 1. Validate that identifiers are not empty
- * 2. Validate identifier length by dialect (PostgreSQL: 63 bytes, MySQL: 64 chars)
- * 3. Reject identifiers with dangerous characters that can't be safely escaped
- * 4. Provide appropriate error types for different validation failures
+ * The validateIdentifier function:
+ * 1. Validates that identifiers are not empty
+ * 2. Validates identifier length by dialect (PostgreSQL: 63 bytes, MySQL: 64 chars)
+ * 3. Rejects identifiers with dangerous characters that can't be safely escaped
+ * 4. Provides appropriate error types for different validation failures
  */
-describe('validateIdentifier function - RED PHASE', () => {
+describe('validateIdentifier function', () => {
   describe('empty identifier validation', () => {
     it('should throw InvalidIdentifierError for empty string', async () => {
       // This import should fail until validateIdentifier is implemented
@@ -776,19 +820,17 @@ describe('validateIdentifier function - RED PHASE', () => {
 });
 
 // =============================================================================
-// Reserved Keywords Escaping for All Dialects - RED PHASE
+// Reserved Keywords Escaping for All Dialects
 // =============================================================================
 
-describe('Reserved keywords escaping for all dialects - RED PHASE', () => {
-  // Currently escapeIdentifier only escapes keywords for PostgreSQL
-  // These tests verify that keywords should be escaped for ALL dialects
+describe('Reserved keywords escaping for all dialects', () => {
+  // Verifies that keywords are escaped for ALL dialects consistently
 
   const commonKeywords = ['select', 'from', 'where', 'table', 'insert', 'update', 'delete', 'order', 'group', 'by'];
 
   describe('MySQL should escape reserved keywords', () => {
     commonKeywords.forEach((keyword) => {
       it(`should escape "${keyword}" in MySQL`, () => {
-        // This test will FAIL because MySQL keyword escaping is not implemented
         expect(escapeIdentifier(keyword, 'mysql')).toBe(`\`${keyword}\``);
       });
     });
@@ -797,7 +839,6 @@ describe('Reserved keywords escaping for all dialects - RED PHASE', () => {
   describe('SQLite should escape reserved keywords', () => {
     commonKeywords.forEach((keyword) => {
       it(`should escape "${keyword}" in SQLite`, () => {
-        // This test will FAIL because SQLite keyword escaping is not implemented
         expect(escapeIdentifier(keyword, 'sqlite')).toBe(`"${keyword}"`);
       });
     });
@@ -806,7 +847,6 @@ describe('Reserved keywords escaping for all dialects - RED PHASE', () => {
   describe('ClickHouse should escape reserved keywords', () => {
     commonKeywords.forEach((keyword) => {
       it(`should escape "${keyword}" in ClickHouse`, () => {
-        // This test will FAIL because ClickHouse keyword escaping is not implemented
         expect(escapeIdentifier(keyword, 'clickhouse')).toBe(`\`${keyword}\``);
       });
     });
@@ -815,7 +855,62 @@ describe('Reserved keywords escaping for all dialects - RED PHASE', () => {
   describe('DuckDB should escape reserved keywords', () => {
     commonKeywords.forEach((keyword) => {
       it(`should escape "${keyword}" in DuckDB`, () => {
-        // This test will FAIL because DuckDB keyword escaping is not implemented
+        expect(escapeIdentifier(keyword, 'duckdb')).toBe(`"${keyword}"`);
+      });
+    });
+  });
+});
+
+// =============================================================================
+// Dialect-Specific Reserved Keywords Tests
+// =============================================================================
+
+describe('Dialect-specific reserved keywords', () => {
+  describe('MySQL-specific keywords', () => {
+    const mysqlKeywords = ['groups', 'empty', 'rank', 'system', 'window', 'cume_dist', 'dense_rank'];
+
+    mysqlKeywords.forEach((keyword) => {
+      it(`should escape MySQL keyword "${keyword}"`, () => {
+        expect(escapeIdentifier(keyword, 'mysql')).toBe(`\`${keyword}\``);
+      });
+    });
+  });
+
+  describe('PostgreSQL-specific keywords', () => {
+    const postgresKeywords = ['ilike', 'analyse', 'lateral', 'variadic', 'verbose', 'tablesample'];
+
+    postgresKeywords.forEach((keyword) => {
+      it(`should escape PostgreSQL keyword "${keyword}"`, () => {
+        expect(escapeIdentifier(keyword, 'postgres')).toBe(`"${keyword}"`);
+      });
+    });
+  });
+
+  describe('ClickHouse-specific keywords', () => {
+    const clickhouseKeywords = ['prewhere', 'final', 'sample', 'settings', 'totals', 'materialize'];
+
+    clickhouseKeywords.forEach((keyword) => {
+      it(`should escape ClickHouse keyword "${keyword}"`, () => {
+        expect(escapeIdentifier(keyword, 'clickhouse')).toBe(`\`${keyword}\``);
+      });
+    });
+  });
+
+  describe('SQLite-specific keywords', () => {
+    const sqliteKeywords = ['autoincrement', 'glob', 'indexed', 'pragma', 'vacuum', 'reindex'];
+
+    sqliteKeywords.forEach((keyword) => {
+      it(`should escape SQLite keyword "${keyword}"`, () => {
+        expect(escapeIdentifier(keyword, 'sqlite')).toBe(`"${keyword}"`);
+      });
+    });
+  });
+
+  describe('DuckDB-specific keywords', () => {
+    const duckdbKeywords = ['pivot', 'unpivot', 'qualify', 'asof', 'positional', 'macro'];
+
+    duckdbKeywords.forEach((keyword) => {
+      it(`should escape DuckDB keyword "${keyword}"`, () => {
         expect(escapeIdentifier(keyword, 'duckdb')).toBe(`"${keyword}"`);
       });
     });

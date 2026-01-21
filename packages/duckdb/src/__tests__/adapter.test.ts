@@ -848,16 +848,19 @@ describe('DuckDBAdapter Integration', () => {
     const schema = createBasicUserSchema();
 
     // Standard table
+    // Note: "User" is escaped because "user" is a SQL reserved keyword
     const standardSql = transformToDuckDBDDL(schema);
-    expect(standardSql).toMatch(/^CREATE TABLE User/);
+    expect(standardSql).toMatch(/^CREATE TABLE "User"/);
 
     // Temporary table
     const tempSql = transformToDuckDBDDL(schema, { temporary: true });
     expect(tempSql).toMatch(/^CREATE TEMPORARY TABLE/);
 
     // With schema
+    // Note: "User" is escaped because "user" is a SQL reserved keyword
+    // Note: "myschema" is not escaped because it's a simple identifier
     const schemaQualifiedSql = transformToDuckDBDDL(schema, { schema: 'myschema' });
-    expect(schemaQualifiedSql).toContain('myschema.User');
+    expect(schemaQualifiedSql).toContain('myschema."User"');
   });
 
   it('should handle serializeWithIndexes', () => {
