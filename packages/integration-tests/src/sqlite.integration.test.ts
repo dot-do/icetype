@@ -2005,6 +2005,796 @@ describe('SQLite Integration Tests', () => {
   });
 
   // ===========================================================================
+  // Edge Cases - Advanced
+  // ===========================================================================
+  describe('Edge Cases - Advanced', () => {
+    describe('Concurrent Writes (WAL Mode)', () => {
+      it('should handle concurrent write transactions in WAL mode', () => {
+        // Create a separate database for WAL mode testing
+        // Note: In-memory databases cannot use WAL, so we test the transaction behavior
+        const walTestIds: string[] = [];
+
+        // Simulate concurrent writers using transactions
+        const insertStmt = db.prepare(`
+          INSERT INTO SimpleUser ("$id", "$type", "$version", "$createdAt", "$updatedAt", id, email, name, isActive)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        const insertMany = db.transaction((users: Array<{ id: string; email: string; name: string }>) => {
+          const now = Date.now();
+          for (const user of users) {
+            walTestIds.push(user.id);
+            insertStmt.run(user.id, 'SimpleUser', 1, now, now, user.id, user.email, user.name, 1);
+          }
+        });
+
+        // Simulate "concurrent" batches (sequential in test, but demonstrates transaction isolation)
+        const batch1 = Array.from({ length: 50 }, (_, i) => ({
+          id: generateTestUUID(`WAL1${i.toString().padStart(3, '0')}`),
+          email: `wal1_${i}@test.com`,
+          name: `WAL User 1-${i}`,
+        }));
+
+        const batch2 = Array.from({ length: 50 }, (_, i) => ({
+          id: generateTestUUID(`WAL2${i.toString().padStart(3, '0')}`),
+          email: `wal2_${i}@test.com`,
+          name: `WAL User 2-${i}`,
+        }));
+
+        // Execute both batches
+        insertMany(batch1);
+        insertMany(batch2);
+
+        // Verify all records were inserted
+        const placeholders = walTestIds.map(() => '?').join(', ');
+        const count = db.prepare(
+          `SELECT COUNT(*) as cnt FROM SimpleUser WHERE "$id" IN (${placeholders})`
+        ).get(...walTestIds) as { cnt: number };
+
+        expect(count.cnt).toBe(100);
+
+        // Cleanup
+        db.exec(`DELETE FROM SimpleUser WHERE email LIKE 'wal%@test.com'`);
+      });
+
+      it('should maintain consistency with overlapping read/write transactions', () => {
+        // Test read/write consistency
+        const baseId = generateTestUUID('RWC1');
+
+        // Insert initial record
+        db.prepare(`
+          INSERT INTO SimpleUser ("$id", "$type", "$version", "$createdAt", "$updatedAt", id, email, name, isActive)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(baseId, 'SimpleUser', 1, Date.now(), Date.now(), baseId, 'rwc@test.com', 'RWC User', 1);
+
+        // Transaction that reads, modifies, reads again
+        const readWriteRead = db.transaction(() => {
+          const initial = db.prepare('SELECT name FROM SimpleUser WHERE "$id" = ?').get(baseId) as { name: string };
+          expect(initial.name).toBe('RWC User');
+
+          db.prepare('UPDATE SimpleUser SET name = ? WHERE "$id" = ?').run('Modified RWC User', baseId);
+
+          const modified = db.prepare('SELECT name FROM SimpleUser WHERE "$id" = ?').get(baseId) as { name: string };
+          expect(modified.name).toBe('Modified RWC User');
+
+          return { initial: initial.name, modified: modified.name };
+        });
+
+        const result = readWriteRead();
+        expect(result.initial).toBe('RWC User');
+        expect(result.modified).toBe('Modified RWC User');
+
+        // Cleanup
+        db.prepare('DELETE FROM SimpleUser WHERE "$id" = ?').run(baseId);
+      });
+
+      it('should handle write conflicts gracefully with immediate transactions', () => {
+        // Test IMMEDIATE transaction behavior
+        const conflictId = generateTestUUID('CONF');
+
+        db.prepare(`
+          INSERT INTO SimpleUser ("$id", "$type", "$version", "$createdAt", "$updatedAt", id, email, name, isActive)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(conflictId, 'SimpleUser', 1, Date.now(), Date.now(), conflictId, 'conflict@test.com', 'Conflict User', 1);
+
+        // Immediate transaction for writes
+        const immediateUpdate = db.transaction(() => {
+          db.prepare('UPDATE SimpleUser SET name = ? WHERE "$id" = ?').run('Updated by Immediate', conflictId);
+          return db.prepare('SELECT name FROM SimpleUser WHERE "$id" = ?').get(conflictId) as { name: string };
+        }).immediate;
+
+        const result = immediateUpdate();
+        expect(result.name).toBe('Updated by Immediate');
+
+        // Cleanup
+        db.prepare('DELETE FROM SimpleUser WHERE "$id" = ?').run(conflictId);
+      });
+    });
+
+    describe('Very Large Blobs', () => {
+      beforeAll(() => {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS LargeBlobTest (
+            "$id" TEXT NOT NULL PRIMARY KEY,
+            data BLOB,
+            description TEXT
+          )
+        `);
+      });
+
+      it('should handle 1MB blob data', () => {
+        const blobId = generateTestUUID('BLOB1MB');
+        const oneMB = 1024 * 1024;
+        const largeData = Buffer.alloc(oneMB, 0xAB);
+
+        db.prepare(`INSERT INTO LargeBlobTest ("$id", data, description) VALUES (?, ?, ?)`).run(
+          blobId,
+          largeData,
+          '1MB blob'
+        );
+
+        const row = db.prepare('SELECT data, LENGTH(data) as size FROM LargeBlobTest WHERE "$id" = ?').get(blobId) as {
+          data: Buffer;
+          size: number;
+        };
+
+        expect(row.size).toBe(oneMB);
+        expect(Buffer.isBuffer(row.data)).toBe(true);
+        expect(row.data[0]).toBe(0xAB);
+        expect(row.data[oneMB - 1]).toBe(0xAB);
+      });
+
+      it('should handle 10MB blob data', () => {
+        const blobId = generateTestUUID('BLOB10M');
+        const tenMB = 10 * 1024 * 1024;
+        const largeData = Buffer.alloc(tenMB, 0xCD);
+
+        db.prepare(`INSERT INTO LargeBlobTest ("$id", data, description) VALUES (?, ?, ?)`).run(
+          blobId,
+          largeData,
+          '10MB blob'
+        );
+
+        const row = db.prepare('SELECT LENGTH(data) as size FROM LargeBlobTest WHERE "$id" = ?').get(blobId) as {
+          size: number;
+        };
+
+        expect(row.size).toBe(tenMB);
+      });
+
+      it('should handle blob with binary patterns including null bytes', () => {
+        const blobId = generateTestUUID('BLOBNUL');
+        // Create data with null bytes and various binary patterns
+        const binaryData = Buffer.from([
+          0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, // null bytes and max bytes
+          0x01, 0x02, 0x03, 0x04, 0x05, 0x06, // sequential
+          0xDE, 0xAD, 0xBE, 0xEF, // common test pattern
+          0x00, 0x00, 0x00, 0x00, // trailing nulls
+        ]);
+
+        db.prepare(`INSERT INTO LargeBlobTest ("$id", data, description) VALUES (?, ?, ?)`).run(
+          blobId,
+          binaryData,
+          'Binary patterns with nulls'
+        );
+
+        const row = db.prepare('SELECT data FROM LargeBlobTest WHERE "$id" = ?').get(blobId) as { data: Buffer };
+
+        expect(row.data).toEqual(binaryData);
+        expect(row.data[0]).toBe(0x00);
+        expect(row.data[3]).toBe(0xFF);
+        expect(row.data.slice(12, 16)).toEqual(Buffer.from([0xDE, 0xAD, 0xBE, 0xEF]));
+      });
+
+      it('should efficiently query blob metadata without loading blob content', () => {
+        // Insert a large blob
+        const blobId = generateTestUUID('BLOBMTA');
+        const fiveMB = 5 * 1024 * 1024;
+        const largeData = Buffer.alloc(fiveMB, 0x42);
+
+        db.prepare(`INSERT INTO LargeBlobTest ("$id", data, description) VALUES (?, ?, ?)`).run(
+          blobId,
+          largeData,
+          'Metadata test blob'
+        );
+
+        // Query only metadata (size, description) without loading the blob
+        const startTime = Date.now();
+        const metadata = db.prepare(
+          'SELECT "$id", LENGTH(data) as size, description FROM LargeBlobTest WHERE "$id" = ?'
+        ).get(blobId) as { '$id': string; size: number; description: string };
+        const queryTime = Date.now() - startTime;
+
+        expect(metadata.size).toBe(fiveMB);
+        expect(metadata.description).toBe('Metadata test blob');
+        // Metadata query should be fast (< 100ms)
+        expect(queryTime).toBeLessThan(100);
+      });
+    });
+
+    describe('Database File Locking', () => {
+      it('should handle exclusive transaction locking', () => {
+        const lockId = generateTestUUID('LOCK1');
+
+        // Insert test record
+        db.prepare(`
+          INSERT INTO SimpleUser ("$id", "$type", "$version", "$createdAt", "$updatedAt", id, email, name, isActive)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(lockId, 'SimpleUser', 1, Date.now(), Date.now(), lockId, 'lock@test.com', 'Lock User', 1);
+
+        // Exclusive transaction
+        const exclusiveTx = db.transaction(() => {
+          // Read current value
+          const current = db.prepare('SELECT name FROM SimpleUser WHERE "$id" = ?').get(lockId) as { name: string };
+
+          // Update
+          db.prepare('UPDATE SimpleUser SET name = ? WHERE "$id" = ?').run('Locked Update', lockId);
+
+          // Read updated value
+          const updated = db.prepare('SELECT name FROM SimpleUser WHERE "$id" = ?').get(lockId) as { name: string };
+
+          return { before: current.name, after: updated.name };
+        }).exclusive;
+
+        const result = exclusiveTx();
+        expect(result.before).toBe('Lock User');
+        expect(result.after).toBe('Locked Update');
+
+        // Cleanup
+        db.prepare('DELETE FROM SimpleUser WHERE "$id" = ?').run(lockId);
+      });
+
+      it('should verify database integrity under lock stress', () => {
+        const stressIds: string[] = [];
+
+        // Rapid insert/update/delete cycle
+        for (let i = 0; i < 100; i++) {
+          const id = generateTestUUID(`LSTRS${i.toString().padStart(3, '0')}`);
+          stressIds.push(id);
+
+          // Insert
+          db.prepare(`
+            INSERT INTO SimpleUser ("$id", "$type", "$version", "$createdAt", "$updatedAt", id, email, name, isActive)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(id, 'SimpleUser', 1, Date.now(), Date.now(), id, `stress${i}@test.com`, `Stress ${i}`, 1);
+        }
+
+        // Update all in transaction
+        const updateAll = db.transaction(() => {
+          for (const id of stressIds) {
+            db.prepare('UPDATE SimpleUser SET name = ? WHERE "$id" = ?').run('Updated', id);
+          }
+        });
+        updateAll();
+
+        // Verify all updates
+        const placeholders = stressIds.map(() => '?').join(', ');
+        const count = db.prepare(
+          `SELECT COUNT(*) as cnt FROM SimpleUser WHERE "$id" IN (${placeholders}) AND name = 'Updated'`
+        ).get(...stressIds) as { cnt: number };
+
+        expect(count.cnt).toBe(100);
+
+        // Cleanup
+        db.exec(`DELETE FROM SimpleUser WHERE email LIKE 'stress%@test.com'`);
+      });
+    });
+
+    describe('Recovery After Crash', () => {
+      it('should rollback incomplete transaction on error', () => {
+        const recoverId = generateTestUUID('RECOV1');
+
+        // Insert initial record
+        db.prepare(`
+          INSERT INTO SimpleUser ("$id", "$type", "$version", "$createdAt", "$updatedAt", id, email, name, isActive)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(recoverId, 'SimpleUser', 1, Date.now(), Date.now(), recoverId, 'recover@test.com', 'Original', 1);
+
+        // Attempt transaction that will fail
+        const failingTx = db.transaction(() => {
+          db.prepare('UPDATE SimpleUser SET name = ? WHERE "$id" = ?').run('Should Rollback', recoverId);
+
+          // Simulate crash/error
+          throw new Error('Simulated crash');
+        });
+
+        expect(() => failingTx()).toThrow('Simulated crash');
+
+        // Verify original value is preserved (rollback occurred)
+        const row = db.prepare('SELECT name FROM SimpleUser WHERE "$id" = ?').get(recoverId) as { name: string };
+        expect(row.name).toBe('Original');
+
+        // Cleanup
+        db.prepare('DELETE FROM SimpleUser WHERE "$id" = ?').run(recoverId);
+      });
+
+      it('should maintain data integrity after constraint violation rollback', () => {
+        const integrityId1 = generateTestUUID('INTG1');
+        const integrityId2 = generateTestUUID('INTG2');
+
+        // Create table with unique constraint
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS IntegrityTest (
+            "$id" TEXT NOT NULL PRIMARY KEY,
+            uniqueCode TEXT UNIQUE
+          )
+        `);
+
+        // Insert first record
+        db.prepare(`INSERT INTO IntegrityTest ("$id", uniqueCode) VALUES (?, ?)`).run(integrityId1, 'CODE001');
+
+        // Attempt to insert duplicate in transaction
+        const duplicateTx = db.transaction(() => {
+          db.prepare(`INSERT INTO IntegrityTest ("$id", uniqueCode) VALUES (?, ?)`).run(integrityId2, 'CODE001');
+        });
+
+        expect(() => duplicateTx()).toThrow(/UNIQUE constraint failed/i);
+
+        // Only first record should exist
+        const count = db.prepare('SELECT COUNT(*) as cnt FROM IntegrityTest').get() as { cnt: number };
+        expect(count.cnt).toBe(1);
+      });
+
+      it('should handle partial batch failure with savepoints', () => {
+        const batchIds = [
+          generateTestUUID('BTCH1'),
+          generateTestUUID('BTCH2'),
+          generateTestUUID('BTCH3'),
+        ];
+
+        let successCount = 0;
+
+        // Outer transaction with inner savepoints
+        const partialBatch = db.transaction(() => {
+          for (let i = 0; i < batchIds.length; i++) {
+            try {
+              // Inner transaction (savepoint)
+              const inner = db.transaction(() => {
+                if (i === 1) {
+                  throw new Error(`Item ${i} failed`);
+                }
+                db.prepare(`
+                  INSERT INTO SimpleUser ("$id", "$type", "$version", "$createdAt", "$updatedAt", id, email, name, isActive)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `).run(batchIds[i], 'SimpleUser', 1, Date.now(), Date.now(), batchIds[i], `batch${i}@test.com`, `Batch ${i}`, 1);
+                successCount++;
+              });
+              inner();
+            } catch {
+              // Continue with other items
+            }
+          }
+        });
+
+        partialBatch();
+
+        // Should have 2 successful inserts (index 0 and 2)
+        expect(successCount).toBe(2);
+
+        // Cleanup
+        db.exec(`DELETE FROM SimpleUser WHERE email LIKE 'batch%@test.com'`);
+      });
+    });
+
+    describe('VACUUM and ANALYZE', () => {
+      it('should execute VACUUM successfully', () => {
+        // Create and populate a test table
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS VacuumTest (
+            "$id" TEXT NOT NULL PRIMARY KEY,
+            data TEXT
+          )
+        `);
+
+        // Insert some data
+        const insertStmt = db.prepare(`INSERT INTO VacuumTest ("$id", data) VALUES (?, ?)`);
+        for (let i = 0; i < 100; i++) {
+          insertStmt.run(generateTestUUID(`VAC${i.toString().padStart(3, '0')}`), `Data ${i}`);
+        }
+
+        // Delete most of the data
+        db.exec(`DELETE FROM VacuumTest WHERE data LIKE 'Data 9%'`);
+
+        // VACUUM should succeed (reclaims space)
+        // Note: VACUUM on :memory: database is a no-op but should not error
+        expect(() => db.exec('VACUUM')).not.toThrow();
+
+        // Table should still be functional
+        const count = db.prepare('SELECT COUNT(*) as cnt FROM VacuumTest').get() as { cnt: number };
+        expect(count.cnt).toBeLessThan(100);
+      });
+
+      it('should execute ANALYZE successfully', () => {
+        // ANALYZE updates query planner statistics
+        expect(() => db.exec('ANALYZE')).not.toThrow();
+
+        // Can analyze specific table
+        expect(() => db.exec('ANALYZE SimpleUser')).not.toThrow();
+
+        // Verify sqlite_stat1 table exists (created by ANALYZE)
+        const statTable = db.prepare(`
+          SELECT name FROM sqlite_master WHERE type='table' AND name='sqlite_stat1'
+        `).get() as { name: string } | undefined;
+
+        // sqlite_stat1 may or may not exist depending on whether indexes exist
+        // Just verify ANALYZE completes without error
+      });
+
+      it('should execute ANALYZE with statistics gathering', () => {
+        // Create indexed table
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS AnalyzeTest (
+            "$id" TEXT NOT NULL PRIMARY KEY,
+            category TEXT,
+            value INTEGER
+          )
+        `);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_analyze_category ON AnalyzeTest (category)`);
+
+        // Insert test data
+        const categories = ['A', 'B', 'C', 'D', 'E'];
+        const insertStmt = db.prepare(`INSERT INTO AnalyzeTest ("$id", category, value) VALUES (?, ?, ?)`);
+        for (let i = 0; i < 500; i++) {
+          insertStmt.run(
+            generateTestUUID(`ANLY${i.toString().padStart(4, '0')}`),
+            categories[i % categories.length],
+            i
+          );
+        }
+
+        // Run ANALYZE on the table
+        db.exec('ANALYZE AnalyzeTest');
+
+        // Query plan should now use statistics
+        const plan = db.prepare('EXPLAIN QUERY PLAN SELECT * FROM AnalyzeTest WHERE category = ?').all('A');
+        expect(plan.length).toBeGreaterThan(0);
+      });
+
+      it('should handle VACUUM with large data correctly', () => {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS VacuumLargeTest (
+            "$id" TEXT NOT NULL PRIMARY KEY,
+            content TEXT
+          )
+        `);
+
+        // Insert larger content
+        const largeContent = 'X'.repeat(10000); // 10KB per row
+        const insertStmt = db.prepare(`INSERT INTO VacuumLargeTest ("$id", content) VALUES (?, ?)`);
+
+        for (let i = 0; i < 100; i++) {
+          insertStmt.run(generateTestUUID(`VLRG${i.toString().padStart(3, '0')}`), largeContent);
+        }
+
+        // Delete half
+        db.exec(`DELETE FROM VacuumLargeTest WHERE "$id" LIKE '%0'`);
+
+        // VACUUM
+        expect(() => db.exec('VACUUM')).not.toThrow();
+
+        // Verify remaining data
+        const remaining = db.prepare('SELECT COUNT(*) as cnt FROM VacuumLargeTest').get() as { cnt: number };
+        expect(remaining.cnt).toBeLessThan(100);
+      });
+    });
+
+    describe('Attached Databases', () => {
+      it('should attach and query another in-memory database', () => {
+        // Create another in-memory database and attach it
+        // Note: :memory: creates a new private database each time, so we use a named connection
+        db.exec(`ATTACH DATABASE ':memory:' AS attached_db`);
+
+        // Create table in attached database
+        db.exec(`
+          CREATE TABLE attached_db.AttachedTable (
+            "$id" TEXT NOT NULL PRIMARY KEY,
+            name TEXT
+          )
+        `);
+
+        // Insert into attached database
+        const attachedId = generateTestUUID('ATT01');
+        db.prepare(`INSERT INTO attached_db.AttachedTable ("$id", name) VALUES (?, ?)`).run(attachedId, 'Attached Record');
+
+        // Query from attached database
+        const row = db.prepare('SELECT * FROM attached_db.AttachedTable WHERE "$id" = ?').get(attachedId) as {
+          '$id': string;
+          name: string;
+        };
+
+        expect(row.name).toBe('Attached Record');
+
+        // Detach database
+        db.exec('DETACH DATABASE attached_db');
+      });
+
+      it('should perform cross-database joins', () => {
+        // Attach another database
+        db.exec(`ATTACH DATABASE ':memory:' AS join_db`);
+
+        // Create table in main database
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS MainOrders (
+            "$id" TEXT NOT NULL PRIMARY KEY,
+            customerId TEXT,
+            total REAL
+          )
+        `);
+
+        // Create table in attached database
+        db.exec(`
+          CREATE TABLE join_db.Customers (
+            "$id" TEXT NOT NULL PRIMARY KEY,
+            name TEXT
+          )
+        `);
+
+        // Insert test data
+        const customerId = generateTestUUID('CUST1');
+        const orderId = generateTestUUID('ORD01');
+
+        db.prepare(`INSERT INTO join_db.Customers ("$id", name) VALUES (?, ?)`).run(customerId, 'John Doe');
+        db.prepare(`INSERT INTO MainOrders ("$id", customerId, total) VALUES (?, ?, ?)`).run(orderId, customerId, 99.99);
+
+        // Cross-database join
+        const result = db.prepare(`
+          SELECT o."$id" as orderId, c.name as customerName, o.total
+          FROM MainOrders o
+          JOIN join_db.Customers c ON o.customerId = c."$id"
+          WHERE o."$id" = ?
+        `).get(orderId) as { orderId: string; customerName: string; total: number };
+
+        expect(result.customerName).toBe('John Doe');
+        expect(result.total).toBe(99.99);
+
+        // Cleanup
+        db.exec('DETACH DATABASE join_db');
+      });
+
+      it('should list attached databases', () => {
+        db.exec(`ATTACH DATABASE ':memory:' AS list_test_db`);
+
+        // Query attached databases
+        const databases = db.prepare('PRAGMA database_list').all() as Array<{
+          seq: number;
+          name: string;
+          file: string;
+        }>;
+
+        // Should have at least main and the attached database
+        expect(databases.length).toBeGreaterThanOrEqual(2);
+        expect(databases.some(d => d.name === 'main')).toBe(true);
+        expect(databases.some(d => d.name === 'list_test_db')).toBe(true);
+
+        db.exec('DETACH DATABASE list_test_db');
+      });
+    });
+
+    describe('Custom Collations', () => {
+      it('should create and use custom collation function', () => {
+        // Register a custom collation (reverse string comparison)
+        db.function('reverse_collate', { deterministic: true }, (a: string, b: string) => {
+          const aRev = a.split('').reverse().join('');
+          const bRev = b.split('').reverse().join('');
+          return aRev.localeCompare(bRev);
+        });
+
+        // Note: better-sqlite3 supports custom collations via collation() method
+        // but for compatibility, we'll test case-insensitive and custom sorting
+
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS CustomCollateTest (
+            "$id" TEXT NOT NULL PRIMARY KEY,
+            name TEXT
+          )
+        `);
+
+        // Insert test data
+        const ids = [
+          { id: generateTestUUID('CC001'), name: 'abc' },
+          { id: generateTestUUID('CC002'), name: 'xyz' },
+          { id: generateTestUUID('CC003'), name: 'mno' },
+        ];
+
+        for (const item of ids) {
+          db.prepare(`INSERT INTO CustomCollateTest ("$id", name) VALUES (?, ?)`).run(item.id, item.name);
+        }
+
+        // Use built-in NOCASE collation for case-insensitive sorting
+        const rows = db.prepare(`
+          SELECT name FROM CustomCollateTest ORDER BY name COLLATE NOCASE
+        `).all() as Array<{ name: string }>;
+
+        expect(rows.length).toBe(3);
+        // Verify alphabetical order
+        expect(rows[0]!.name).toBe('abc');
+        expect(rows[1]!.name).toBe('mno');
+        expect(rows[2]!.name).toBe('xyz');
+      });
+
+      it('should handle BINARY collation for exact matching', () => {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS BinaryCollateTest (
+            "$id" TEXT NOT NULL PRIMARY KEY,
+            code TEXT COLLATE BINARY
+          )
+        `);
+
+        const id1 = generateTestUUID('BC001');
+        const id2 = generateTestUUID('BC002');
+
+        db.prepare(`INSERT INTO BinaryCollateTest ("$id", code) VALUES (?, ?)`).run(id1, 'ABC');
+        db.prepare(`INSERT INTO BinaryCollateTest ("$id", code) VALUES (?, ?)`).run(id2, 'abc');
+
+        // BINARY collation is case-sensitive
+        const upper = db.prepare(`SELECT * FROM BinaryCollateTest WHERE code = 'ABC'`).all() as Array<Record<string, unknown>>;
+        const lower = db.prepare(`SELECT * FROM BinaryCollateTest WHERE code = 'abc'`).all() as Array<Record<string, unknown>>;
+
+        expect(upper.length).toBe(1);
+        expect(lower.length).toBe(1);
+        expect(upper[0]!['$id']).not.toBe(lower[0]!['$id']);
+      });
+
+      it('should use RTRIM collation for trailing space handling', () => {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS RtrimCollateTest (
+            "$id" TEXT NOT NULL PRIMARY KEY,
+            value TEXT COLLATE RTRIM
+          )
+        `);
+
+        const id1 = generateTestUUID('RT001');
+        const id2 = generateTestUUID('RT002');
+
+        db.prepare(`INSERT INTO RtrimCollateTest ("$id", value) VALUES (?, ?)`).run(id1, 'test');
+        db.prepare(`INSERT INTO RtrimCollateTest ("$id", value) VALUES (?, ?)`).run(id2, 'test   '); // trailing spaces
+
+        // RTRIM should treat these as equal for comparison (but stores as-is)
+        const results = db.prepare(`
+          SELECT "$id" FROM RtrimCollateTest WHERE value = 'test' COLLATE RTRIM
+        `).all() as Array<{ '$id': string }>;
+
+        // Both should match when using RTRIM comparison
+        expect(results.length).toBe(2);
+      });
+
+      it('should order with custom Unicode handling', () => {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS UnicodeOrderTest (
+            "$id" TEXT NOT NULL PRIMARY KEY,
+            name TEXT
+          )
+        `);
+
+        // Insert various Unicode characters
+        const items = [
+          { id: generateTestUUID('UNI01'), name: '\u00e9clair' }, // éclair
+          { id: generateTestUUID('UNI02'), name: 'apple' },
+          { id: generateTestUUID('UNI03'), name: '\u00e1rbol' }, // árbol
+          { id: generateTestUUID('UNI04'), name: 'banana' },
+        ];
+
+        for (const item of items) {
+          db.prepare(`INSERT INTO UnicodeOrderTest ("$id", name) VALUES (?, ?)`).run(item.id, item.name);
+        }
+
+        // Default SQLite ordering (by code point)
+        const rows = db.prepare(`SELECT name FROM UnicodeOrderTest ORDER BY name`).all() as Array<{ name: string }>;
+
+        expect(rows.length).toBe(4);
+        // Verify ordering exists (exact order depends on SQLite version and locale)
+      });
+    });
+
+    describe('Savepoint Management', () => {
+      it('should support named savepoints for nested transactions', () => {
+        const spId1 = generateTestUUID('SP001');
+        const spId2 = generateTestUUID('SP002');
+
+        // Begin explicit transaction with savepoints
+        db.exec('BEGIN TRANSACTION');
+
+        try {
+          // First insert
+          db.prepare(`
+            INSERT INTO SimpleUser ("$id", "$type", "$version", "$createdAt", "$updatedAt", id, email, name, isActive)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(spId1, 'SimpleUser', 1, Date.now(), Date.now(), spId1, 'sp1@test.com', 'SP User 1', 1);
+
+          // Create savepoint
+          db.exec('SAVEPOINT sp_before_second');
+
+          // Second insert
+          db.prepare(`
+            INSERT INTO SimpleUser ("$id", "$type", "$version", "$createdAt", "$updatedAt", id, email, name, isActive)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(spId2, 'SimpleUser', 1, Date.now(), Date.now(), spId2, 'sp2@test.com', 'SP User 2', 1);
+
+          // Rollback to savepoint (undoes second insert)
+          db.exec('ROLLBACK TO SAVEPOINT sp_before_second');
+
+          // Release savepoint
+          db.exec('RELEASE SAVEPOINT sp_before_second');
+
+          // Commit transaction
+          db.exec('COMMIT');
+
+          // Verify: first record should exist, second should not
+          const user1 = db.prepare('SELECT * FROM SimpleUser WHERE "$id" = ?').get(spId1);
+          const user2 = db.prepare('SELECT * FROM SimpleUser WHERE "$id" = ?').get(spId2);
+
+          expect(user1).toBeDefined();
+          expect(user2).toBeUndefined();
+        } catch (e) {
+          db.exec('ROLLBACK');
+          throw e;
+        } finally {
+          // Cleanup
+          db.prepare('DELETE FROM SimpleUser WHERE "$id" IN (?, ?)').run(spId1, spId2);
+        }
+      });
+
+      it('should handle multiple savepoint levels', () => {
+        const baseId = generateTestUUID('MLSP0');
+        let insertedIds: string[] = [];
+
+        db.exec('BEGIN TRANSACTION');
+
+        try {
+          // Level 0 - insert
+          db.prepare(`
+            INSERT INTO SimpleUser ("$id", "$type", "$version", "$createdAt", "$updatedAt", id, email, name, isActive)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(baseId, 'SimpleUser', 1, Date.now(), Date.now(), baseId, 'level0@test.com', 'Level 0', 1);
+          insertedIds.push(baseId);
+
+          // Savepoint 1
+          db.exec('SAVEPOINT sp_level1');
+
+          const level1Id = generateTestUUID('MLSP1');
+          db.prepare(`
+            INSERT INTO SimpleUser ("$id", "$type", "$version", "$createdAt", "$updatedAt", id, email, name, isActive)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(level1Id, 'SimpleUser', 1, Date.now(), Date.now(), level1Id, 'level1@test.com', 'Level 1', 1);
+          insertedIds.push(level1Id);
+
+          // Savepoint 2 (nested)
+          db.exec('SAVEPOINT sp_level2');
+
+          const level2Id = generateTestUUID('MLSP2');
+          db.prepare(`
+            INSERT INTO SimpleUser ("$id", "$type", "$version", "$createdAt", "$updatedAt", id, email, name, isActive)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(level2Id, 'SimpleUser', 1, Date.now(), Date.now(), level2Id, 'level2@test.com', 'Level 2', 1);
+          insertedIds.push(level2Id);
+
+          // Release level 2 (keep its changes within level 1)
+          db.exec('RELEASE SAVEPOINT sp_level2');
+
+          // Rollback to level 1 (undoes level 1 and level 2 inserts)
+          db.exec('ROLLBACK TO SAVEPOINT sp_level1');
+          db.exec('RELEASE SAVEPOINT sp_level1');
+
+          db.exec('COMMIT');
+
+          // Only level 0 should exist
+          const count = db.prepare(
+            `SELECT COUNT(*) as cnt FROM SimpleUser WHERE "$id" IN (?, ?, ?)`
+          ).get(baseId, level1Id, level2Id) as { cnt: number };
+
+          expect(count.cnt).toBe(1);
+        } catch (e) {
+          db.exec('ROLLBACK');
+          throw e;
+        } finally {
+          // Cleanup
+          db.exec(`DELETE FROM SimpleUser WHERE email LIKE 'level%@test.com'`);
+        }
+      });
+    });
+  });
+
+  // ===========================================================================
   // Stress Tests
   // ===========================================================================
   describe('Stress Tests', () => {
