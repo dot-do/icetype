@@ -7,6 +7,9 @@
     "---SQL Adapters---",
     "postgres",
     "clickhouse",
-    "duckdb"
+    "duckdb",
+    "---ORM Adapters---",
+    "drizzle",
+    "prisma"
   ]
 }

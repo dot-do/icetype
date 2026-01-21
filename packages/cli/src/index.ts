@@ -23,6 +23,23 @@ export {
   generatePostgresDDLForAllSchemas,
   type PostgresDDLOptions,
 } from './commands/postgres.js';
+export { prismaExport } from './commands/prisma.js';
+export {
+  prismaImport,
+  formatAsTypeScript as formatPrismaAsTypeScript,
+  formatAsJson as formatPrismaAsJson,
+  formatSchemas as formatPrismaSchemas,
+} from './commands/prisma-import.js';
+export { drizzleExport } from './commands/drizzle.js';
+export {
+  drizzleImport,
+  fieldToIceTypeString,
+  generateTypeScriptOutput as generateDrizzleTypeScriptOutput,
+  generateJsonOutput as generateDrizzleJsonOutput,
+  generateOutput as generateDrizzleOutput,
+  type DrizzleImportFormat,
+  type DrizzleImportCommandOptions,
+} from './commands/drizzle-import.js';
 
 // Schema loader utilities
 export {

@@ -27,6 +27,8 @@ import {
   inferOrderBy,
 } from './ddl.js';
 
+import { VERSION } from './version.js';
+
 // =============================================================================
 // ClickHouse Adapter
 // =============================================================================
@@ -74,7 +76,7 @@ export class ClickHouseAdapter
   implements SchemaAdapter<ClickHouseDDL, ClickHouseTableOptions>
 {
   readonly name = 'clickhouse';
-  readonly version = '0.1.0';
+  readonly version = VERSION;
 
   /**
    * Transform an IceType schema to ClickHouse DDL structure.

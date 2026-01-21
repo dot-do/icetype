@@ -21,8 +21,12 @@ import {
   serializeColumn,
   serializeDDL,
   generateIndexStatements,
+  isArrayType,
+  fieldToSQLiteColumn,
   ICETYPE_TO_SQLITE,
 } from '../index.js';
+
+import { parseField } from '@icetype/core';
 
 import type { SQLiteDDL, SQLiteColumn } from '../types.js';
 
@@ -997,6 +1001,142 @@ describe('SQLite-Specific Features', () => {
 
     types.forEach(type => {
       expect(validTypes.has(type)).toBe(true);
+    });
+  });
+});
+
+// =============================================================================
+// Array Type Handling Tests
+// =============================================================================
+
+describe('Array Type Handling', () => {
+  describe('isArrayType()', () => {
+    it('should detect array types ending with []', () => {
+      expect(isArrayType('string[]')).toBe(true);
+      expect(isArrayType('int[]')).toBe(true);
+      expect(isArrayType('uuid[]')).toBe(true);
+      expect(isArrayType('json[]')).toBe(true);
+    });
+
+    it('should return false for non-array types', () => {
+      expect(isArrayType('string')).toBe(false);
+      expect(isArrayType('int')).toBe(false);
+      expect(isArrayType('json')).toBe(false);
+      expect(isArrayType('[]')).toBe(false); // just brackets
+    });
+
+    it('should handle edge cases', () => {
+      expect(isArrayType('')).toBe(false);
+      expect(isArrayType('string[][]')).toBe(true); // nested arrays end with []
+    });
+  });
+
+  describe('fieldToSQLiteColumn() with arrays', () => {
+    it('should convert array types to TEXT and return warning', () => {
+      const field = parseField('string[]');
+      const result = fieldToSQLiteColumn('tags', field);
+
+      expect(result.column.type).toBe('TEXT');
+      expect(result.column.name).toBe('tags');
+      expect(result.warning).toBeDefined();
+      expect(result.warning?.code).toBe('SQLITE_ARRAY_AS_JSON');
+      expect(result.warning?.fieldName).toBe('tags');
+      expect(result.warning?.message).toContain('SQLite does not have native array support');
+      expect(result.warning?.message).toContain('string[]');
+    });
+
+    it('should not return warning for non-array types', () => {
+      const field = parseField('string');
+      const result = fieldToSQLiteColumn('name', field);
+
+      expect(result.column.type).toBe('TEXT');
+      expect(result.warning).toBeUndefined();
+    });
+
+    it('should handle int[] array type', () => {
+      const field = parseField('int[]');
+      const result = fieldToSQLiteColumn('scores', field);
+
+      expect(result.column.type).toBe('TEXT');
+      expect(result.warning).toBeDefined();
+      expect(result.warning?.message).toContain('int[]');
+    });
+  });
+
+  describe('SQLiteAdapter.transform() with arrays', () => {
+    let adapter: SQLiteAdapter;
+
+    beforeEach(() => {
+      adapter = new SQLiteAdapter();
+    });
+
+    it('should collect warnings for array fields in DDL', () => {
+      const schema = parseSchema({
+        $type: 'Post',
+        id: 'uuid!',
+        title: 'string!',
+        tags: 'string[]',
+        scores: 'int[]',
+      });
+
+      const ddl = adapter.transform(schema);
+
+      expect(ddl.warnings).toBeDefined();
+      expect(ddl.warnings).toHaveLength(2);
+
+      const tagWarning = ddl.warnings?.find(w => w.fieldName === 'tags');
+      const scoreWarning = ddl.warnings?.find(w => w.fieldName === 'scores');
+
+      expect(tagWarning).toBeDefined();
+      expect(tagWarning?.code).toBe('SQLITE_ARRAY_AS_JSON');
+
+      expect(scoreWarning).toBeDefined();
+      expect(scoreWarning?.code).toBe('SQLITE_ARRAY_AS_JSON');
+    });
+
+    it('should not have warnings for schemas without array fields', () => {
+      const schema = parseSchema({
+        $type: 'User',
+        id: 'uuid!',
+        name: 'string',
+        age: 'int?',
+      });
+
+      const ddl = adapter.transform(schema);
+
+      expect(ddl.warnings).toBeUndefined();
+    });
+
+    it('should generate TEXT columns for array fields', () => {
+      const schema = parseSchema({
+        $type: 'Document',
+        id: 'uuid!',
+        keywords: 'string[]',
+        ratings: 'double[]',
+      });
+
+      const ddl = adapter.transform(schema);
+
+      const keywordsCol = ddl.columns.find(c => c.name === 'keywords');
+      const ratingsCol = ddl.columns.find(c => c.name === 'ratings');
+
+      expect(keywordsCol?.type).toBe('TEXT');
+      expect(ratingsCol?.type).toBe('TEXT');
+    });
+
+    it('should generate valid SQL for schemas with array fields', () => {
+      const schema = parseSchema({
+        $type: 'Article',
+        id: 'uuid!',
+        title: 'string!',
+        tags: 'string[]',
+      });
+
+      const sql = transformToSQLiteDDL(schema);
+
+      expect(sql).toContain('CREATE TABLE');
+      expect(sql).toContain('Article');
+      expect(sql).toContain('tags TEXT');
     });
   });
 });

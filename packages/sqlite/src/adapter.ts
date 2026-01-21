@@ -13,6 +13,7 @@ import type {
   SQLiteDDL,
   SQLiteColumn,
   SQLiteAdapterOptions,
+  SQLiteDDLWarning,
 } from './types.js';
 
 import {
@@ -21,6 +22,8 @@ import {
   serializeDDL,
   generateIndexStatements,
 } from './ddl.js';
+
+import { VERSION } from './version.js';
 
 // =============================================================================
 // SQLite Adapter
@@ -66,7 +69,7 @@ export class SQLiteAdapter
   implements SchemaAdapter<SQLiteDDL, SQLiteAdapterOptions>
 {
   readonly name = 'sqlite';
-  readonly version = '0.1.0';
+  readonly version = VERSION;
 
   /**
    * Transform an IceType schema to a SQLite DDL structure.
@@ -81,6 +84,7 @@ export class SQLiteAdapter
   ): SQLiteDDL {
     const columns: SQLiteColumn[] = [];
     const primaryKey: string[] = [];
+    const warnings: SQLiteDDLWarning[] = [];
 
     // Add system fields if requested (default: true)
     const includeSystemFields = options?.includeSystemFields ?? true;
@@ -99,8 +103,11 @@ export class SQLiteAdapter
       // Skip directive fields
       if (fieldName.startsWith('$')) continue;
 
-      const column = fieldToSQLiteColumn(fieldName, fieldDef);
-      columns.push(column);
+      const result = fieldToSQLiteColumn(fieldName, fieldDef);
+      columns.push(result.column);
+      if (result.warning) {
+        warnings.push(result.warning);
+      }
     }
 
     // Build DDL structure
@@ -112,6 +119,11 @@ export class SQLiteAdapter
       withoutRowid: options?.withoutRowid,
       strict: options?.strict,
     };
+
+    // Add warnings if any were generated
+    if (warnings.length > 0) {
+      ddl.warnings = warnings;
+    }
 
     // Collect unique constraints from unique indexed fields
     const uniqueColumns = columns.filter(c => c.unique && !c.primaryKey);

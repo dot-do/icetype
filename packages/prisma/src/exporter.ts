@@ -22,6 +22,8 @@ import {
   ICETYPE_DEFAULT_GENERATORS,
 } from './types.js';
 
+import { VERSION } from './version.js';
+
 // =============================================================================
 // Type Mapping
 // =============================================================================
@@ -515,7 +517,7 @@ export class PrismaAdapter
   implements SchemaAdapter<PrismaModelOutput, PrismaExportOptions>
 {
   readonly name = 'prisma';
-  readonly version = '0.1.0';
+  readonly version = VERSION;
 
   /**
    * Transform an IceType schema to a Prisma model output.

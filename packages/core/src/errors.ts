@@ -465,3 +465,36 @@ export function getErrorMessage(error: unknown): string {
   }
   return String(error);
 }
+
+// =============================================================================
+// Exhaustive Type Checking
+// =============================================================================
+
+/**
+ * Helper function for exhaustive type checking in switch statements.
+ *
+ * Use this in the `default` case of a switch statement to ensure all
+ * possible values of a union type are handled. TypeScript will report
+ * a compile-time error if a case is missing.
+ *
+ * @param value - The value that should never reach this point
+ * @returns Never returns; always throws
+ * @throws Error with the unexpected value
+ *
+ * @example
+ * ```typescript
+ * type Status = 'active' | 'inactive' | 'pending';
+ *
+ * function handleStatus(status: Status): string {
+ *   switch (status) {
+ *     case 'active': return 'Active';
+ *     case 'inactive': return 'Inactive';
+ *     case 'pending': return 'Pending';
+ *     default: return assertNever(status);
+ *   }
+ * }
+ * ```
+ */
+export function assertNever(value: never): never {
+  throw new Error(`Unexpected value: ${value}`);
+}

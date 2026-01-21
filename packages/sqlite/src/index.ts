@@ -65,6 +65,7 @@ export type {
   SQLiteDDL,
   SQLiteTypeMapping,
   SQLiteAdapterOptions,
+  SQLiteDDLWarning,
 } from './types.js';
 
 export { ICETYPE_TO_SQLITE } from './types.js';
@@ -74,6 +75,7 @@ export { ICETYPE_TO_SQLITE } from './types.js';
 // =============================================================================
 
 export {
+  isArrayType,
   mapIceTypeToSQLite,
   getSQLiteTypeString,
   fieldToSQLiteColumn,
@@ -83,6 +85,11 @@ export {
   serializeColumn,
   serializeDDL,
   generateIndexStatements,
+} from './ddl.js';
+
+export type {
+  DDLWarning,
+  FieldToColumnResult,
 } from './ddl.js';
 
 // =============================================================================

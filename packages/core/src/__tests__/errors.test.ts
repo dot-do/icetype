@@ -18,6 +18,7 @@ import {
   isAdapterError,
   isSchemaLoadError,
   getErrorMessage,
+  assertNever,
 } from '../errors.js';
 
 // =============================================================================
@@ -380,5 +381,57 @@ describe('ErrorCodes', () => {
   it('should have schema load codes starting with ICETYPE_4', () => {
     expect(ErrorCodes.SCHEMA_LOAD_ERROR).toMatch(/^ICETYPE_4/);
     expect(ErrorCodes.FILE_NOT_FOUND).toMatch(/^ICETYPE_4/);
+  });
+});
+
+// =============================================================================
+// assertNever Tests
+// =============================================================================
+
+describe('assertNever', () => {
+  it('should throw error with unexpected value', () => {
+    // Use type assertion to test runtime behavior
+    const unexpectedValue = 'unexpected' as never;
+    expect(() => assertNever(unexpectedValue)).toThrow('Unexpected value: unexpected');
+  });
+
+  it('should include the value in the error message', () => {
+    const unexpectedValue = 42 as never;
+    expect(() => assertNever(unexpectedValue)).toThrow('Unexpected value: 42');
+  });
+
+  it('should work in exhaustive switch statements', () => {
+    type Status = 'active' | 'inactive';
+
+    function handleStatus(status: Status): string {
+      switch (status) {
+        case 'active':
+          return 'Active';
+        case 'inactive':
+          return 'Inactive';
+        default:
+          return assertNever(status);
+      }
+    }
+
+    expect(handleStatus('active')).toBe('Active');
+    expect(handleStatus('inactive')).toBe('Inactive');
+  });
+
+  it('should throw for unhandled cases at runtime', () => {
+    type Color = 'red' | 'blue';
+
+    function handleColor(color: Color): string {
+      switch (color) {
+        case 'red':
+          return 'Red';
+        // Intentionally not handling 'blue' to test runtime behavior
+        default:
+          return assertNever(color as never);
+      }
+    }
+
+    expect(handleColor('red')).toBe('Red');
+    expect(() => handleColor('blue')).toThrow('Unexpected value: blue');
   });
 });

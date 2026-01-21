@@ -20,6 +20,9 @@ import { clickhouseExport } from './commands/clickhouse.js';
 import { duckdbExport } from './commands/duckdb.js';
 import { icebergExport } from './commands/iceberg.js';
 import { postgresExport } from './commands/postgres.js';
+import { prismaExport } from './commands/prisma.js';
+import { prismaImport } from './commands/prisma-import.js';
+import { drizzleImport } from './commands/drizzle-import.js';
 import { diff } from './commands/diff.js';
 import { generateHelpText, hasHelpFlag, type HelpCommand } from './utils/help.js';
 import { formatCliError } from './utils/cli-error.js';
@@ -46,6 +49,9 @@ Commands:
   duckdb export      Export to DuckDB DDL format
   iceberg export     Export to Iceberg metadata format
   postgres export    Export to PostgreSQL DDL format
+  prisma export      Export to Prisma schema format
+  prisma import      Import Prisma schema and convert to IceType
+  drizzle import     Import Drizzle schema and convert to IceType
 
 Options:
   -h, --help        Show this help message
@@ -61,6 +67,9 @@ Examples:
   ice duckdb export --schema ./schema.ts --output ./tables.sql
   ice iceberg export --schema ./schema.ts --output ./metadata.json
   ice postgres export --schema ./schema.ts --output ./create-tables.sql
+  ice prisma export --schema ./schema.ts --output ./schema.prisma
+  ice prisma import --input ./schema.prisma --output ./icetype-schema.ts
+  ice drizzle import --input ./drizzle-schema.ts --output ./icetype-schema.ts
 `;
 
 // Parent command help definitions
@@ -109,6 +118,38 @@ const POSTGRES_HELP: HelpCommand = {
   examples: [
     'ice postgres export --schema ./schema.ts --output ./create-tables.sql',
     'ice postgres export -s ./schema.ts --schemaName public',
+  ],
+};
+
+const PRISMA_HELP: HelpCommand = {
+  name: 'prisma',
+  description: 'Prisma schema operations',
+  usage: 'ice prisma <subcommand> [options]',
+  options: [],
+  subcommands: [
+    { name: 'export', description: 'Export to Prisma schema format' },
+    { name: 'import', description: 'Import Prisma schema and convert to IceType' },
+  ],
+  examples: [
+    'ice prisma export --schema ./schema.ts --output ./schema.prisma',
+    'ice prisma export -s ./schema.ts --provider mysql',
+    'ice prisma import --input ./schema.prisma --output ./icetype-schema.ts',
+    'ice prisma import -i ./schema.prisma -f json',
+  ],
+};
+
+const DRIZZLE_HELP: HelpCommand = {
+  name: 'drizzle',
+  description: 'Drizzle ORM schema operations',
+  usage: 'ice drizzle <subcommand> [options]',
+  options: [],
+  subcommands: [
+    { name: 'import', description: 'Import Drizzle schema and convert to IceType' },
+  ],
+  examples: [
+    'ice drizzle import --input ./drizzle-schema.ts --output ./icetype-schema.ts',
+    'ice drizzle import -i ./schema.ts -f json',
+    'ice drizzle import -i ./schema.ts --verbose',
   ],
 };
 
@@ -194,6 +235,38 @@ async function main() {
         } else {
           console.error(`Unknown postgres subcommand: ${commandArgs[0]}`);
           console.log('Available: ice postgres export');
+          process.exit(1);
+        }
+        break;
+
+      case 'prisma':
+        if (
+          hasHelpFlag(commandArgs) &&
+          commandArgs[0] !== 'export' &&
+          commandArgs[0] !== 'import'
+        ) {
+          console.log(generateHelpText(PRISMA_HELP));
+          process.exit(0);
+        } else if (commandArgs[0] === 'export') {
+          await prismaExport(commandArgs.slice(1));
+        } else if (commandArgs[0] === 'import') {
+          await prismaImport(commandArgs.slice(1));
+        } else {
+          console.error(`Unknown prisma subcommand: ${commandArgs[0]}`);
+          console.log('Available: ice prisma export, ice prisma import');
+          process.exit(1);
+        }
+        break;
+
+      case 'drizzle':
+        if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'import') {
+          console.log(generateHelpText(DRIZZLE_HELP));
+          process.exit(0);
+        } else if (commandArgs[0] === 'import') {
+          await drizzleImport(commandArgs.slice(1));
+        } else {
+          console.error(`Unknown drizzle subcommand: ${commandArgs[0]}`);
+          console.log('Available: ice drizzle import');
           process.exit(1);
         }
         break;

@@ -16,7 +16,7 @@ import {
   generateParquetSchemaString,
 } from '@icetype/iceberg';
 import { PostgresAdapter, transformToPostgresDDL } from '@icetype/postgres';
-import { ClickHouseAdapter, transformToClickHouseDDL } from '@icetype/clickhouse';
+import { ClickHouseAdapter } from '@icetype/clickhouse';
 import { DuckDBAdapter, transformToDuckDBDDL } from '@icetype/duckdb';
 import { MySQLAdapter, transformToMySQLDDL } from '@icetype/mysql';
 

@@ -108,6 +108,25 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
+  examples/drizzle:
+    dependencies:
+      '@icetype/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@icetype/drizzle':
+        specifier: workspace:*
+        version: link:../../packages/drizzle
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.7
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
   examples/duckdb:
     dependencies:
       '@icetype/core':
@@ -146,6 +165,25 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
+  examples/mysql:
+    dependencies:
+      '@icetype/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@icetype/mysql':
+        specifier: workspace:*
+        version: link:../../packages/mysql
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.7
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
   examples/postgres:
     dependencies:
       '@icetype/core':
@@ -154,6 +192,25 @@ importers:
       '@icetype/postgres':
         specifier: workspace:*
         version: link:../../packages/postgres
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.7
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  examples/sqlite:
+    dependencies:
+      '@icetype/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@icetype/sqlite':
+        specifier: workspace:*
+        version: link:../../packages/sqlite
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -211,15 +268,30 @@ importers:
       '@icetype/core':
         specifier: workspace:*
         version: link:../core
+      '@icetype/drizzle':
+        specifier: workspace:*
+        version: link:../drizzle
       '@icetype/duckdb':
         specifier: workspace:*
         version: link:../duckdb
       '@icetype/iceberg':
         specifier: workspace:*
         version: link:../iceberg
+      '@icetype/mysql':
+        specifier: workspace:*
+        version: link:../mysql
       '@icetype/postgres':
         specifier: workspace:*
         version: link:../postgres
+      '@icetype/prisma':
+        specifier: workspace:*
+        version: link:../prisma
+      '@icetype/sqlite':
+        specifier: workspace:*
+        version: link:../sqlite
+      jiti:
+        specifier: ^2.6.1
+        version: 2.6.1
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -251,6 +323,22 @@ importers:
         version: 2.1.9(@types/node@24.10.9)(lightningcss@1.30.2)
 
   packages/core:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@24.10.9)(lightningcss@1.30.2)
+
+  packages/drizzle:
+    dependencies:
+      '@icetype/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@icetype/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -308,6 +396,9 @@ importers:
       '@icetype/core':
         specifier: workspace:*
         version: link:../core
+      '@icetype/drizzle':
+        specifier: workspace:*
+        version: link:../drizzle
       '@icetype/duckdb':
         specifier: workspace:*
         version: link:../duckdb
@@ -320,6 +411,12 @@ importers:
       '@icetype/postgres':
         specifier: workspace:*
         version: link:../postgres
+      '@icetype/prisma':
+        specifier: workspace:*
+        version: link:../prisma
+      '@icetype/sqlite':
+        specifier: workspace:*
+        version: link:../sqlite
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -336,6 +433,9 @@ importers:
       '@icetype/core':
         specifier: workspace:*
         version: link:../core
+      '@icetype/sql-common':
+        specifier: workspace:*
+        version: link:../sql-common
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -363,6 +463,22 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@24.10.9)(lightningcss@1.30.2)
 
+  packages/prisma:
+    dependencies:
+      '@icetype/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@icetype/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@24.10.9)(lightningcss@1.30.2)
+
   packages/sql-common:
     devDependencies:
       typescript:
@@ -380,6 +496,9 @@ importers:
       '@icetype/core':
         specifier: workspace:*
         version: link:../core
+      '@icetype/sql-common':
+        specifier: workspace:*
+        version: link:../sql-common
     devDependencies:
       typescript:
         specifier: ^5.7.0

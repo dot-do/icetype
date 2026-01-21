@@ -99,6 +99,7 @@ export {
   isSchemaLoadError,
   // Utilities
   getErrorMessage,
+  assertNever,
 } from './errors.js';
 
 // Re-export error option types

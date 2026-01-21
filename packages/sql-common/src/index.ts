@@ -3,7 +3,7 @@
  *
  * Shared SQL DDL utilities for IceType database adapters.
  * Provides common functionality for escaping identifiers, formatting values,
- * and generating DDL statements across DuckDB, PostgreSQL, and ClickHouse.
+ * and generating DDL statements across DuckDB, PostgreSQL, ClickHouse, SQLite, and MySQL.
  *
  * @packageDocumentation
  */
@@ -15,7 +15,7 @@
 /**
  * Supported SQL dialects.
  */
-export type SqlDialect = 'duckdb' | 'postgres' | 'clickhouse';
+export type SqlDialect = 'duckdb' | 'postgres' | 'clickhouse' | 'sqlite' | 'mysql';
 
 /**
  * Common column definition interface used across all SQL dialects.
@@ -133,8 +133,8 @@ function isReservedKeyword(identifier: string): boolean {
  * Escape an identifier for the given SQL dialect.
  *
  * Different dialects use different quote characters:
- * - DuckDB and PostgreSQL use double quotes ("identifier")
- * - ClickHouse uses backticks (`identifier`)
+ * - DuckDB, PostgreSQL, and SQLite use double quotes ("identifier")
+ * - ClickHouse and MySQL use backticks (`identifier`)
  *
  * Identifiers are escaped (quoted) if they:
  * - Contain special characters (anything besides letters, digits, underscore)
@@ -158,12 +158,12 @@ export function escapeIdentifier(identifier: string, dialect: SqlDialect): strin
   }
 
   // Determine quote character based on dialect
-  if (dialect === 'clickhouse') {
-    // ClickHouse uses backticks
+  if (dialect === 'clickhouse' || dialect === 'mysql') {
+    // ClickHouse and MySQL use backticks
     const escaped = identifier.replace(/`/g, '``');
     return `\`${escaped}\``;
   } else {
-    // DuckDB and PostgreSQL use double quotes
+    // DuckDB, PostgreSQL, and SQLite use double quotes
     const escaped = identifier.replace(/"/g, '""');
     return `"${escaped}"`;
   }
@@ -180,15 +180,16 @@ export function escapeIdentifier(identifier: string, dialect: SqlDialect): strin
  * - null: Returns 'NULL'
  * - string: Escapes single quotes and wraps in single quotes
  * - number: Returns the number as a string
- * - boolean: Returns 'TRUE' or 'FALSE'
+ * - boolean: Returns 'TRUE'/'FALSE' (or '1'/'0' for SQLite)
  * - Date: Returns ISO string for TIMESTAMP, date-only for DATE types
  * - Array/Object: JSON serializes and wraps in single quotes
  *
  * @param value - The default value
  * @param type - The SQL type (used for Date formatting)
+ * @param dialect - Optional SQL dialect (defaults to 'postgres' behavior)
  * @returns The SQL expression string
  */
-export function formatDefaultValue(value: unknown, type: string): string {
+export function formatDefaultValue(value: unknown, type: string, dialect?: SqlDialect): string {
   if (value === null) {
     return 'NULL';
   }
@@ -204,6 +205,10 @@ export function formatDefaultValue(value: unknown, type: string): string {
   }
 
   if (typeof value === 'boolean') {
+    // SQLite uses 0/1 for booleans
+    if (dialect === 'sqlite') {
+      return value ? '1' : '0';
+    }
     return value ? 'TRUE' : 'FALSE';
   }
 
@@ -285,6 +290,16 @@ const SYSTEM_COLUMN_TYPES: Record<SqlDialect, {
     stringType: 'String',
     intType: 'Int32',
     bigintType: 'Int64',
+  },
+  sqlite: {
+    stringType: 'TEXT',
+    intType: 'INTEGER',
+    bigintType: 'INTEGER',
+  },
+  mysql: {
+    stringType: 'VARCHAR(255)',
+    intType: 'INT',
+    bigintType: 'BIGINT',
   },
 };
 

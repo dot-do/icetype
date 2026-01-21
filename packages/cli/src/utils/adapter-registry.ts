@@ -14,6 +14,8 @@ import type { SchemaAdapter } from '@icetype/adapters';
 import { PostgresAdapter } from '@icetype/postgres';
 import { DuckDBAdapter } from '@icetype/duckdb';
 import { ClickHouseAdapter } from '@icetype/clickhouse';
+import { MySQLAdapter } from '@icetype/mysql';
+import { SQLiteAdapter } from '@icetype/sqlite';
 
 // =============================================================================
 // State Management
@@ -79,6 +81,16 @@ export function initializeAdapterRegistry(): void {
   // Iceberg adapter
   if (!globalRegistry.has('iceberg')) {
     globalRegistry.register(new IcebergAdapter());
+  }
+
+  // MySQL adapter
+  if (!globalRegistry.has('mysql')) {
+    globalRegistry.register(new MySQLAdapter());
+  }
+
+  // SQLite adapter
+  if (!globalRegistry.has('sqlite')) {
+    globalRegistry.register(new SQLiteAdapter());
   }
 
   initialized = true;

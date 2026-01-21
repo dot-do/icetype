@@ -22,6 +22,8 @@ import {
   generateIndexStatements,
 } from './ddl.js';
 
+import { VERSION } from './version.js';
+
 // =============================================================================
 // MySQL Adapter
 // =============================================================================
@@ -66,7 +68,7 @@ export class MySQLAdapter
   implements SchemaAdapter<MySQLDDL, MySQLAdapterOptions>
 {
   readonly name = 'mysql';
-  readonly version = '0.1.0';
+  readonly version = VERSION;
 
   /**
    * Transform an IceType schema to a MySQL DDL structure.

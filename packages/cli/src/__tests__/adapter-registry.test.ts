@@ -169,8 +169,8 @@ describe('CLI Adapter Registry Integration', () => {
 
       initializeAdapterRegistry();
 
-      expect(globalRegistry.has('mysql')).toBe(false);
-      expect(globalRegistry.has('sqlite')).toBe(false);
+      expect(globalRegistry.has('oracle')).toBe(false);
+      expect(globalRegistry.has('mongodb')).toBe(false);
     });
   });
 

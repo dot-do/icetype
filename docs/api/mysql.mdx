@@ -1,0 +1,699 @@
+---
+title: "@icetype/mysql API"
+description: API reference for the @icetype/mysql package - MySQL DDL generation from IceType schemas.
+---
+
+# @icetype/mysql API
+
+The `@icetype/mysql` package transforms IceType schemas to MySQL DDL (Data Definition Language) statements. MySQL is a widely-used relational database ideal for web applications, transactional workloads, and enterprise systems.
+
+## Installation
+
+```bash
+npm install @icetype/mysql
+# or
+pnpm add @icetype/mysql
+```
+
+## Quick Start
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { MySQLAdapter, transformToMySQLDDL } from '@icetype/mysql';
+
+// Parse an IceType schema
+const schema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+  age: 'int?',
+  balance: 'decimal',
+  createdAt: 'timestamp',
+});
+
+// Option 1: Use the adapter directly
+const adapter = new MySQLAdapter();
+const ddl = adapter.transform(schema, { ifNotExists: true });
+const sql = adapter.serialize(ddl);
+
+// Option 2: Use the convenience function
+const sql2 = transformToMySQLDDL(schema, {
+  ifNotExists: true,
+  charset: 'utf8mb4',
+  collation: 'utf8mb4_unicode_ci',
+});
+
+console.log(sql2);
+// CREATE TABLE IF NOT EXISTS User (
+//   `$id` VARCHAR(255) NOT NULL,
+//   `$type` VARCHAR(255) NOT NULL,
+//   `$version` INT NOT NULL DEFAULT 1,
+//   `$createdAt` BIGINT NOT NULL,
+//   `$updatedAt` BIGINT NOT NULL,
+//   id CHAR(36) NOT NULL,
+//   email VARCHAR(255) UNIQUE,
+//   name VARCHAR(255),
+//   age INT,
+//   balance DECIMAL(38, 9),
+//   createdAt DATETIME,
+//   PRIMARY KEY (`$id`),
+//   UNIQUE (email)
+// ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+## MySQLAdapter Class
+
+The main adapter class that implements the `SchemaAdapter` interface.
+
+### Constructor
+
+```typescript
+import { MySQLAdapter } from '@icetype/mysql';
+
+const adapter = new MySQLAdapter();
+```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `name` | `string` | `'mysql'` - Adapter identifier |
+| `version` | `string` | `'0.1.0'` - Adapter version |
+
+### Methods
+
+#### `transform(schema, options?)`
+
+Transforms an IceType schema to a MySQL DDL structure.
+
+```typescript
+const ddl = adapter.transform(schema, {
+  ifNotExists: true,
+  engine: 'InnoDB',
+  charset: 'utf8mb4',
+  includeSystemFields: true,
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `schema` | `IceTypeSchema` | Parsed IceType schema |
+| `options` | `MySQLAdapterOptions` | Optional configuration |
+
+**Returns:** `MySQLDDL`
+
+---
+
+#### `serialize(output)`
+
+Serializes a MySQL DDL structure to a CREATE TABLE SQL statement.
+
+```typescript
+const sql = adapter.serialize(ddl);
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `output` | `MySQLDDL` | DDL structure to serialize |
+
+**Returns:** `string` - SQL CREATE TABLE statement
+
+---
+
+#### `serializeWithIndexes(ddl)`
+
+Generates DDL including CREATE INDEX statements for indexed columns.
+
+```typescript
+const sqlWithIndexes = adapter.serializeWithIndexes(ddl);
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ddl` | `MySQLDDL` | DDL structure |
+
+**Returns:** `string` - Full DDL including CREATE INDEX statements
+
+## Convenience Functions
+
+### `createMySQLAdapter()`
+
+Factory function to create a new MySQL adapter instance.
+
+```typescript
+import { createMySQLAdapter } from '@icetype/mysql';
+
+const adapter = createMySQLAdapter();
+```
+
+**Returns:** `MySQLAdapter`
+
+---
+
+### `transformToMySQLDDL(schema, options?)`
+
+Transforms an IceType schema directly to a MySQL CREATE TABLE statement.
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { transformToMySQLDDL } from '@icetype/mysql';
+
+const schema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  email: 'string#',
+});
+
+const sql = transformToMySQLDDL(schema, { ifNotExists: true });
+console.log(sql);
+// CREATE TABLE IF NOT EXISTS User (
+//   ...
+// ) ENGINE=InnoDB;
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `schema` | `IceTypeSchema` | Parsed IceType schema |
+| `options` | `MySQLAdapterOptions` | Optional configuration |
+
+**Returns:** `string` - SQL CREATE TABLE statement
+
+---
+
+### `generateMySQLDDL(schema, options?)`
+
+Transforms an IceType schema to a MySQL DDL structure (without serializing to SQL).
+
+```typescript
+import { generateMySQLDDL } from '@icetype/mysql';
+
+const ddl = generateMySQLDDL(schema, {
+  tableName: 'users',
+  engine: 'InnoDB',
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `schema` | `IceTypeSchema` | Parsed IceType schema |
+| `options` | `MySQLAdapterOptions` | Optional configuration |
+
+**Returns:** `MySQLDDL`
+
+## DDL Helper Functions
+
+### `mapIceTypeToMySQL(iceType, field?)`
+
+Maps an IceType type to its MySQL equivalent.
+
+```typescript
+import { mapIceTypeToMySQL } from '@icetype/mysql';
+
+const mapping = mapIceTypeToMySQL('string');
+// { mysqlType: 'VARCHAR', length: 255 }
+
+const decimalMapping = mapIceTypeToMySQL('decimal');
+// { mysqlType: 'DECIMAL', precision: 38, scale: 9 }
+```
+
+---
+
+### `getMySQLTypeString(mapping)`
+
+Gets the MySQL type string with length/precision/scale if applicable.
+
+```typescript
+import { getMySQLTypeString } from '@icetype/mysql';
+
+const typeStr = getMySQLTypeString({ mysqlType: 'DECIMAL', precision: 10, scale: 2 });
+// 'DECIMAL(10, 2)'
+
+const varcharStr = getMySQLTypeString({ mysqlType: 'VARCHAR', length: 255 });
+// 'VARCHAR(255)'
+```
+
+---
+
+### `fieldToMySQLColumn(name, field)`
+
+Converts an IceType field definition to a MySQL column definition.
+
+```typescript
+import { fieldToMySQLColumn } from '@icetype/mysql';
+import { parseField } from '@icetype/core';
+
+const field = parseField('string#');
+const column = fieldToMySQLColumn('email', field);
+// { name: 'email', type: 'VARCHAR(255)', nullable: false, unique: true }
+```
+
+---
+
+### `formatDefaultValue(value, type)`
+
+Formats a default value as a SQL expression.
+
+```typescript
+import { formatDefaultValue } from '@icetype/mysql';
+
+formatDefaultValue('hello', 'VARCHAR');  // "'hello'"
+formatDefaultValue(42, 'INT');           // '42'
+formatDefaultValue(true, 'TINYINT');     // 'TRUE'
+formatDefaultValue(null, 'VARCHAR');     // 'NULL'
+```
+
+---
+
+### `generateSystemColumns()`
+
+Generates system field columns for MySQL tables.
+
+```typescript
+import { generateSystemColumns } from '@icetype/mysql';
+
+const systemCols = generateSystemColumns();
+// Returns array of $id, $type, $version, $createdAt, $updatedAt columns
+```
+
+---
+
+### `escapeIdentifier(identifier)`
+
+Escapes a MySQL identifier (table or column name) using backticks.
+
+```typescript
+import { escapeIdentifier } from '@icetype/mysql';
+
+const escaped = escapeIdentifier('$id');
+// '`$id`'
+
+const simple = escapeIdentifier('user_name');
+// 'user_name' (no escaping needed)
+```
+
+---
+
+### `serializeColumn(column)`
+
+Serializes a column definition to a DDL fragment.
+
+```typescript
+import { serializeColumn } from '@icetype/mysql';
+
+const columnDDL = serializeColumn({
+  name: 'email',
+  type: 'VARCHAR(255)',
+  nullable: false,
+  unique: true,
+});
+// 'email VARCHAR(255) NOT NULL UNIQUE'
+```
+
+---
+
+### `serializeDDL(ddl)`
+
+Serializes a complete DDL structure to SQL.
+
+```typescript
+import { serializeDDL } from '@icetype/mysql';
+
+const sql = serializeDDL(ddl);
+```
+
+---
+
+### `generateIndexStatements(tableName, columns)`
+
+Generates CREATE INDEX statements for indexed columns.
+
+```typescript
+import { generateIndexStatements } from '@icetype/mysql';
+
+const indexes = generateIndexStatements('users', columns);
+// ['CREATE INDEX `idx_users_email` ON `users` (`email`);']
+```
+
+## Options Reference
+
+### `MySQLAdapterOptions`
+
+Options for the MySQL adapter.
+
+```typescript
+interface MySQLAdapterOptions {
+  // Override the table name (defaults to schema name)
+  tableName?: string;
+
+  // Add IF NOT EXISTS clause
+  ifNotExists?: boolean;
+
+  // Include system fields ($id, $type, $version, $createdAt, $updatedAt)
+  includeSystemFields?: boolean;  // default: true
+
+  // Storage engine (defaults to InnoDB)
+  engine?: 'InnoDB' | 'MyISAM' | 'MEMORY' | 'CSV' | 'ARCHIVE' | string;
+
+  // Character set
+  charset?: string;
+
+  // Collation
+  collation?: string;
+
+  // Table comment
+  comment?: string;
+}
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `tableName` | `string` | Schema name | Override the generated table name |
+| `ifNotExists` | `boolean` | `undefined` | Add `IF NOT EXISTS` clause |
+| `includeSystemFields` | `boolean` | `true` | Include IceType system columns |
+| `engine` | `string` | `'InnoDB'` | MySQL storage engine |
+| `charset` | `string` | `undefined` | Character set (e.g., `'utf8mb4'`) |
+| `collation` | `string` | `undefined` | Collation (e.g., `'utf8mb4_unicode_ci'`) |
+| `comment` | `string` | `undefined` | Table comment |
+
+## MySQL-Specific Features
+
+### Storage Engines
+
+MySQL supports multiple storage engines. InnoDB is the default and recommended for most use cases:
+
+```typescript
+const sql = transformToMySQLDDL(schema, {
+  engine: 'InnoDB',  // Default - supports transactions, foreign keys
+});
+
+// For read-heavy workloads without transactions
+const sql2 = transformToMySQLDDL(schema, {
+  engine: 'MyISAM',
+});
+
+// For temporary in-memory tables
+const sql3 = transformToMySQLDDL(schema, {
+  engine: 'MEMORY',
+});
+```
+
+### Character Set and Collation
+
+Specify character set and collation for proper Unicode support:
+
+```typescript
+const sql = transformToMySQLDDL(schema, {
+  charset: 'utf8mb4',
+  collation: 'utf8mb4_unicode_ci',
+});
+// CREATE TABLE User (
+//   ...
+// ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+Common character sets:
+- `utf8mb4` - Full UTF-8 support (recommended)
+- `utf8` - Legacy 3-byte UTF-8
+- `latin1` - Western European
+
+Common collations:
+- `utf8mb4_unicode_ci` - Unicode, case-insensitive
+- `utf8mb4_bin` - Binary comparison
+- `utf8mb4_general_ci` - General, case-insensitive
+
+### Table Comments
+
+Add descriptive comments to tables:
+
+```typescript
+const sql = transformToMySQLDDL(schema, {
+  comment: 'User accounts table',
+});
+// CREATE TABLE User (
+//   ...
+// ) ENGINE=InnoDB COMMENT='User accounts table';
+```
+
+### Foreign Keys and Constraints
+
+The DDL structure supports foreign key constraints:
+
+```typescript
+const ddl: MySQLDDL = {
+  tableName: 'Order',
+  columns: [...],
+  foreignKeys: [
+    {
+      columns: ['user_id'],
+      references: {
+        table: 'User',
+        columns: ['$id'],
+      },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    },
+  ],
+};
+```
+
+## Type Mappings
+
+The following table shows how IceType types map to MySQL types:
+
+| IceType | MySQL | Notes |
+|---------|-------|-------|
+| `string` | `VARCHAR(255)` | Variable-length string |
+| `text` | `TEXT` | Long text |
+| `varchar` | `VARCHAR(255)` | Alias for string |
+| `int` | `INT` | 32-bit signed integer |
+| `long` | `BIGINT` | 64-bit signed integer |
+| `bigint` | `BIGINT` | Alias for long |
+| `float` | `FLOAT` | 32-bit floating point |
+| `double` | `DOUBLE` | 64-bit floating point |
+| `bool` | `TINYINT(1)` | Boolean as tiny integer |
+| `boolean` | `TINYINT(1)` | Alias for bool |
+| `uuid` | `CHAR(36)` | UUID as fixed-length string |
+| `timestamp` | `DATETIME` | Date and time |
+| `timestamptz` | `DATETIME` | Date and time (timezone in app layer) |
+| `date` | `DATE` | Date only |
+| `time` | `TIME` | Time only |
+| `json` | `JSON` | JSON type (MySQL 5.7+) |
+| `binary` | `BLOB` | Binary data |
+| `decimal` | `DECIMAL(38, 9)` | High-precision decimal |
+
+### MySQL-Specific Considerations
+
+- **UUID**: MySQL lacks native UUID type, so `CHAR(36)` is used
+- **Boolean**: MySQL uses `TINYINT(1)` for boolean values
+- **Timezone**: MySQL `DATETIME` doesn't store timezone info; handle in application layer
+- **Arrays**: MySQL doesn't support native array types; use JSON for array data
+
+## Types
+
+### `MySQLDDL`
+
+The DDL structure containing all information for table creation.
+
+```typescript
+interface MySQLDDL {
+  tableName: string;
+  columns: MySQLColumn[];
+  primaryKey?: string[];
+  uniqueConstraints?: string[][];
+  ifNotExists?: boolean;
+  engine?: string;
+  charset?: string;
+  collation?: string;
+  comment?: string;
+  checkConstraints?: Array<{
+    name?: string;
+    expression: string;
+  }>;
+  foreignKeys?: Array<{
+    columns: string[];
+    references: {
+      table: string;
+      columns: string[];
+    };
+    onDelete?: 'CASCADE' | 'SET NULL' | 'SET DEFAULT' | 'RESTRICT' | 'NO ACTION';
+    onUpdate?: 'CASCADE' | 'SET NULL' | 'SET DEFAULT' | 'RESTRICT' | 'NO ACTION';
+  }>;
+}
+```
+
+### `MySQLColumn`
+
+Column definition for DDL generation.
+
+```typescript
+interface MySQLColumn {
+  name: string;
+  type: string;
+  nullable: boolean;
+  default?: string;
+  primaryKey?: boolean;
+  unique?: boolean;
+  autoIncrement?: boolean;
+  precision?: number;
+  scale?: number;
+  length?: number;
+}
+```
+
+### `MySQLType`
+
+Union of MySQL native data types.
+
+```typescript
+type MySQLType =
+  | 'VARCHAR'
+  | 'CHAR'
+  | 'TEXT'
+  | 'TINYTEXT'
+  | 'MEDIUMTEXT'
+  | 'LONGTEXT'
+  | 'INT'
+  | 'TINYINT'
+  | 'SMALLINT'
+  | 'MEDIUMINT'
+  | 'BIGINT'
+  | 'FLOAT'
+  | 'DOUBLE'
+  | 'DECIMAL'
+  | 'DATE'
+  | 'TIME'
+  | 'DATETIME'
+  | 'TIMESTAMP'
+  | 'YEAR'
+  | 'JSON'
+  | 'BLOB'
+  | 'TINYBLOB'
+  | 'MEDIUMBLOB'
+  | 'LONGBLOB'
+  | 'BINARY'
+  | 'VARBINARY'
+  | 'ENUM'
+  | 'SET';
+```
+
+### `MySQLTypeMapping`
+
+Configuration for mapping IceType types to MySQL types.
+
+```typescript
+interface MySQLTypeMapping {
+  mysqlType: string;
+  precision?: number;
+  scale?: number;
+  length?: number;
+}
+```
+
+## System Columns
+
+When `includeSystemFields` is `true` (the default), the following system columns are added:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `$id` | `VARCHAR(255) NOT NULL` | Primary key identifier |
+| `$type` | `VARCHAR(255) NOT NULL` | Entity type name |
+| `$version` | `INT NOT NULL DEFAULT 1` | Optimistic concurrency version |
+| `$createdAt` | `BIGINT NOT NULL` | Creation timestamp (epoch ms) |
+| `$updatedAt` | `BIGINT NOT NULL` | Last update timestamp (epoch ms) |
+
+## Use Cases
+
+### Web Applications
+
+MySQL is the most common database for web applications:
+
+```typescript
+const schema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+  passwordHash: 'string!',
+  isActive: 'bool',
+});
+
+const sql = transformToMySQLDDL(schema, {
+  ifNotExists: true,
+  charset: 'utf8mb4',
+  collation: 'utf8mb4_unicode_ci',
+});
+```
+
+### E-commerce Systems
+
+Define product and order schemas:
+
+```typescript
+const schema = parseSchema({
+  $type: 'Product',
+  sku: 'string#',
+  name: 'string!',
+  description: 'text',
+  price: 'decimal!',
+  quantity: 'int',
+  categories: 'json',
+  isAvailable: 'bool',
+});
+
+const ddl = transformToMySQLDDL(schema, {
+  engine: 'InnoDB',
+  charset: 'utf8mb4',
+});
+```
+
+### Multi-tenant Applications
+
+Use table comments for documentation:
+
+```typescript
+const schema = parseSchema({
+  $type: 'Tenant',
+  subdomain: 'string#',
+  name: 'string!',
+  plan: 'string',
+  settings: 'json',
+  createdAt: 'timestamp',
+});
+
+const ddl = transformToMySQLDDL(schema, {
+  ifNotExists: true,
+  comment: 'Multi-tenant configuration table',
+});
+```
+
+### Analytics Tables
+
+For read-heavy analytics workloads:
+
+```typescript
+const schema = parseSchema({
+  $type: 'PageView',
+  sessionId: 'string!',
+  url: 'string!',
+  referrer: 'string?',
+  userAgent: 'string',
+  timestamp: 'timestamp!',
+  metadata: 'json',
+});
+
+const ddl = transformToMySQLDDL(schema, {
+  engine: 'MyISAM',  // Faster reads, no transactions needed
+  comment: 'Page view analytics',
+});
+```

@@ -1,0 +1,1060 @@
+---
+title: "@icetype/prisma API"
+description: API reference for the @icetype/prisma package - Bidirectional Prisma schema import and export for IceType.
+---
+
+# @icetype/prisma API
+
+The `@icetype/prisma` package provides bidirectional conversion between IceType schemas and Prisma schema format:
+
+- **Import (Prisma to IceType)**: Parse existing `.prisma` files and convert them to IceType schema definitions for migration
+- **Export (IceType to Prisma)**: Generate Prisma schema files from IceType schemas for use with Prisma ORM
+
+## Installation
+
+```bash
+npm install @icetype/prisma
+# or
+pnpm add @icetype/prisma
+```
+
+## Quick Start
+
+### Export: IceType to Prisma
+
+Generate a Prisma schema from IceType schemas:
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { PrismaAdapter, generatePrismaSchema } from '@icetype/prisma';
+
+// Parse IceType schemas
+const userSchema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+  createdAt: 'timestamp!',
+});
+
+const postSchema = parseSchema({
+  $type: 'Post',
+  id: 'uuid!',
+  title: 'string!',
+  content: 'text?',
+  authorId: 'string!',
+});
+
+// Generate complete Prisma schema
+const prismaSchema = generatePrismaSchema([userSchema, postSchema], {
+  provider: 'postgresql',
+  databaseUrl: 'env("DATABASE_URL")',
+});
+
+console.log(prismaSchema);
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+// }
+//
+// generator client {
+//   provider = "prisma-client-js"
+// }
+//
+// model User {
+//   id String @id @default(uuid())
+//   email String @unique
+//   name String
+//   createdAt DateTime @default(now())
+// }
+//
+// model Post {
+//   id String @id @default(uuid())
+//   title String
+//   content String?
+//   authorId String
+// }
+```
+
+### Import: Prisma to IceType
+
+Parse an existing Prisma schema and convert to IceType:
+
+```typescript
+import { parsePrismaSchema, parsePrismaFile } from '@icetype/prisma';
+
+// Parse a Prisma schema string
+const schemas = parsePrismaSchema(`
+  model User {
+    id    String @id @default(uuid())
+    email String @unique
+    name  String?
+    posts Post[]
+  }
+
+  model Post {
+    id       String @id @default(uuid())
+    title    String
+    content  String?
+    author   User   @relation(fields: [authorId], references: [id])
+    authorId String
+  }
+`);
+
+console.log(schemas);
+// [
+//   { $type: 'User', id: 'string!#', email: 'string!#', name: 'string?', posts: '[Post]' },
+//   { $type: 'Post', id: 'string!#', title: 'string!', content: 'string?', author: 'User!', authorId: 'string!' }
+// ]
+
+// Or parse from a file
+const fileSchemas = await parsePrismaFile('./prisma/schema.prisma');
+```
+
+---
+
+## Export API (IceType to Prisma)
+
+### PrismaAdapter Class
+
+The main adapter class that implements the `SchemaAdapter` interface.
+
+#### Constructor
+
+```typescript
+import { PrismaAdapter } from '@icetype/prisma';
+
+const adapter = new PrismaAdapter();
+```
+
+#### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `name` | `string` | `'prisma'` - Adapter identifier |
+| `version` | `string` | `'0.1.0'` - Adapter version |
+
+#### Methods
+
+##### `transform(schema, options?)`
+
+Transforms an IceType schema to a Prisma model output structure.
+
+```typescript
+const model = adapter.transform(schema, {
+  provider: 'postgresql',
+  includeSystemFields: false,
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `schema` | `IceTypeSchema` | Parsed IceType schema |
+| `options` | `PrismaExportOptions` | Optional configuration |
+
+**Returns:** `PrismaModelOutput`
+
+---
+
+##### `serialize(output)`
+
+Serializes a Prisma model output to a schema string (model block only).
+
+```typescript
+const modelString = adapter.serialize(model);
+// model User {
+//   id String @id @default(uuid())
+//   email String @unique
+//   ...
+// }
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `output` | `PrismaModelOutput` | Model output to serialize |
+
+**Returns:** `string` - Prisma model block string
+
+---
+
+##### `generateSchema(schemas, options?)`
+
+Generates a complete Prisma schema file from multiple IceType schemas.
+
+```typescript
+const fullSchema = adapter.generateSchema([userSchema, postSchema], {
+  provider: 'postgresql',
+  databaseUrl: 'env("DATABASE_URL")',
+  previewFeatures: ['fullTextSearch'],
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `schemas` | `IceTypeSchema[]` | Array of IceType schemas |
+| `options` | `PrismaExportOptions` | Optional configuration |
+
+**Returns:** `string` - Complete Prisma schema with datasource, generator, and models
+
+---
+
+### `generatePrismaSchema(schemas, options?)`
+
+Generate a complete Prisma schema file from one or more IceType schemas.
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { generatePrismaSchema } from '@icetype/prisma';
+
+const schema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+});
+
+const prismaSchema = generatePrismaSchema([schema], {
+  provider: 'postgresql',
+  databaseUrl: 'env("DATABASE_URL")',
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `schemas` | `IceTypeSchema[]` | Array of IceType schemas |
+| `options` | `PrismaExportOptions` | Optional configuration |
+
+**Returns:** `string` - Complete Prisma schema string
+
+---
+
+### `transformToPrisma(schema, options?)`
+
+Transform a single IceType schema to a Prisma model string (without datasource/generator blocks).
+
+```typescript
+import { transformToPrisma } from '@icetype/prisma';
+
+const modelString = transformToPrisma(schema, {
+  includeSystemFields: false,
+});
+// model User {
+//   id String @id @default(uuid())
+//   email String @unique
+//   name String
+// }
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `schema` | `IceTypeSchema` | Parsed IceType schema |
+| `options` | `PrismaExportOptions` | Optional configuration |
+
+**Returns:** `string` - Prisma model string
+
+---
+
+### `generatePrismaSchemaOutput(schemas, options?)`
+
+Generate Prisma schema output with structured data for programmatic access.
+
+```typescript
+import { generatePrismaSchemaOutput } from '@icetype/prisma';
+
+const output = generatePrismaSchemaOutput([schema], {
+  provider: 'mysql',
+});
+
+console.log(output.schema);  // Full schema string
+console.log(output.models);  // Array of PrismaModelOutput
+console.log(output.enums);   // Array of PrismaEnumOutput
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `schemas` | `IceTypeSchema[]` | Array of IceType schemas |
+| `options` | `PrismaExportOptions` | Optional configuration |
+
+**Returns:** `PrismaSchemaOutput`
+
+---
+
+### `createPrismaAdapter()`
+
+Factory function to create a new Prisma adapter instance.
+
+```typescript
+import { createPrismaAdapter } from '@icetype/prisma';
+
+const adapter = createPrismaAdapter();
+```
+
+**Returns:** `PrismaAdapter`
+
+---
+
+## Import API (Prisma to IceType)
+
+### `parsePrismaSchema(content, options?)`
+
+Parse a Prisma schema string and convert to IceType schema definitions.
+
+```typescript
+import { parsePrismaSchema } from '@icetype/prisma';
+
+const schemas = parsePrismaSchema(`
+  model User {
+    id    String @id @default(uuid())
+    email String @unique
+    name  String?
+    posts Post[]
+  }
+
+  model Post {
+    id       String @id @default(uuid())
+    title    String
+    content  String?
+    author   User   @relation(fields: [authorId], references: [id])
+    authorId String
+  }
+`);
+
+// Result:
+// [
+//   { $type: 'User', id: 'string!#', email: 'string!#', name: 'string?', posts: '[Post]' },
+//   { $type: 'Post', id: 'string!#', title: 'string!', content: 'string?', author: 'User!', authorId: 'string!' }
+// ]
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `prismaContent` | `string` | Prisma schema content |
+| `options` | `PrismaImportOptions` | Optional import configuration |
+
+**Returns:** `IceTypeSchemaDefinition[]`
+
+---
+
+### `parsePrismaFile(filePath, options?)`
+
+Parse a Prisma schema file and convert to IceType schema definitions.
+
+```typescript
+import { parsePrismaFile } from '@icetype/prisma';
+
+const schemas = await parsePrismaFile('./prisma/schema.prisma', {
+  includeRelations: true,
+  convertUniqueToIndexed: true,
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `filePath` | `string` | Path to the Prisma schema file |
+| `options` | `PrismaImportOptions` | Optional import configuration |
+
+**Returns:** `Promise<IceTypeSchemaDefinition[]>`
+
+---
+
+### `parsePrismaSchemaToAst(content)`
+
+Get the raw parsed Prisma schema without IceType conversion. Useful for inspection or custom conversion logic.
+
+```typescript
+import { parsePrismaSchemaToAst } from '@icetype/prisma';
+
+const ast = parsePrismaSchemaToAst(prismaContent);
+
+console.log(ast.models);  // Array of PrismaModel
+console.log(ast.enums);   // Array of PrismaEnum
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `prismaContent` | `string` | Prisma schema content |
+
+**Returns:** `ParsedPrismaSchema`
+
+---
+
+### `convertPrismaModel(modelString, options?)`
+
+Convert a single Prisma model string to IceType.
+
+```typescript
+import { convertPrismaModel } from '@icetype/prisma';
+
+const schema = convertPrismaModel(`
+  model User {
+    id    String @id @default(uuid())
+    email String @unique
+  }
+`);
+
+// { $type: 'User', id: 'string!#', email: 'string!# = uuid()' }
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `modelString` | `string` | Single model definition string |
+| `options` | `PrismaImportOptions` | Optional import configuration |
+
+**Returns:** `IceTypeSchemaDefinition | null`
+
+---
+
+## Options Reference
+
+### `PrismaExportOptions`
+
+Options for exporting IceType schemas to Prisma format.
+
+```typescript
+interface PrismaExportOptions {
+  // Database provider (default: 'postgresql')
+  provider?: PrismaProvider;
+
+  // Database URL or environment variable reference (default: 'env("DATABASE_URL")')
+  databaseUrl?: string;
+
+  // Datasource name (default: 'db')
+  datasourceName?: string;
+
+  // Generator name (default: 'client')
+  generatorName?: string;
+
+  // Generator provider (default: 'prisma-client-js')
+  generatorProvider?: string;
+
+  // Whether to include system fields ($id, $type, etc.) (default: false)
+  includeSystemFields?: boolean;
+
+  // Preview features to enable
+  previewFeatures?: string[];
+
+  // Custom type mappings to override defaults
+  customTypeMappings?: Record<string, string>;
+
+  // Whether to generate @@map attributes for table name mapping (default: false)
+  generateTableMaps?: boolean;
+}
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `provider` | `PrismaProvider` | `'postgresql'` | Database provider |
+| `databaseUrl` | `string` | `'env("DATABASE_URL")'` | Database connection URL |
+| `datasourceName` | `string` | `'db'` | Datasource block name |
+| `generatorName` | `string` | `'client'` | Generator block name |
+| `generatorProvider` | `string` | `'prisma-client-js'` | Generator provider |
+| `includeSystemFields` | `boolean` | `false` | Include IceType system fields |
+| `previewFeatures` | `string[]` | `undefined` | Prisma preview features |
+| `customTypeMappings` | `Record<string, string>` | `undefined` | Custom type overrides |
+| `generateTableMaps` | `boolean` | `false` | Generate `@@map` attributes |
+
+---
+
+### `PrismaImportOptions`
+
+Options for importing Prisma schemas to IceType format.
+
+```typescript
+interface PrismaImportOptions {
+  // Whether to include relation fields in output (default: true)
+  includeRelations?: boolean;
+
+  // Whether to convert unique constraints to IceType # modifier (default: true)
+  convertUniqueToIndexed?: boolean;
+
+  // Whether to include @db.* native type annotations as comments (default: false)
+  includeNativeTypeComments?: boolean;
+
+  // Custom type mappings to override defaults
+  customTypeMappings?: Record<string, string>;
+}
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `includeRelations` | `boolean` | `true` | Include relation fields |
+| `convertUniqueToIndexed` | `boolean` | `true` | Convert `@unique` to `#` modifier |
+| `includeNativeTypeComments` | `boolean` | `false` | Include native type comments |
+| `customTypeMappings` | `Record<string, string>` | `undefined` | Custom type overrides |
+
+---
+
+## Provider Support
+
+The `@icetype/prisma` package supports all Prisma database providers:
+
+| Provider | Description |
+|----------|-------------|
+| `postgresql` | PostgreSQL database (default) |
+| `mysql` | MySQL database |
+| `sqlite` | SQLite database |
+| `sqlserver` | Microsoft SQL Server |
+| `mongodb` | MongoDB database |
+
+### Example with Different Providers
+
+```typescript
+// PostgreSQL (default)
+const pgSchema = generatePrismaSchema(schemas, {
+  provider: 'postgresql',
+  databaseUrl: 'env("DATABASE_URL")',
+});
+
+// MySQL
+const mysqlSchema = generatePrismaSchema(schemas, {
+  provider: 'mysql',
+  databaseUrl: 'env("DATABASE_URL")',
+});
+
+// SQLite
+const sqliteSchema = generatePrismaSchema(schemas, {
+  provider: 'sqlite',
+  databaseUrl: 'file:./dev.db',
+});
+
+// SQL Server
+const sqlserverSchema = generatePrismaSchema(schemas, {
+  provider: 'sqlserver',
+  databaseUrl: 'env("DATABASE_URL")',
+});
+
+// MongoDB
+const mongoSchema = generatePrismaSchema(schemas, {
+  provider: 'mongodb',
+  databaseUrl: 'env("MONGODB_URL")',
+});
+```
+
+---
+
+## Type Mappings
+
+### IceType to Prisma (Export)
+
+| IceType | Prisma | Default Generator |
+|---------|--------|-------------------|
+| `string` | `String` | - |
+| `text` | `String` | - |
+| `int` | `Int` | - |
+| `long` | `BigInt` | - |
+| `bigint` | `BigInt` | - |
+| `float` | `Float` | - |
+| `double` | `Float` | - |
+| `bool` | `Boolean` | - |
+| `boolean` | `Boolean` | - |
+| `uuid` | `String` | `uuid()` |
+| `timestamp` | `DateTime` | `now()` |
+| `timestamptz` | `DateTime` | `now()` |
+| `date` | `DateTime` | - |
+| `time` | `DateTime` | - |
+| `json` | `Json` | - |
+| `binary` | `Bytes` | - |
+| `decimal` | `Decimal` | - |
+
+### Prisma to IceType (Import)
+
+| Prisma | IceType |
+|--------|---------|
+| `String` | `string` |
+| `Int` | `int` |
+| `BigInt` | `bigint` |
+| `Float` | `float` |
+| `Decimal` | `double` |
+| `Boolean` | `bool` |
+| `DateTime` | `timestamp` |
+| `Json` | `json` |
+| `Bytes` | `binary` |
+
+### Modifier Mappings
+
+| Prisma Attribute | IceType Modifier | Direction |
+|------------------|------------------|-----------|
+| `@id` | `!#` (required + unique) | Both |
+| `@unique` | `#` | Both |
+| `?` (optional) | `?` | Both |
+| Required (no `?`) | `!` | Both |
+| `[]` (array) | `[Type]` | Both |
+
+---
+
+## Generated Prisma Schema Examples
+
+### Basic User Model
+
+IceType input:
+```typescript
+const schema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+  age: 'int?',
+  isActive: 'bool!',
+  createdAt: 'timestamp!',
+  updatedAt: 'timestamp!',
+});
+```
+
+Generated Prisma output:
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id String @id @default(uuid())
+  email String @unique
+  name String
+  age Int?
+  isActive Boolean
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+```
+
+### Model with Indexes
+
+IceType input with compound index:
+```typescript
+const schema = parseSchema({
+  $type: 'Event',
+  $index: [['tenantId', 'createdAt']],
+  id: 'uuid!',
+  tenantId: 'string!',
+  type: 'string!',
+  data: 'json',
+  createdAt: 'timestamp!',
+});
+```
+
+Generated Prisma output:
+```prisma
+model Event {
+  id String @id @default(uuid())
+  tenantId String
+  type String
+  data Json?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+}
+```
+
+### Prisma Model Syntax Reference
+
+When importing Prisma schemas, the parser understands these constructs:
+
+```prisma
+model User {
+  // Field with @id - becomes primary key
+  id        String   @id @default(uuid())
+
+  // Field with @unique - becomes indexed (#)
+  email     String   @unique
+
+  // Optional field (?)
+  name      String?
+
+  // Required field (no ?)
+  bio       String
+
+  // Array field
+  tags      String[]
+
+  // Relation field (one-to-many)
+  posts     Post[]
+
+  // DateTime with default
+  createdAt DateTime @default(now())
+
+  // DateTime with @updatedAt
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id       String @id @default(uuid())
+  title    String
+  content  String?
+
+  // Relation field (many-to-one)
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId String
+}
+
+// Enum definition
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+```
+
+---
+
+## CLI Usage Examples
+
+### Export: Generate Prisma Schema
+
+```bash
+# Using the IceType CLI to generate Prisma schema
+npx icetype export prisma ./schemas/*.ts -o ./prisma/schema.prisma
+
+# With options
+npx icetype export prisma ./schemas/*.ts \
+  --provider postgresql \
+  --output ./prisma/schema.prisma
+```
+
+### Import: Convert Prisma to IceType
+
+```bash
+# Convert existing Prisma schema to IceType
+npx icetype import prisma ./prisma/schema.prisma -o ./schemas/
+
+# With options
+npx icetype import prisma ./prisma/schema.prisma \
+  --output ./schemas/ \
+  --include-relations
+```
+
+### Programmatic CLI Usage
+
+```typescript
+import { parsePrismaFile, generatePrismaSchema } from '@icetype/prisma';
+import { parseSchema } from '@icetype/core';
+import { writeFileSync, readFileSync } from 'node:fs';
+
+// Import: Read Prisma and convert to IceType
+async function importFromPrisma(inputPath: string) {
+  const schemas = await parsePrismaFile(inputPath);
+
+  // Convert to IceType schema files
+  for (const schema of schemas) {
+    const content = `export const ${schema.$type} = ${JSON.stringify(schema, null, 2)};`;
+    writeFileSync(`./schemas/${schema.$type}.ts`, content);
+  }
+}
+
+// Export: Read IceType and generate Prisma
+function exportToPrisma(schemas: any[], outputPath: string) {
+  const parsedSchemas = schemas.map(s => parseSchema(s));
+  const prismaSchema = generatePrismaSchema(parsedSchemas, {
+    provider: 'postgresql',
+  });
+  writeFileSync(outputPath, prismaSchema);
+}
+```
+
+---
+
+## Types
+
+### `PrismaModelOutput`
+
+Generated Prisma model structure.
+
+```typescript
+interface PrismaModelOutput {
+  name: string;
+  fields: PrismaFieldOutput[];
+  blockAttributes?: string[];
+}
+```
+
+### `PrismaFieldOutput`
+
+Generated Prisma field structure.
+
+```typescript
+interface PrismaFieldOutput {
+  name: string;
+  type: string;
+  isOptional: boolean;
+  isArray: boolean;
+  attributes: string[];
+}
+```
+
+### `PrismaSchemaOutput`
+
+Complete schema output with structured data.
+
+```typescript
+interface PrismaSchemaOutput {
+  schema: string;
+  models: PrismaModelOutput[];
+  enums: PrismaEnumOutput[];
+}
+```
+
+### `PrismaEnumOutput`
+
+Generated Prisma enum structure.
+
+```typescript
+interface PrismaEnumOutput {
+  name: string;
+  values: string[];
+}
+```
+
+### `IceTypeSchemaDefinition`
+
+IceType schema definition object (output from import).
+
+```typescript
+interface IceTypeSchemaDefinition {
+  $type: string;
+  $partitionBy?: string[];
+  $index?: string[][];
+  $fts?: string[];
+  $vector?: Record<string, number>;
+  [key: string]: unknown;
+}
+```
+
+### `ParsedPrismaSchema`
+
+Raw parsed Prisma schema AST.
+
+```typescript
+interface ParsedPrismaSchema {
+  models: PrismaModel[];
+  enums: PrismaEnum[];
+}
+```
+
+### `PrismaProvider`
+
+Supported Prisma database providers.
+
+```typescript
+type PrismaProvider =
+  | 'postgresql'
+  | 'mysql'
+  | 'sqlite'
+  | 'sqlserver'
+  | 'mongodb';
+```
+
+---
+
+## Helper Functions
+
+### `mapIceTypeToPrisma(iceType, customMappings?)`
+
+Map an IceType primitive type to a Prisma type.
+
+```typescript
+import { mapIceTypeToPrisma } from '@icetype/prisma';
+
+mapIceTypeToPrisma('string')      // 'String'
+mapIceTypeToPrisma('uuid')        // 'String'
+mapIceTypeToPrisma('timestamp')   // 'DateTime'
+```
+
+---
+
+### `getDefaultGenerator(iceType)`
+
+Get the default generator for a Prisma type based on IceType.
+
+```typescript
+import { getDefaultGenerator } from '@icetype/prisma';
+
+getDefaultGenerator('uuid')       // 'uuid()'
+getDefaultGenerator('timestamp')  // 'now()'
+getDefaultGenerator('string')     // undefined
+```
+
+---
+
+### `fieldToPrismaField(fieldName, field, options?)`
+
+Convert an IceType field definition to a Prisma field output.
+
+```typescript
+import { fieldToPrismaField } from '@icetype/prisma';
+
+const prismaField = fieldToPrismaField('email', field, options);
+// { name: 'email', type: 'String', isOptional: false, isArray: false, attributes: ['@unique'] }
+```
+
+---
+
+### `schemaToPrismaModel(schema, options?)`
+
+Convert an IceType schema to a Prisma model output.
+
+```typescript
+import { schemaToPrismaModel } from '@icetype/prisma';
+
+const model = schemaToPrismaModel(schema, {
+  includeSystemFields: false,
+});
+```
+
+---
+
+### `serializePrismaField(field)`
+
+Serialize a Prisma field to schema format.
+
+```typescript
+import { serializePrismaField } from '@icetype/prisma';
+
+serializePrismaField({
+  name: 'email',
+  type: 'String',
+  isOptional: false,
+  isArray: false,
+  attributes: ['@unique'],
+});
+// 'email String @unique'
+```
+
+---
+
+### `serializePrismaModel(model)`
+
+Serialize a Prisma model to schema format.
+
+```typescript
+import { serializePrismaModel } from '@icetype/prisma';
+
+const modelString = serializePrismaModel(model);
+// model User {
+//   id String @id @default(uuid())
+//   ...
+// }
+```
+
+---
+
+### `serializePrismaEnum(prismaEnum)`
+
+Serialize a Prisma enum to schema format.
+
+```typescript
+import { serializePrismaEnum } from '@icetype/prisma';
+
+serializePrismaEnum({ name: 'Role', values: ['USER', 'ADMIN'] });
+// enum Role {
+//   USER
+//   ADMIN
+// }
+```
+
+---
+
+### `generateDatasourceBlock(options?)`
+
+Generate the datasource block for a Prisma schema.
+
+```typescript
+import { generateDatasourceBlock } from '@icetype/prisma';
+
+generateDatasourceBlock({ provider: 'postgresql' });
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+// }
+```
+
+---
+
+### `generateGeneratorBlock(options?)`
+
+Generate the generator block for a Prisma schema.
+
+```typescript
+import { generateGeneratorBlock } from '@icetype/prisma';
+
+generateGeneratorBlock({ previewFeatures: ['fullTextSearch'] });
+// generator client {
+//   provider = "prisma-client-js"
+//   previewFeatures = ["fullTextSearch"]
+// }
+```
+
+---
+
+## Constants
+
+### `ICETYPE_TO_PRISMA_MAP`
+
+Map of IceType types to Prisma types.
+
+```typescript
+import { ICETYPE_TO_PRISMA_MAP } from '@icetype/prisma';
+
+console.log(ICETYPE_TO_PRISMA_MAP);
+// {
+//   string: 'String',
+//   text: 'String',
+//   int: 'Int',
+//   long: 'BigInt',
+//   ...
+// }
+```
+
+### `PRISMA_TO_ICETYPE_MAP`
+
+Map of Prisma types to IceType types.
+
+```typescript
+import { PRISMA_TO_ICETYPE_MAP } from '@icetype/prisma';
+
+console.log(PRISMA_TO_ICETYPE_MAP);
+// {
+//   String: 'string',
+//   Int: 'int',
+//   BigInt: 'bigint',
+//   ...
+// }
+```
+
+### `ICETYPE_DEFAULT_GENERATORS`
+
+Map of IceType types to Prisma default generators.
+
+```typescript
+import { ICETYPE_DEFAULT_GENERATORS } from '@icetype/prisma';
+
+console.log(ICETYPE_DEFAULT_GENERATORS);
+// {
+//   uuid: 'uuid()',
+//   timestamp: 'now()',
+//   timestamptz: 'now()',
+// }
+```

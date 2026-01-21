@@ -44,9 +44,14 @@
     "@icetype/adapters": "workspace:*",
     "@icetype/clickhouse": "workspace:*",
     "@icetype/core": "workspace:*",
+    "@icetype/drizzle": "workspace:*",
     "@icetype/duckdb": "workspace:*",
     "@icetype/iceberg": "workspace:*",
-    "@icetype/postgres": "workspace:*"
+    "@icetype/mysql": "workspace:*",
+    "@icetype/postgres": "workspace:*",
+    "@icetype/prisma": "workspace:*",
+    "@icetype/sqlite": "workspace:*",
+    "jiti": "^2.6.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

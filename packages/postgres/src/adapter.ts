@@ -23,6 +23,8 @@ import {
   generateIndexStatements,
 } from './ddl.js';
 
+import { VERSION } from './version.js';
+
 // =============================================================================
 // PostgreSQL Adapter
 // =============================================================================
@@ -69,7 +71,7 @@ export class PostgresAdapter
   implements SchemaAdapter<PostgresDDL, PostgresAdapterOptions>
 {
   readonly name = 'postgres';
-  readonly version = '0.1.0';
+  readonly version = VERSION;
 
   /**
    * Transform an IceType schema to a PostgreSQL DDL structure.

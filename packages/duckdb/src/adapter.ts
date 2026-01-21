@@ -22,6 +22,8 @@ import {
   generateIndexStatements,
 } from './ddl.js';
 
+import { VERSION } from './version.js';
+
 // =============================================================================
 // DuckDB Adapter
 // =============================================================================
@@ -66,7 +68,7 @@ export class DuckDBAdapter
   implements SchemaAdapter<DuckDBDDL, DuckDBAdapterOptions>
 {
   readonly name = 'duckdb';
-  readonly version = '0.1.0';
+  readonly version = VERSION;
 
   /**
    * Transform an IceType schema to a DuckDB DDL structure.

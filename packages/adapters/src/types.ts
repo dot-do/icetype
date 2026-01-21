@@ -59,6 +59,19 @@ export interface SchemaAdapter<TOutput = unknown, TOptions = unknown> {
    * @returns String representation of the output
    */
   serialize(output: TOutput): string;
+
+  /**
+   * Serialize the output including index creation statements.
+   *
+   * This optional method generates a complete DDL string that includes both
+   * the primary schema definition (e.g., CREATE TABLE) and any associated
+   * index statements (e.g., CREATE INDEX). This is useful for SQL adapters
+   * that need to create indexes separately from the table definition.
+   *
+   * @param output - The output to serialize
+   * @returns String representation including index statements
+   */
+  serializeWithIndexes?(output: TOutput): string;
 }
 
 // =============================================================================

@@ -8,6 +8,13 @@
  */
 
 import type { FieldDefinition } from '@icetype/core';
+import {
+  escapeIdentifier as escapeIdentifierCommon,
+  formatDefaultValue as formatDefaultValueCommon,
+  generateSystemColumns as generateSystemColumnsCommon,
+  validateSchemaName,
+  type SqlColumn,
+} from '@icetype/sql-common';
 
 import type {
   MySQLColumn,
@@ -16,6 +23,9 @@ import type {
 } from './types.js';
 
 import { ICETYPE_TO_MYSQL } from './types.js';
+
+// Re-export validateSchemaName for use in the adapter
+export { validateSchemaName };
 
 // =============================================================================
 // Type Mapping
@@ -73,6 +83,55 @@ export function getMySQLTypeString(mapping: MySQLTypeMapping): string {
 // =============================================================================
 
 /**
+ * Escape an identifier for MySQL SQL.
+ *
+ * MySQL uses backticks for identifier quoting.
+ * This is a wrapper around the sql-common escapeIdentifier with 'mysql' dialect.
+ *
+ * @param identifier - The identifier to escape
+ * @returns The escaped identifier
+ */
+export function escapeIdentifier(identifier: string): string {
+  return escapeIdentifierCommon(identifier, 'mysql');
+}
+
+/**
+ * Format a default value as a SQL expression for MySQL.
+ *
+ * This is a wrapper around the sql-common formatDefaultValue.
+ *
+ * @param value - The default value
+ * @param type - The MySQL type
+ * @returns The SQL expression string
+ */
+export function formatDefaultValue(value: unknown, type: string): string {
+  return formatDefaultValueCommon(value, type, 'mysql');
+}
+
+/**
+ * Generate system field columns for MySQL tables.
+ *
+ * These are the standard IceType system fields that should be included
+ * in every table. This wraps the sql-common generateSystemColumns with
+ * 'mysql' dialect and converts to MySQLColumn format.
+ *
+ * @returns Array of system column definitions
+ */
+export function generateSystemColumns(): MySQLColumn[] {
+  const sqlColumns = generateSystemColumnsCommon('mysql');
+  return sqlColumns.map((col: SqlColumn): MySQLColumn => ({
+    name: col.name,
+    type: col.type,
+    nullable: col.nullable,
+    default: col.default,
+    primaryKey: col.primaryKey,
+    unique: col.unique,
+    precision: col.precision,
+    scale: col.scale,
+  }));
+}
+
+/**
  * Convert an IceType field definition to a MySQL column definition.
  *
  * @param fieldName - The field name
@@ -112,125 +171,9 @@ export function fieldToMySQLColumn(
   return column;
 }
 
-/**
- * Format a default value as a SQL expression.
- *
- * @param value - The default value
- * @param type - The MySQL type
- * @returns The SQL expression string
- */
-export function formatDefaultValue(value: unknown, type: string): string {
-  if (value === null) {
-    return 'NULL';
-  }
-
-  if (typeof value === 'string') {
-    // Escape single quotes
-    const escaped = value.replace(/'/g, "''");
-    return `'${escaped}'`;
-  }
-
-  if (typeof value === 'number') {
-    return String(value);
-  }
-
-  if (typeof value === 'boolean') {
-    return value ? 'TRUE' : 'FALSE';
-  }
-
-  if (value instanceof Date) {
-    // For DATE types (not DATETIME), return only the date portion
-    if (type.toUpperCase().includes('DATE') && !type.toUpperCase().includes('DATETIME')) {
-      return `'${value.toISOString().split('T')[0]}'`;
-    }
-    return `'${value.toISOString()}'`;
-  }
-
-  if (Array.isArray(value) || typeof value === 'object') {
-    // JSON serialize for complex types
-    const escaped = JSON.stringify(value).replace(/'/g, "''");
-    return `'${escaped}'`;
-  }
-
-  return String(value);
-}
-
-// =============================================================================
-// System Fields
-// =============================================================================
-
-/**
- * Generate system field columns for MySQL tables.
- *
- * These are the standard IceType system fields that should be included
- * in every table.
- *
- * @returns Array of system column definitions
- */
-export function generateSystemColumns(): MySQLColumn[] {
-  return [
-    {
-      name: '$id',
-      type: 'VARCHAR(255)',
-      nullable: false,
-      primaryKey: true,
-    },
-    {
-      name: '$type',
-      type: 'VARCHAR(255)',
-      nullable: false,
-    },
-    {
-      name: '$version',
-      type: 'INT',
-      nullable: false,
-      default: '1',
-    },
-    {
-      name: '$createdAt',
-      type: 'BIGINT',
-      nullable: false,
-    },
-    {
-      name: '$updatedAt',
-      type: 'BIGINT',
-      nullable: false,
-    },
-  ];
-}
-
 // =============================================================================
 // DDL Serialization
 // =============================================================================
-
-/**
- * Escape an identifier for MySQL SQL.
- *
- * MySQL uses backticks for identifier quoting.
- *
- * Identifiers are escaped (wrapped in backticks) if they:
- * - Contain special characters (anything besides letters, digits, underscore)
- * - Start with a digit
- * - Start with $ (system fields)
- * - Are SQL reserved keywords
- *
- * @param identifier - The identifier to escape
- * @returns The escaped identifier
- */
-export function escapeIdentifier(identifier: string): string {
-  // Check if identifier needs escaping
-  const isSimpleIdentifier = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(identifier);
-  const startsWithDollar = identifier.startsWith('$');
-
-  // If it's a simple identifier without special conditions, return as-is
-  if (isSimpleIdentifier && !startsWithDollar) {
-    return identifier;
-  }
-
-  // MySQL uses backticks
-  const escaped = identifier.replace(/`/g, '``');
-  return `\`${escaped}\``;
-}
 
 /**
  * Serialize a column definition to a DDL fragment.

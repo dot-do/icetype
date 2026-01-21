@@ -8,8 +8,15 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { createJiti } from 'jiti';
 import type { IceTypeSchema } from '@icetype/core';
 import { SchemaLoadError, ErrorCodes } from '@icetype/core';
+
+// Create a jiti instance for loading TypeScript files
+const jiti = createJiti(import.meta.url, {
+  interopDefault: true,
+  moduleCache: false, // Disable cache for watch mode compatibility
+});
 
 export interface LoadedSchema {
   name: string;
@@ -41,11 +48,18 @@ function isIceTypeSchema(value: unknown): value is IceTypeSchema {
 async function loadFromModule(filePath: string): Promise<LoadResult> {
   const schemas: LoadedSchema[] = [];
   const errors: string[] = [];
+  const absolutePath = resolve(filePath);
 
   try {
-    // Try native ESM import first
-    const fileUrl = pathToFileURL(resolve(filePath)).href;
-    const module = await import(fileUrl);
+    let module: Record<string, unknown>;
+
+    // Use jiti for TypeScript files, native import for JS files
+    if (filePath.endsWith('.ts')) {
+      module = await jiti.import(absolutePath) as Record<string, unknown>;
+    } else {
+      const fileUrl = pathToFileURL(absolutePath).href;
+      module = await import(fileUrl);
+    }
 
     // Extract all IceTypeSchema exports
     for (const [exportName, exportValue] of Object.entries(module)) {
@@ -62,20 +76,7 @@ async function loadFromModule(filePath: string): Promise<LoadResult> {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-
-    // If native import failed for .ts files, suggest using tsx
-    if (filePath.endsWith('.ts')) {
-      errors.push(
-        `Failed to load TypeScript file: ${filePath}\n` +
-          `  Error: ${message}\n` +
-          `  Tip: Run with 'npx tsx' or compile to .js first:\n` +
-          `    npx tsx node_modules/.bin/ice validate --schema ${filePath}\n` +
-          `    # or compile first:\n` +
-          `    npx tsc ${filePath} && ice validate --schema ${filePath.replace('.ts', '.js')}`
-      );
-    } else {
-      errors.push(`Failed to load module: ${filePath}\n  Error: ${message}`);
-    }
+    errors.push(`Failed to load module: ${filePath}\n  Error: ${message}`);
   }
 
   return { schemas, errors };
@@ -125,7 +126,7 @@ async function loadFromJson(filePath: string): Promise<LoadResult> {
  * Load IceType schemas from a file.
  *
  * Supports:
- * - .ts files (requires tsx runtime or pre-compilation)
+ * - .ts files (loaded via jiti - no pre-compilation required)
  * - .js/.mjs files (native ESM import)
  * - .json files (parsed directly)
  *

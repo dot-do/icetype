@@ -67,6 +67,18 @@ export interface SQLiteTableOptions {
 // =============================================================================
 
 /**
+ * Warning message generated during DDL transformation.
+ */
+export interface SQLiteDDLWarning {
+  /** The field name that triggered the warning */
+  fieldName: string;
+  /** Warning message */
+  message: string;
+  /** Warning code for programmatic handling */
+  code: string;
+}
+
+/**
  * SQLite DDL representation.
  *
  * Contains all the information needed to generate a CREATE TABLE statement.
@@ -101,6 +113,8 @@ export interface SQLiteDDL {
     onDelete?: 'CASCADE' | 'SET NULL' | 'SET DEFAULT' | 'RESTRICT' | 'NO ACTION';
     onUpdate?: 'CASCADE' | 'SET NULL' | 'SET DEFAULT' | 'RESTRICT' | 'NO ACTION';
   }>;
+  /** Warnings generated during transformation */
+  warnings?: SQLiteDDLWarning[];
 }
 
 // =============================================================================

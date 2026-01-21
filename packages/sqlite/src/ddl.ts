@@ -8,6 +8,12 @@
  */
 
 import type { FieldDefinition } from '@icetype/core';
+import {
+  escapeIdentifier as sqlCommonEscapeIdentifier,
+  formatDefaultValue as sqlCommonFormatDefaultValue,
+  generateSystemColumns as sqlCommonGenerateSystemColumns,
+  type SqlColumn,
+} from '@icetype/sql-common';
 
 import type {
   SQLiteColumn,
@@ -16,6 +22,27 @@ import type {
 } from './types.js';
 
 import { ICETYPE_TO_SQLITE } from './types.js';
+
+// =============================================================================
+// Array Type Detection
+// =============================================================================
+
+/**
+ * Check if a field type string represents an array type.
+ *
+ * Array types are denoted by `[]` suffix (e.g., `string[]`, `int[]`).
+ *
+ * Note: When working with parsed FieldDefinition objects, use the
+ * `field.isArray` property instead for accurate detection, since
+ * the parser strips the `[]` suffix and sets `isArray: true`.
+ *
+ * @param fieldType - The IceType field type string
+ * @returns True if the type string ends with `[]`
+ */
+export function isArrayType(fieldType: string): boolean {
+  // Must have at least one character before []
+  return fieldType.length > 2 && fieldType.endsWith('[]');
+}
 
 // =============================================================================
 // Type Mapping
@@ -61,18 +88,57 @@ export function getSQLiteTypeString(mapping: SQLiteTypeMapping): string {
 // =============================================================================
 
 /**
+ * Warning message generated during DDL transformation.
+ */
+export interface DDLWarning {
+  /** The field name that triggered the warning */
+  fieldName: string;
+  /** Warning message */
+  message: string;
+  /** Warning code for programmatic handling */
+  code: string;
+}
+
+/**
+ * Result of converting an IceType field to a SQLite column.
+ */
+export interface FieldToColumnResult {
+  /** The SQLite column definition */
+  column: SQLiteColumn;
+  /** Any warnings generated during conversion */
+  warning?: DDLWarning;
+}
+
+/**
  * Convert an IceType field definition to a SQLite column definition.
  *
  * @param fieldName - The field name
  * @param field - The IceType field definition
- * @returns The SQLite column definition
+ * @returns The SQLite column definition and any warnings
  */
 export function fieldToSQLiteColumn(
   fieldName: string,
   field: FieldDefinition
-): SQLiteColumn {
-  const typeMapping = mapIceTypeToSQLite(field.type, field);
-  let typeString = getSQLiteTypeString(typeMapping);
+): FieldToColumnResult {
+  let warning: DDLWarning | undefined;
+  let typeString: string;
+
+  // Check if this is an array type using the parsed isArray property
+  // The parser strips [] from the type and sets isArray: true
+  if (field.isArray) {
+    // SQLite doesn't have native array support - store as JSON in TEXT
+    typeString = 'TEXT';
+    const arrayTypeName = `${field.type}[]`;
+    warning = {
+      fieldName,
+      message: `SQLite does not have native array support. Array type '${arrayTypeName}' will be stored as JSON in a TEXT column. Use JSON functions (json_each, json_extract, etc.) to query array data.`,
+      code: 'SQLITE_ARRAY_AS_JSON',
+    };
+    console.warn(`[icetype/sqlite] Warning: Field '${fieldName}' has array type '${arrayTypeName}'. SQLite stores arrays as JSON in TEXT columns.`);
+  } else {
+    const typeMapping = mapIceTypeToSQLite(field.type, field);
+    typeString = getSQLiteTypeString(typeMapping);
+  }
 
   // Handle relation fields - store as foreign key reference (TEXT)
   if (field.relation) {
@@ -91,48 +157,20 @@ export function fieldToSQLiteColumn(
     column.default = formatDefaultValue(field.defaultValue, typeString);
   }
 
-  return column;
+  return { column, warning };
 }
 
 /**
- * Format a default value as a SQL expression.
+ * Format a default value as a SQL expression for SQLite.
+ *
+ * Uses the shared sql-common formatDefaultValue with SQLite dialect.
  *
  * @param value - The default value
  * @param type - The SQLite type
  * @returns The SQL expression string
  */
-export function formatDefaultValue(value: unknown, _type: string): string {
-  if (value === null) {
-    return 'NULL';
-  }
-
-  if (typeof value === 'string') {
-    // Escape single quotes
-    const escaped = value.replace(/'/g, "''");
-    return `'${escaped}'`;
-  }
-
-  if (typeof value === 'number') {
-    return String(value);
-  }
-
-  if (typeof value === 'boolean') {
-    // SQLite uses 0/1 for boolean
-    return value ? '1' : '0';
-  }
-
-  if (value instanceof Date) {
-    // Store as ISO8601 string
-    return `'${value.toISOString()}'`;
-  }
-
-  if (Array.isArray(value) || typeof value === 'object') {
-    // JSON serialize for complex types
-    const escaped = JSON.stringify(value).replace(/'/g, "''");
-    return `'${escaped}'`;
-  }
-
-  return String(value);
+export function formatDefaultValue(value: unknown, type: string): string {
+  return sqlCommonFormatDefaultValue(value, type, 'sqlite');
 }
 
 // =============================================================================
@@ -142,41 +180,22 @@ export function formatDefaultValue(value: unknown, _type: string): string {
 /**
  * Generate system field columns for SQLite tables.
  *
+ * Uses the shared sql-common generateSystemColumns with SQLite dialect.
  * These are the standard IceType system fields that should be included
  * in every table.
  *
  * @returns Array of system column definitions
  */
 export function generateSystemColumns(): SQLiteColumn[] {
-  return [
-    {
-      name: '$id',
-      type: 'TEXT',
-      nullable: false,
-      primaryKey: true,
-    },
-    {
-      name: '$type',
-      type: 'TEXT',
-      nullable: false,
-    },
-    {
-      name: '$version',
-      type: 'INTEGER',
-      nullable: false,
-      default: '1',
-    },
-    {
-      name: '$createdAt',
-      type: 'INTEGER',
-      nullable: false,
-    },
-    {
-      name: '$updatedAt',
-      type: 'INTEGER',
-      nullable: false,
-    },
-  ];
+  // Get columns from sql-common and convert to SQLiteColumn format
+  const columns = sqlCommonGenerateSystemColumns('sqlite');
+  return columns.map((col: SqlColumn): SQLiteColumn => ({
+    name: col.name,
+    type: col.type,
+    nullable: col.nullable,
+    primaryKey: col.primaryKey,
+    default: col.default,
+  }));
 }
 
 // =============================================================================
@@ -186,6 +205,7 @@ export function generateSystemColumns(): SQLiteColumn[] {
 /**
  * Escape an identifier for SQLite SQL.
  *
+ * Uses the shared sql-common escapeIdentifier with SQLite dialect.
  * SQLite uses double quotes for identifier quoting.
  *
  * Identifiers are escaped (wrapped in double quotes) if they:
@@ -198,18 +218,7 @@ export function generateSystemColumns(): SQLiteColumn[] {
  * @returns The escaped identifier
  */
 export function escapeIdentifier(identifier: string): string {
-  // Check if identifier needs escaping
-  const isSimpleIdentifier = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(identifier);
-  const startsWithDollar = identifier.startsWith('$');
-
-  // If it's a simple identifier without special conditions, return as-is
-  if (isSimpleIdentifier && !startsWithDollar) {
-    return identifier;
-  }
-
-  // SQLite uses double quotes
-  const escaped = identifier.replace(/"/g, '""');
-  return `"${escaped}"`;
+  return sqlCommonEscapeIdentifier(identifier, 'sqlite');
 }
 
 /**
