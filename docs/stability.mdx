@@ -1,0 +1,999 @@
+---
+title: Stability Guarantees
+description: IceType versioning policy, stability guarantees, and upgrade guidance for production use.
+---
+
+# Stability Guarantees
+
+IceType follows semantic versioning and provides clear stability guarantees to help you plan upgrades and understand the impact of version changes.
+
+<Callout type="warn" title="Current Status: 0.x (Pre-1.0)">
+IceType is currently in version 0.x, which means the API may change between minor versions. We recommend pinning to exact versions in production until 1.0 is released.
+</Callout>
+
+## Quick Reference
+
+| Aspect | Status | Notes |
+|--------|--------|-------|
+| Core parser (`parseSchema`) | Stable | API unlikely to change |
+| Schema syntax | Stable | All documented syntax is stable |
+| Validation API | Stable | Return types finalized |
+| Iceberg export | Stable | Follows Iceberg spec |
+| Fuzzy relations (`~>`, `<~`) | Experimental | Syntax reserved, functionality planned |
+| Codemods | Planned | Available at 1.0 |
+
+## What's Stable
+
+The following features are considered stable and safe for production use:
+
+- **Schema parsing**: `parseSchema()`, `parseField()`, `parseRelation()`
+- **Schema validation**: `validateSchema()` with structured errors
+- **Field types**: All primitive types (`string`, `int`, `uuid`, `timestamp`, etc.)
+- **Field modifiers**: `!` (required/unique), `#` (indexed), `?` (optional), `[]` (array)
+- **Relation operators**: `->` (forward), `<-` (backward)
+- **Directives**: `$type`, `$partitionBy`, `$index`, `$fts`, `$vector`
+- **Iceberg integration**: `generateIcebergMetadata()`, Parquet schema generation
+- **Database adapters**: PostgreSQL, MySQL, SQLite, ClickHouse, DuckDB DDL generation
+
+## What's Experimental
+
+The following features are experimental and may change:
+
+- **Fuzzy relations** (`~>`, `<~`): Syntax is reserved and parsed, but AI-powered matching is not yet implemented
+- **Prisma bidirectional sync**: Import works; export is in development
+- **Custom type definitions**: Planned for future releases
+- **Schema composition**: Merging multiple schemas is under design
+
+## Semantic Versioning
+
+IceType follows [Semantic Versioning 2.0.0](https://semver.org/) for all packages:
+
+```
+MAJOR.MINOR.PATCH[-PRERELEASE]
+
+Examples:
+  0.1.0        - Initial development release
+  0.2.0        - New features, possible breaking changes (pre-1.0)
+  1.0.0        - First stable release
+  1.1.0        - New features, backward compatible
+  1.1.1        - Bug fixes, backward compatible
+  2.0.0        - Breaking changes
+  1.2.0-alpha.1 - Alpha pre-release
+  1.2.0-beta.1  - Beta pre-release
+  1.2.0-rc.1    - Release candidate
+```
+
+### Version Number Meanings
+
+| Component | When It Changes | Compatibility |
+|-----------|-----------------|---------------|
+| **MAJOR** | Breaking changes to public API | May require code changes |
+| **MINOR** | New features, deprecations | Backward compatible |
+| **PATCH** | Bug fixes, security patches | Backward compatible |
+
+### Pre-release Versions
+
+Pre-release versions allow early access to upcoming features:
+
+| Stage | Format | Stability | Use Case |
+|-------|--------|-----------|----------|
+| **Alpha** | `x.y.z-alpha.n` | Unstable, API may change | Early feedback, experimentation |
+| **Beta** | `x.y.z-beta.n` | Feature complete, may have bugs | Integration testing |
+| **RC** | `x.y.z-rc.n` | Production-ready candidate | Final validation before release |
+
+```json
+// package.json - version range examples
+{
+  "dependencies": {
+    // For 0.x: Use exact versions
+    "@icetype/core": "0.1.0",
+
+    // For 1.0+: Choose based on risk tolerance
+    "@icetype/core": "^1.0.0",   // Accept minor/patch updates
+    "@icetype/core": "~1.0.0",   // Accept patch updates only
+    "@icetype/core": "1.0.0"     // Exact version (most conservative)
+  }
+}
+```
+
+## Schema Format Stability
+
+The IceType schema format has distinct stability guarantees:
+
+### Schema Syntax (Stable)
+
+The schema syntax is stable and will not change in backward-incompatible ways:
+
+```typescript
+import { parseSchema } from '@icetype/core';
+
+// This syntax is stable and will be supported indefinitely
+const schema = parseSchema({
+  $type: 'User',
+  $partitionBy: ['tenantId'],
+  $index: [['email']],
+
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+  createdAt: 'timestamp',
+});
+```
+
+**Guarantees:**
+- Field type syntax (`'string!'`, `'int?'`, `'uuid#'`) will not change
+- Directive syntax (`$type`, `$index`, `$partitionBy`) will not change
+- Relation operators (`->`, `<-`, `~>`, `<~`) will not change
+- Existing valid schemas will remain valid
+
+**May change (with deprecation notice):**
+- New field types may be added
+- New directives may be added
+- New modifiers may be added
+
+### Parsed Schema Structure
+
+The internal parsed schema structure (output of `parseSchema()`) is considered implementation detail and may change between minor versions. If you depend on the internal structure, pin to exact versions.
+
+```typescript
+// Public API - stable
+import { parseSchema, validateSchema } from '@icetype/core';
+
+const schema = parseSchema({ $type: 'User', id: 'uuid!' });
+const result = validateSchema(schema);
+
+// Internal structure - may change between minor versions
+// Avoid depending on: schema.fields[0].modifiers (implementation detail)
+```
+
+## Migration Format Stability
+
+IceType migrations follow these stability rules:
+
+### Migration Files (Stable)
+
+Generated migration files are stable and will be honored across versions:
+
+```typescript
+// migrations/0001_create_users.ts
+// This format is stable and backward-compatible
+export const up = {
+  createTable: {
+    name: 'users',
+    columns: [
+      { name: 'id', type: 'uuid', primaryKey: true },
+      { name: 'email', type: 'string', index: true },
+    ],
+  },
+};
+
+export const down = {
+  dropTable: 'users',
+};
+```
+
+### Migration Generation
+
+The migration generation algorithm may change between versions, but:
+- Existing migrations will continue to work
+- Re-generating migrations may produce different (but equivalent) output
+- Breaking changes to migration format require a major version bump
+
+## Breaking Change Policy
+
+### What Constitutes a Breaking Change
+
+**Breaking changes (require major version bump):**
+
+1. **Removing or renaming public API functions**
+   ```typescript
+   // Breaking: removing parseSchema
+   // import { parseSchema } from 'icetype'; // removed
+   ```
+
+2. **Changing function signatures incompatibly**
+   ```typescript
+   // Breaking: required parameter added
+   // Before: parseSchema(input)
+   // After:  parseSchema(input, options)  // options required
+   ```
+
+3. **Changing return type incompatibly**
+   ```typescript
+   // Breaking: return type changed
+   // Before: validateSchema() returns { valid: boolean }
+   // After:  validateSchema() returns boolean
+   ```
+
+4. **Removing support for schema syntax**
+   ```typescript
+   // Breaking: 'string!' no longer valid
+   ```
+
+5. **Changing the meaning of existing syntax**
+   ```typescript
+   // Breaking: '#' now means something different
+   ```
+
+**Not breaking changes:**
+
+1. Adding new optional parameters
+2. Adding new return properties (if existing code ignores them)
+3. Adding new field types
+4. Adding new directives
+5. Performance improvements
+6. Bug fixes (even if they change incorrect behavior)
+7. Adding stricter validation (with deprecation warnings first)
+
+### Deprecation Timeline
+
+When a feature is deprecated, IceType follows a structured process to give you ample time to migrate:
+
+<Callout type="info" title="Deprecation Policy">
+Deprecated features are never removed without at least two minor version warning periods and a major version bump. You will always have advance notice before breaking changes.
+</Callout>
+
+#### Phase 1: Announcement (Version N.x)
+
+- Feature marked as deprecated in documentation
+- Release notes include deprecation notice
+- JSDoc/TSDoc comments updated with `@deprecated` tag
+- No runtime warnings yet
+
+```typescript
+/**
+ * @deprecated Use parseSchema() instead. Will emit warnings in v1.2.0
+ * and be removed in v2.0.0.
+ */
+export function legacyParse(input: object): Schema;
+```
+
+#### Phase 2: Soft Warning (Version N.x+1)
+
+- Runtime warning on first use per session
+- Warning includes migration path
+- Feature continues to work normally
+- Warnings can be suppressed for testing
+
+```typescript
+// Console output (once per session):
+// [icetype] Deprecation Warning: 'string#indexed' syntax is deprecated.
+//           Use 'string#' instead (# implies indexed).
+//           Migration guide: https://icetype.dev/docs/stability#migration-guides
+//           This will be removed in v2.0.0.
+```
+
+#### Phase 3: Loud Warning (Version N.x+2)
+
+- Warning emitted on every use
+- Warning severity increased
+- Feature still works but clearly discouraged
+
+```typescript
+// Console output (every call):
+// [icetype] ⚠️ DEPRECATION: 'legacyParse()' will be removed in v2.0.0.
+//           Migrate now: https://icetype.dev/docs/stability#legacyparsemigration
+```
+
+#### Phase 4: Removal (Version N+1.0.0)
+
+- Feature removed in next major version
+- Attempting to use throws a clear error with migration link
+- Codemods provided when possible
+
+```typescript
+// After removal (v2.0.0):
+import { legacyParse } from '@icetype/core';
+// Error: 'legacyParse' was removed in v2.0.0.
+//        Use 'parseSchema()' instead.
+//        See: https://icetype.dev/docs/stability#v2-migration
+```
+
+#### Deprecation Timeline Example
+
+| Version | Status | Behavior |
+|---------|--------|----------|
+| 1.0.0 | Current | Feature works normally |
+| 1.1.0 | Announced | Docs updated, no warnings |
+| 1.2.0 | Soft Warning | Warning on first use |
+| 1.3.0 | Loud Warning | Warning on every use |
+| 2.0.0 | Removed | Feature no longer exists |
+
+### Suppressing Deprecation Warnings
+
+During migration, you may need to temporarily suppress warnings:
+
+```typescript
+// Suppress all deprecation warnings (use sparingly)
+process.env.ICETYPE_SUPPRESS_DEPRECATIONS = 'true';
+
+// Suppress specific deprecations
+process.env.ICETYPE_SUPPRESS_DEPRECATIONS = 'legacyParse,string#indexed';
+
+// Programmatic suppression
+import { configure } from '@icetype/core';
+
+configure({
+  suppressDeprecations: ['legacyParse'],
+  deprecationHandler: (warning) => {
+    // Custom handling: log to monitoring, send to error tracker, etc.
+    myLogger.warn('IceType deprecation', warning);
+  },
+});
+```
+
+<Callout type="warn" title="Temporary Only">
+Suppressing warnings should only be temporary. Create a migration plan and track deprecated usage in your issue tracker.
+</Callout>
+
+## Migration Guides
+
+This section provides step-by-step migration guides for common upgrade scenarios.
+
+### Migration Guide: 0.x to 1.0
+
+<Callout type="info">
+This guide will be finalized when 1.0 is released. The examples below represent anticipated changes based on the current roadmap.
+</Callout>
+
+#### Step 1: Prepare Your Codebase
+
+Before upgrading, ensure you're on the latest 0.x version and have no deprecation warnings:
+
+```bash
+# Update to latest 0.x
+npm install @icetype/core@latest
+
+# Run tests and check for deprecation warnings
+npm test 2>&1 | grep -i deprecat
+
+# If using TypeScript, check for type errors
+npx tsc --noEmit
+```
+
+#### Step 2: Review Breaking Changes
+
+Check the [CHANGELOG.md](https://github.com/dot-do/icetype/blob/main/CHANGELOG.md) for the complete list. Common changes include:
+
+| Change | 0.x Behavior | 1.0 Behavior | Migration |
+|--------|--------------|--------------|-----------|
+| `$type` required | Optional | Required | Add `$type` to all schemas |
+| `string#indexed` | Accepted | Deprecated | Use `string#` |
+| `legacyParse()` | Available | Removed | Use `parseSchema()` |
+| Error types | `string[]` | `ValidationError[]` | Update error handling |
+
+#### Step 3: Update Schema Definitions
+
+```typescript
+// BEFORE (0.x)
+import { parseSchema, legacyParse } from '@icetype/core';
+
+// Using legacyParse (to be removed)
+const oldSchema = legacyParse({
+  id: 'uuid!',
+  email: 'string#indexed',  // Old syntax
+});
+
+// Missing $type directive
+const userSchema = parseSchema({
+  id: 'uuid!',
+  email: 'string#',
+});
+```
+
+```typescript
+// AFTER (1.0)
+import { parseSchema } from '@icetype/core';
+
+// legacyParse removed - use parseSchema
+const userSchema = parseSchema({
+  $type: 'User',           // Required
+  id: 'uuid!',
+  email: 'string#',        // Simplified syntax
+});
+```
+
+#### Step 4: Update Error Handling
+
+```typescript
+// BEFORE (0.x)
+const result = validateSchema(schema);
+if (!result.valid) {
+  // errors was string[]
+  console.error(result.errors.join('\n'));
+}
+
+// AFTER (1.0)
+const result = validateSchema(schema);
+if (!result.valid) {
+  // errors is now ValidationError[]
+  for (const error of result.errors) {
+    console.error(`[${error.code}] ${error.field}: ${error.message}`);
+  }
+}
+```
+
+#### Step 5: Run Codemods
+
+IceType provides automated codemods for common migrations:
+
+```bash
+# Run all v1.0 migrations
+npx @icetype/codemod v1-migration ./src
+
+# Run specific migrations
+npx @icetype/codemod add-type-directive ./src
+npx @icetype/codemod update-error-handling ./src
+
+# Dry run (preview changes without modifying files)
+npx @icetype/codemod v1-migration ./src --dry-run
+```
+
+#### Step 6: Test and Verify
+
+```bash
+# Install 1.0
+npm install @icetype/core@^1.0.0
+
+# Run full test suite
+npm test
+
+# Check TypeScript compilation
+npx tsc --noEmit
+
+# Run integration tests for critical paths
+npm run test:integration
+```
+
+### Migration Guide: 1.x to 2.0
+
+<Callout type="info" title="Future Version">
+This section documents planned changes for version 2.0. Actual changes may differ based on user feedback.
+</Callout>
+
+#### Anticipated Breaking Changes
+
+| Feature | 1.x | 2.0 | Reason |
+|---------|-----|-----|--------|
+| `ValidationResult.errors` | `ValidationError[]` | `readonly ValidationError[]` | Immutability |
+| `parseSchema` return | Mutable schema | Frozen schema | Performance |
+| Deprecated adapters | Warnings | Removed | Cleanup |
+
+#### Migration Steps
+
+```typescript
+// BEFORE (1.x) - Mutating parsed schema
+const schema = parseSchema({ $type: 'User', id: 'uuid!' });
+schema.directives.type = 'ModifiedUser';  // This worked in 1.x
+
+// AFTER (2.0) - Schema is frozen
+const schema = parseSchema({ $type: 'User', id: 'uuid!' });
+// schema.directives.type = 'ModifiedUser';  // Error: Cannot modify frozen object
+
+// Instead, create a new schema
+const modifiedSchema = parseSchema({
+  ...schema.toDefinition(),
+  $type: 'ModifiedUser',
+});
+```
+
+## Breaking Change Examples
+
+This section provides detailed examples of how to handle specific breaking changes.
+
+### Example 1: Required `$type` Directive
+
+**Change:** The `$type` directive becomes required in version 1.0.
+
+**Why:** Explicit naming prevents ambiguity and improves error messages.
+
+```typescript
+// DEPRECATED (0.x) - Works but emits warning
+const schema = parseSchema({
+  id: 'uuid!',
+  name: 'string',
+});
+// Warning: Schema definition missing $type directive.
+//          This will be required in v1.0.0.
+
+// CURRENT (1.0+) - Required
+const schema = parseSchema({
+  $type: 'User',  // Required
+  id: 'uuid!',
+  name: 'string',
+});
+```
+
+**Codemod:** `npx @icetype/codemod add-type-directive ./src`
+
+### Example 2: Index Syntax Simplification
+
+**Change:** The `#indexed` suffix is deprecated in favor of `#`.
+
+**Why:** Shorter syntax, consistent with other modifiers.
+
+```typescript
+import { parseSchema } from '@icetype/core';
+
+// DEPRECATED (0.x to 1.2)
+const schema = parseSchema({
+  $type: 'User',
+  email: 'string#indexed',   // Verbose - deprecated
+  username: 'string#unique', // Also deprecated
+});
+
+// CURRENT (1.2+)
+const schema = parseSchema({
+  $type: 'User',
+  email: 'string#',    // # implies indexed
+  username: 'string!', // ! implies unique (for identifiers)
+});
+```
+
+**Codemod:** `npx @icetype/codemod simplify-modifiers ./src`
+
+### Example 3: Validation Error Structure
+
+**Change:** `ValidationResult.errors` uses structured `ValidationError[]` objects.
+
+**Why:** Structured errors enable better tooling, IDE integration, and error handling.
+
+```typescript
+import { validateSchema, type ValidationResult } from '@icetype/core';
+
+// Current structure (0.x and 1.0+)
+interface ValidationResult {
+  valid: boolean;
+  errors: ValidationError[];
+}
+
+interface ValidationError {
+  code: string;        // e.g., 'INVALID_TYPE', 'MISSING_DIRECTIVE'
+  field?: string;      // e.g., 'email'
+  message: string;     // Human-readable message
+  suggestion?: string; // How to fix
+}
+
+// Example usage
+const result = validateSchema(schema);
+if (!result.valid) {
+  for (const error of result.errors) {
+    console.error(`[${error.code}] ${error.field}: ${error.message}`);
+    if (error.suggestion) {
+      console.info(`  Suggestion: ${error.suggestion}`);
+    }
+  }
+}
+```
+
+**Helper for simple error messages:**
+
+```typescript
+// Extract just the message strings if needed
+function getErrorMessages(result: ValidationResult): string[] {
+  return result.errors.map(e => e.message);
+}
+```
+
+### Example 4: Relation Syntax
+
+**Syntax:** Relation operators require a space before the target type.
+
+**Why:** Consistent parsing and clear error messages.
+
+```typescript
+import { parseSchema } from '@icetype/core';
+
+// CORRECT - Space after operator
+const schema = parseSchema({
+  $type: 'Post',
+  author: '-> User!',    // Space before target type
+  comments: '<- Comment.post[]',
+});
+
+// INCORRECT - Will produce a parse error
+const schema = parseSchema({
+  $type: 'Post',
+  author: '->User!',     // No space - parse error
+});
+```
+
+### Example 5: Adapter Package Names
+
+**Convention:** Adapter packages follow the `@icetype/{database}` naming pattern.
+
+**Why:** Better discoverability and consistent naming across the ecosystem.
+
+```typescript
+// Current package naming (0.x and 1.0+)
+import { generateDDL } from '@icetype/postgres';
+import { generateDDL } from '@icetype/mysql';
+import { generateDDL } from '@icetype/sqlite';
+import { generateDDL } from '@icetype/clickhouse';
+import { generateDDL } from '@icetype/duckdb';
+
+// ORM integrations
+import { toSchema } from '@icetype/drizzle';
+import { toSchema } from '@icetype/prisma';
+```
+
+**Installation:**
+
+```bash
+# Install core and adapters you need
+npm install @icetype/core @icetype/postgres @icetype/drizzle
+```
+
+## Package Version Compatibility Matrix
+
+This matrix shows which versions of IceType packages work together.
+
+### Core Package Compatibility
+
+| @icetype/core | @icetype/postgres | @icetype/drizzle | @icetype/prisma | @icetype/iceberg |
+|---------------|-------------------|------------------|-----------------|------------------|
+| 0.1.x | 0.1.x | 0.1.x | 0.1.x | 0.1.x |
+| 1.0.x | 1.0.x | 1.0.x | 1.0.x | 1.0.x |
+| 1.1.x | 1.0.x - 1.1.x | 1.0.x - 1.1.x | 1.0.x - 1.1.x | 1.0.x - 1.1.x |
+
+<Callout type="info">
+Adapter packages are designed to be backward compatible within the same major version. A 1.0.x adapter will work with any 1.x core package.
+</Callout>
+
+### Runtime Compatibility
+
+| IceType | Node.js | TypeScript | Cloudflare Workers | Deno |
+|---------|---------|------------|-------------------|------|
+| 0.1.x | 18.x+ | 5.0+ | Yes | 1.40+ |
+| 1.0.x | 18.x+ | 5.0+ | Yes | 1.40+ |
+| 1.1.x | 20.x+ | 5.2+ | Yes | 1.42+ |
+
+### Database Adapter Compatibility
+
+| Adapter | PostgreSQL | MySQL | SQLite | ClickHouse | DuckDB |
+|---------|------------|-------|--------|------------|--------|
+| @icetype/postgres | 12+ | - | - | - | - |
+| @icetype/mysql | - | 8.0+ | - | - | - |
+| @icetype/sqlite | - | - | 3.35+ | - | - |
+| @icetype/clickhouse | - | - | - | 22.x+ | - |
+| @icetype/duckdb | - | - | - | - | 0.9+ |
+
+### ORM Integration Compatibility
+
+| @icetype/drizzle | drizzle-orm | Notes |
+|------------------|-------------|-------|
+| 0.1.x | 0.29.x - 0.30.x | Initial support |
+| 1.0.x | 0.30.x - 0.32.x | Full support |
+
+| @icetype/prisma | @prisma/client | Notes |
+|-----------------|----------------|-------|
+| 0.1.x | 5.0.x - 5.10.x | Schema import/export |
+| 1.0.x | 5.8.x - 5.15.x | Bidirectional sync |
+
+### Checking Compatibility
+
+Use the built-in compatibility checker:
+
+```bash
+# Check if your installed versions are compatible
+npx icetype doctor
+
+# Output:
+# Checking IceType package compatibility...
+#
+# @icetype/core: 1.0.2
+# @icetype/postgres: 1.0.1 ✓ Compatible
+# @icetype/drizzle: 0.1.5 ⚠ Outdated (recommend 1.0.x)
+# @icetype/prisma: 1.0.0 ✓ Compatible
+#
+# Node.js: 20.10.0 ✓ Supported
+# TypeScript: 5.3.2 ✓ Supported
+#
+# Recommendations:
+# - Upgrade @icetype/drizzle to ^1.0.0 for full compatibility
+```
+
+### Dependency Resolution
+
+When using multiple IceType packages, ensure consistent versions:
+
+```json
+{
+  "dependencies": {
+    "@icetype/core": "^1.0.0",
+    "@icetype/postgres": "^1.0.0",
+    "@icetype/drizzle": "^1.0.0"
+  },
+  "overrides": {
+    "@icetype/core": "^1.0.0"
+  }
+}
+```
+
+<Callout type="warn" title="Version Mismatch">
+Mixing major versions (e.g., @icetype/core@1.x with @icetype/postgres@0.x) is not supported and may cause runtime errors. Always upgrade all packages together when crossing major versions.
+</Callout>
+
+## Backward Compatibility Promises
+
+### API Compatibility
+
+After 1.0, we guarantee:
+
+| API | Compatibility Promise |
+|-----|----------------------|
+| `parseSchema()` | Signature stable, output structure may grow |
+| `validateSchema()` | Signature stable, may add new error types |
+| `generateIcebergMetadata()` | Signature stable, output follows Iceberg spec |
+| Adapter APIs | Signature stable per adapter |
+| CLI commands | Commands and flags stable, output format may improve |
+
+### Node.js Compatibility
+
+IceType supports:
+- **Active LTS** versions (currently 18.x, 20.x)
+- **Current** version (22.x)
+- Support dropped for EOL Node.js versions in minor releases
+
+### TypeScript Compatibility
+
+- IceType supports TypeScript 5.0 and later
+- Type definitions are included in all packages
+- Breaking type changes follow the same versioning policy as runtime changes
+
+## LTS Policy
+
+<Callout type="warn" title="No LTS Yet">
+IceType does not currently have an LTS (Long-Term Support) policy. This will be established after 1.0 release based on community needs.
+</Callout>
+
+### Planned LTS Policy (Post-1.0)
+
+Once IceType reaches maturity, we plan to offer:
+
+| Version Stream | Support Duration | Updates Include |
+|---------------|------------------|-----------------|
+| **Current** | Until next major | All updates |
+| **LTS** | 18 months after next major | Security fixes, critical bugs |
+| **Maintenance** | 6 months after LTS ends | Security fixes only |
+
+## Upgrade Guide
+
+### Pre-1.0 Upgrades (0.x to 0.y)
+
+During the 0.x phase, minor versions may contain breaking changes. Always:
+
+1. **Read the changelog** before upgrading
+2. **Pin exact versions** in production
+3. **Test thoroughly** after upgrading
+
+```bash
+# Check current version
+npm list @icetype/core
+
+# Upgrade with care
+npm install @icetype/core@0.2.0
+
+# Run your tests
+npm test
+```
+
+### Upgrading from 0.x to 1.0
+
+When 1.0 is released, follow this migration path:
+
+```bash
+# 1. Update to latest 0.x first
+npm install @icetype/core@latest
+
+# 2. Fix all deprecation warnings
+npm test 2>&1 | grep -i deprecat
+
+# 3. Update to 1.0
+npm install @icetype/core@^1.0.0
+
+# 4. Review breaking changes in CHANGELOG.md
+```
+
+**Example migration:**
+
+```typescript
+import { parseSchema } from '@icetype/core';
+
+// Before (0.x syntax that might be deprecated)
+const schema = parseSchema({
+  $type: 'User',
+  id: 'uuid!unique',  // Old verbose syntax
+});
+
+// After (1.0 syntax)
+const schema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',  // ! implies unique for uuid primary keys
+});
+```
+
+### Handling Deprecated Features
+
+When you see deprecation warnings:
+
+1. **Identify the deprecated feature** in the warning message
+2. **Check documentation** for the recommended replacement
+3. **Update your code** before the next major version
+4. **Suppress warnings** temporarily if needed (not recommended)
+
+```typescript
+// Temporary warning suppression (use sparingly)
+process.env.ICETYPE_SUPPRESS_DEPRECATIONS = 'true';
+```
+
+### Migration Path for Breaking Changes
+
+When a breaking change is released:
+
+**Step 1: Review the changelog**
+```markdown
+## 2.0.0 (Breaking Changes)
+
+### Breaking
+- `parseSchema()` now requires `$type` directive (was optional)
+- Removed `legacyParse()` function (deprecated in 1.3.0)
+- Changed `ValidationResult.errors` from string[] to Error[]
+```
+
+**Step 2: Update incrementally**
+```typescript
+// Before (1.x)
+const schema = parseSchema({
+  id: 'uuid!',
+  name: 'string',
+});
+const errors: string[] = result.errors;
+
+// After (2.x)
+const schema = parseSchema({
+  $type: 'MyEntity',  // Now required
+  id: 'uuid!',
+  name: 'string',
+});
+const errors: Error[] = result.errors;
+const messages = errors.map(e => e.message);  // If you need strings
+```
+
+**Step 3: Run codemods (when available)**
+```bash
+# IceType provides codemods for major upgrades
+npx @icetype/codemod v2-migration ./src
+```
+
+## Version Support Matrix
+
+### IceType Release History
+
+| IceType Version | Release Date | Node.js | TypeScript | Status |
+|-----------------|--------------|---------|------------|--------|
+| 0.1.x | January 2026 | 18+ | 5.0+ | Current |
+| 1.0.x (planned) | Q2 2026 | 18+ | 5.0+ | Upcoming |
+| 2.0.x (planned) | 2027 | 20+ | 5.4+ | Planned |
+
+### End-of-Life Schedule
+
+| Version | EOL Date | Notes |
+|---------|----------|-------|
+| 0.1.x | 6 months after 1.0.0 release | Security fixes only after 1.0 |
+| 1.0.x | 12 months after 2.0.0 release | LTS candidate |
+
+## Reporting Compatibility Issues
+
+If you encounter compatibility issues, follow these steps to get help quickly.
+
+### Before Reporting
+
+1. **Check the [changelog](https://github.com/dot-do/icetype/blob/main/CHANGELOG.md)** for known breaking changes
+2. **Search [existing issues](https://github.com/dot-do/icetype/issues)** - your issue may already be reported
+3. **Verify versions** are compatible using `npx icetype doctor`
+4. **Create a minimal reproduction** that demonstrates the issue
+
+### Required Information
+
+Include this in all bug reports:
+
+```bash
+# Generate system information
+npx envinfo --system --binaries --npmPackages @icetype/*
+
+# Example output:
+#   System:
+#     OS: macOS 15.0
+#     CPU: Apple M3
+#   Binaries:
+#     Node: 20.10.0
+#     npm: 10.2.0
+#   npmPackages:
+#     @icetype/core: ^0.1.0 => 0.1.0
+#     @icetype/postgres: ^0.1.0 => 0.1.0
+```
+
+### Issue Template
+
+When opening a GitHub issue, use this template:
+
+```markdown
+## Description
+Brief description of the compatibility issue.
+
+## Environment
+<!-- Paste output of: npx envinfo --system --binaries --npmPackages @icetype/* -->
+
+## Steps to Reproduce
+1. Install packages: `npm install @icetype/core@0.1.0`
+2. Create schema with: `parseSchema({ ... })`
+3. Run: `npm test`
+
+## Expected Behavior
+What you expected to happen.
+
+## Actual Behavior
+What actually happened, including error messages.
+
+## Minimal Reproduction
+<!-- Link to a GitHub repo or StackBlitz that reproduces the issue -->
+
+## Additional Context
+- Previous working version: x.x.x
+- Upgrade path followed: [link to migration guide]
+```
+
+### Getting Help
+
+| Channel | Best For | Response Time |
+|---------|----------|---------------|
+| [GitHub Issues](https://github.com/dot-do/icetype/issues) | Bug reports, feature requests | 1-3 days |
+| [GitHub Discussions](https://github.com/dot-do/icetype/discussions) | Questions, help requests | 1-2 days |
+| [Discord](https://discord.gg/icetype) | Real-time help, community support | Hours |
+
+<Callout type="info">
+For security vulnerabilities, please email security@icetype.dev instead of opening a public issue.
+</Callout>
+
+## Security
+
+### Security Updates
+
+Security patches are released as soon as possible after a vulnerability is discovered:
+
+- **Critical vulnerabilities**: Patch released within 24-48 hours
+- **High severity**: Patch released within 7 days
+- **Medium/Low severity**: Included in next scheduled release
+
+Security patches are backported to:
+- Current version (always)
+- Previous minor version (when possible)
+- LTS versions (when established)
+
+### Reporting Security Issues
+
+If you discover a security vulnerability:
+
+1. **Do not** open a public GitHub issue
+2. Email security@icetype.dev with details
+3. Include steps to reproduce if possible
+4. Allow up to 48 hours for initial response
+
+We follow responsible disclosure practices and will credit reporters (unless they prefer anonymity) once a fix is released.
+
+### Dependency Security
+
+IceType maintains minimal dependencies to reduce attack surface:
+
+- Dependencies are regularly audited with `npm audit`
+- Major dependency updates are tested before release
+- Transitive dependencies are monitored for vulnerabilities
+
+```bash
+# Check for known vulnerabilities in your project
+npm audit
+
+# Update IceType packages with security fixes
+npm update @icetype/core @icetype/postgres
+```

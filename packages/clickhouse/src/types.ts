@@ -4,8 +4,13 @@
  * Defines the types for ClickHouse DDL generation including
  * table engines, columns, and table options.
  *
+ * Type mappings are now imported from @icetype/core for consistency
+ * across all adapters.
+ *
  * @packageDocumentation
  */
+
+import { getUnifiedTypeMapping, type Dialect } from '@icetype/core';
 
 // =============================================================================
 // ClickHouse Engine Types
@@ -166,7 +171,22 @@ export interface ClickHouseDDL {
 // =============================================================================
 
 /**
+ * Get the ClickHouse type for an IceType.
+ *
+ * Uses the unified type mappings from @icetype/core for consistency.
+ *
+ * @param iceType - The IceType type string
+ * @returns The ClickHouse type string
+ */
+export function getClickHouseTypeFromCore(iceType: string): string {
+  return getUnifiedTypeMapping(iceType, 'clickhouse' as Dialect);
+}
+
+/**
  * Mapping from IceType types to ClickHouse types.
+ *
+ * @deprecated Use getClickHouseTypeFromCore() or getUnifiedTypeMapping() from @icetype/core instead.
+ * This table is kept for backward compatibility but derives from the unified mappings.
  */
 export const ICETYPE_TO_CLICKHOUSE: Record<string, string> = {
   // String types

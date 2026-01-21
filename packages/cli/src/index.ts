@@ -64,6 +64,7 @@ export {
   watchGenerate,
   type WatcherOptions,
   type WatchGenerateOptions,
+  type CleanupAwareWatcher,
 } from './utils/watcher.js';
 
 // Adapter registry utilities

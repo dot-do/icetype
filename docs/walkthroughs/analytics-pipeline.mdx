@@ -1,0 +1,1120 @@
+---
+title: Analytics Pipeline Example
+description: Build a real-time analytics pipeline with IceType, featuring event schemas, time-series partitioning, Iceberg integration, and OLAP query patterns.
+---
+
+# Analytics Pipeline Example
+
+This guide walks you through building a complete analytics data pipeline with IceType. You'll learn how to design event schemas for clickstream data, implement time-series partitioning, integrate with Apache Iceberg for data lake analytics, and optimize for both real-time and batch processing workloads.
+
+<Callout type="info">
+This example demonstrates OLAP patterns for analytics workloads. All schemas are designed for high-volume event ingestion and efficient time-range queries.
+</Callout>
+
+## Overview
+
+We'll build schemas for a modern analytics pipeline with these components:
+
+| Entity | Description |
+|--------|-------------|
+| **PageView** | Page view events with session tracking |
+| **ClickEvent** | User interaction events (clicks, scrolls, forms) |
+| **Conversion** | Conversion funnel events (signup, purchase, etc.) |
+| **Session** | User session aggregates |
+| **DailyMetrics** | Pre-aggregated daily statistics |
+
+## Prerequisites
+
+Install IceType with the Iceberg adapter for data lake integration:
+
+```bash
+npm install icetype @icetype/core @icetype/iceberg @icetype/postgres
+```
+
+## Architecture Overview
+
+```
+                    Real-time Path
+                    ─────────────
+Events ──► IceType Schema ──► Hot Storage (DO/SQLite)
+                │                    │
+                │              Edge Cache (Warm)
+                │                    │
+                └──────────────► Iceberg (Cold)
+                                     │
+                              Data Lake / Analytics
+                              (Spark, Trino, DuckDB)
+```
+
+The three-tier storage architecture enables:
+
+- **Hot tier**: Sub-10ms queries for real-time dashboards
+- **Warm tier**: Edge-cached aggregates for repeated queries
+- **Cold tier**: Iceberg tables for historical analytics and data lake integration
+
+## Step 1: Define Event Schemas
+
+Create a file `schema/analytics.ts` with your event schemas.
+
+### PageView Schema
+
+Track every page view with rich context:
+
+```typescript
+import { parseSchema } from 'icetype';
+
+export const PageViewSchema = parseSchema({
+  $type: 'PageView',
+  $partitionBy: ['eventDate', 'siteId'],  // Time + tenant partitioning
+  $index: [
+    ['eventDate', 'siteId'],
+    ['sessionId'],
+    ['userId'],
+    ['path'],
+    ['eventTimestamp'],
+  ],
+
+  // Primary key
+  id: 'uuid!',
+
+  // Event metadata
+  eventTimestamp: 'timestamp!',           // Precise event time
+  eventDate: 'date!',                     // Partition key (YYYY-MM-DD)
+  receivedAt: 'timestamp',                // Server receive time
+
+  // Site/tenant identification
+  siteId: 'string!',                      // Multi-tenant site ID
+  environment: 'string = "production"',   // 'production' | 'staging' | 'development'
+
+  // User identification
+  userId: 'string?',                      // Authenticated user ID
+  anonymousId: 'string!',                 // Device/browser ID
+  sessionId: 'string!',                   // Session identifier
+
+  // Page information
+  path: 'string!',                        // URL path (/products/123)
+  url: 'string!',                         // Full URL
+  title: 'string?',                       // Page title
+  referrer: 'string?',                    // Referrer URL
+  referrerDomain: 'string?',              // Extracted referrer domain
+
+  // UTM tracking
+  utmSource: 'string?',
+  utmMedium: 'string?',
+  utmCampaign: 'string?',
+  utmTerm: 'string?',
+  utmContent: 'string?',
+
+  // Device context
+  userAgent: 'string?',
+  deviceType: 'string?',                  // 'desktop' | 'mobile' | 'tablet'
+  browser: 'string?',
+  browserVersion: 'string?',
+  os: 'string?',
+  osVersion: 'string?',
+
+  // Geolocation (derived from IP)
+  country: 'string?',
+  region: 'string?',
+  city: 'string?',
+  timezone: 'string?',
+
+  // Performance metrics
+  loadTime: 'int?',                       // Page load time in ms
+  domContentLoaded: 'int?',               // DOMContentLoaded time in ms
+  firstContentfulPaint: 'int?',           // FCP in ms
+
+  // Custom properties
+  properties: 'json?',                    // Additional custom data
+});
+```
+
+### ClickEvent Schema
+
+Track user interactions beyond page views:
+
+```typescript
+export const ClickEventSchema = parseSchema({
+  $type: 'ClickEvent',
+  $partitionBy: ['eventDate', 'siteId'],
+  $index: [
+    ['eventDate', 'siteId'],
+    ['sessionId'],
+    ['eventType'],
+    ['elementId'],
+    ['pageViewId'],
+  ],
+
+  // Primary key
+  id: 'uuid!',
+
+  // Event metadata
+  eventTimestamp: 'timestamp!',
+  eventDate: 'date!',
+  receivedAt: 'timestamp',
+
+  // Site identification
+  siteId: 'string!',
+
+  // User context
+  userId: 'string?',
+  anonymousId: 'string!',
+  sessionId: 'string!',
+
+  // Associated page view
+  pageViewId: 'uuid?',
+  pageView: '-> PageView?',
+  path: 'string!',
+
+  // Event classification
+  eventType: 'string!',                   // 'click' | 'scroll' | 'form_submit' | 'video_play' | etc.
+  eventCategory: 'string?',               // Grouping category
+  eventAction: 'string?',                 // Specific action
+  eventLabel: 'string?',                  // Human-readable label
+
+  // Element information
+  elementId: 'string?',                   // DOM element ID
+  elementClass: 'string?',                // CSS classes
+  elementTag: 'string?',                  // HTML tag name
+  elementText: 'string?',                 // Truncated inner text
+
+  // Position data
+  positionX: 'int?',                      // Click X coordinate
+  positionY: 'int?',                      // Click Y coordinate
+  scrollDepth: 'int?',                    // Scroll depth percentage (0-100)
+  viewportWidth: 'int?',
+  viewportHeight: 'int?',
+
+  // Link tracking
+  targetUrl: 'string?',                   // Clicked link destination
+  isOutbound: 'bool?',                    // External link flag
+
+  // Form tracking
+  formId: 'string?',
+  formName: 'string?',
+  formFields: 'json?',                    // Field names (not values for privacy)
+
+  // Custom properties
+  properties: 'json?',
+});
+```
+
+### Conversion Schema
+
+Track conversion funnel events:
+
+```typescript
+export const ConversionSchema = parseSchema({
+  $type: 'Conversion',
+  $partitionBy: ['eventDate', 'siteId'],
+  $index: [
+    ['eventDate', 'siteId'],
+    ['conversionType'],
+    ['sessionId'],
+    ['userId'],
+    ['funnelStep'],
+  ],
+
+  // Primary key
+  id: 'uuid!',
+
+  // Event metadata
+  eventTimestamp: 'timestamp!',
+  eventDate: 'date!',
+  receivedAt: 'timestamp',
+
+  // Site identification
+  siteId: 'string!',
+
+  // User context
+  userId: 'string?',
+  anonymousId: 'string!',
+  sessionId: 'string!',
+
+  // Associated events
+  pageViewId: 'uuid?',
+  pageView: '-> PageView?',
+
+  // Conversion details
+  conversionType: 'string!',              // 'signup' | 'purchase' | 'lead' | 'subscription' | etc.
+  conversionName: 'string?',              // Human-readable name
+  conversionValue: 'decimal(12,2)?',      // Monetary value
+  currency: 'string = "USD"',
+
+  // Funnel tracking
+  funnelName: 'string?',                  // Funnel identifier
+  funnelStep: 'int?',                     // Step number in funnel
+  funnelStepName: 'string?',              // Step name
+
+  // Attribution
+  firstTouchSource: 'string?',            // First-touch attribution source
+  firstTouchMedium: 'string?',
+  firstTouchCampaign: 'string?',
+  lastTouchSource: 'string?',             // Last-touch attribution source
+  lastTouchMedium: 'string?',
+  lastTouchCampaign: 'string?',
+
+  // E-commerce specific
+  orderId: 'string?',
+  productIds: 'string[]',
+  productCount: 'int?',
+  transactionId: 'string?',
+
+  // Lead specific
+  leadScore: 'int?',
+  leadSource: 'string?',
+
+  // Custom properties
+  properties: 'json?',
+});
+```
+
+### Session Schema
+
+Aggregate session-level metrics:
+
+```typescript
+export const SessionSchema = parseSchema({
+  $type: 'Session',
+  $partitionBy: ['sessionDate', 'siteId'],
+  $index: [
+    ['sessionDate', 'siteId'],
+    ['userId'],
+    ['anonymousId'],
+    ['firstSource'],
+    ['hasConversion'],
+  ],
+
+  // Primary key - the session ID
+  id: 'string!',                          // Same as sessionId in events
+
+  // Session metadata
+  siteId: 'string!',
+  sessionDate: 'date!',                   // Date session started
+
+  // User identification
+  userId: 'string?',
+  anonymousId: 'string!',
+
+  // Session timing
+  startedAt: 'timestamp!',
+  endedAt: 'timestamp?',
+  duration: 'int?',                       // Duration in seconds
+  isActive: 'bool = true',
+
+  // Engagement metrics
+  pageViewCount: 'int = 0',
+  eventCount: 'int = 0',
+  conversionCount: 'int = 0',
+  bounced: 'bool = false',                // Single page view session
+
+  // Entry/exit pages
+  landingPage: 'string!',
+  exitPage: 'string?',
+
+  // Traffic source (first touch in session)
+  firstSource: 'string?',
+  firstMedium: 'string?',
+  firstCampaign: 'string?',
+  referrer: 'string?',
+  referrerDomain: 'string?',
+
+  // Device context
+  deviceType: 'string?',
+  browser: 'string?',
+  os: 'string?',
+  country: 'string?',
+  region: 'string?',
+  city: 'string?',
+
+  // Conversion tracking
+  hasConversion: 'bool = false',
+  conversionValue: 'decimal(12,2) = 0.00',
+  conversionTypes: 'string[]',
+
+  // Related events
+  pageViews: '<- PageView.sessionId[]',
+  clickEvents: '<- ClickEvent.sessionId[]',
+  conversions: '<- Conversion.sessionId[]',
+
+  // Timestamps
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp?',
+});
+```
+
+### DailyMetrics Schema
+
+Pre-aggregated daily statistics for fast dashboard queries:
+
+```typescript
+export const DailyMetricsSchema = parseSchema({
+  $type: 'DailyMetrics',
+  $partitionBy: ['metricDate'],
+  $index: [
+    ['metricDate', 'siteId'],
+    ['metricDate', 'dimension', 'dimensionValue'],
+  ],
+
+  // Composite key: date + site + dimension
+  id: 'uuid!',
+
+  // Temporal key
+  metricDate: 'date!',
+  siteId: 'string!',
+
+  // Dimension for slicing (e.g., 'country', 'device', 'source', 'page')
+  dimension: 'string!',
+  dimensionValue: 'string!',
+
+  // Traffic metrics
+  sessions: 'int = 0',
+  uniqueVisitors: 'int = 0',
+  pageViews: 'int = 0',
+  events: 'int = 0',
+
+  // Engagement metrics
+  totalDuration: 'int = 0',               // Total session duration in seconds
+  avgSessionDuration: 'float?',
+  avgPageViews: 'float?',
+  bounceRate: 'float?',                   // 0.0 to 1.0
+
+  // Conversion metrics
+  conversions: 'int = 0',
+  conversionRate: 'float?',               // 0.0 to 1.0
+  conversionValue: 'decimal(12,2) = 0.00',
+
+  // Performance metrics
+  avgLoadTime: 'float?',
+  avgFcp: 'float?',
+
+  // New vs returning
+  newVisitors: 'int = 0',
+  returningVisitors: 'int = 0',
+
+  // Timestamps
+  calculatedAt: 'timestamp',
+});
+```
+
+## Step 2: Time-Series Partitioning
+
+Time-series data benefits enormously from proper partitioning. The `$partitionBy` directive tells IceType how to organize data for efficient time-range queries.
+
+### Partitioning Strategy
+
+```typescript
+// Single dimension - by date
+$partitionBy: ['eventDate'],
+
+// Multi-dimensional - by date and tenant
+$partitionBy: ['eventDate', 'siteId'],
+```
+
+### Why Partition By Date?
+
+| Benefit | Description |
+|---------|-------------|
+| **Pruning** | Queries with date filters skip irrelevant partitions entirely |
+| **Retention** | Easy to drop old partitions for data lifecycle management |
+| **Parallelism** | Different partitions can be queried in parallel |
+| **Compaction** | Old partitions can be compacted without affecting new data |
+
+### Partition Key Best Practices
+
+```typescript
+// Good: Date granularity matches query patterns
+$partitionBy: ['eventDate'],           // Daily queries
+
+// Good: Multi-tenant with date
+$partitionBy: ['eventDate', 'siteId'], // Per-tenant daily queries
+
+// Avoid: Too fine granularity creates too many partitions
+// $partitionBy: ['eventTimestamp'],   // Don't partition by timestamp
+
+// Avoid: High cardinality dimension first
+// $partitionBy: ['userId', 'eventDate'],  // userId has too many values
+```
+
+## Step 3: Iceberg Integration
+
+IceType streams changes to Apache Iceberg tables via CDC (Change Data Capture) for data lake analytics.
+
+### Configure Iceberg Export
+
+```typescript
+import { configureIceberg } from '@icetype/iceberg';
+
+const icebergConfig = configureIceberg({
+  // Iceberg catalog configuration
+  catalog: {
+    type: 'rest',                         // REST catalog (Tabular, AWS Glue REST, etc.)
+    uri: process.env.ICEBERG_CATALOG_URI,
+    warehouse: 's3://my-data-lake/warehouse',
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+  },
+
+  // Namespace for tables
+  namespace: 'analytics',
+
+  // CDC configuration
+  cdc: {
+    mode: 'append',                       // 'append' | 'upsert' | 'delete'
+    batchSize: 10000,                     // Events per batch
+    flushInterval: 60000,                 // Flush every 60 seconds
+  },
+});
+```
+
+### Schema to Iceberg Mapping
+
+IceType automatically maps schema types to Iceberg types:
+
+| IceType Type | Iceberg Type |
+|--------------|--------------|
+| `string` | `string` |
+| `int` | `int` |
+| `float` | `float` |
+| `decimal(p,s)` | `decimal(p,s)` |
+| `bool` | `boolean` |
+| `timestamp` | `timestamptz` |
+| `date` | `date` |
+| `uuid` | `uuid` |
+| `json` | `string` (JSON encoded) |
+| `string[]` | `list<string>` |
+
+### Export Schemas to Iceberg
+
+```typescript
+import { exportToIceberg } from '@icetype/iceberg';
+import { PageViewSchema, ClickEventSchema, ConversionSchema, SessionSchema } from './schema/analytics';
+
+// Generate Iceberg table definitions
+const icebergTables = [
+  PageViewSchema,
+  ClickEventSchema,
+  ConversionSchema,
+  SessionSchema,
+].map(schema => exportToIceberg(schema, icebergConfig));
+
+// Create tables in catalog
+await Promise.all(icebergTables.map(table => table.createIfNotExists()));
+```
+
+### CDC Streaming
+
+Events flow from IceType to Iceberg in near real-time:
+
+```typescript
+import { createCDCStream } from '@icetype/iceberg';
+
+// Start CDC stream for page views
+const pageViewStream = createCDCStream(PageViewSchema, icebergConfig, {
+  // Transform before writing to Iceberg
+  transform: (event) => ({
+    ...event,
+    // Add computed columns
+    dayOfWeek: new Date(event.eventTimestamp).getDay(),
+    hourOfDay: new Date(event.eventTimestamp).getHours(),
+  }),
+
+  // Partition spec for Iceberg
+  partitionSpec: [
+    { field: 'eventDate', transform: 'day' },
+    { field: 'siteId', transform: 'identity' },
+  ],
+});
+
+// Start streaming
+await pageViewStream.start();
+```
+
+## Step 4: Aggregation Queries
+
+### Real-Time Queries (Hot Tier)
+
+For real-time dashboards, query the hot tier directly:
+
+```typescript
+import { db } from './db';
+import { pageView, session, conversion } from './db/schema';
+import { sql, eq, and, gte, lte, count, sum, avg } from 'drizzle-orm';
+
+// Real-time visitors (last 5 minutes)
+const activeVisitors = await db
+  .select({
+    count: sql<number>`count(distinct ${session.anonymousId})`,
+  })
+  .from(session)
+  .where(and(
+    eq(session.siteId, siteId),
+    eq(session.isActive, true),
+    gte(session.endedAt, sql`now() - interval '5 minutes'`)
+  ));
+
+// Today's page views by hour
+const hourlyPageViews = await db
+  .select({
+    hour: sql<number>`extract(hour from ${pageView.eventTimestamp})`,
+    count: count(),
+  })
+  .from(pageView)
+  .where(and(
+    eq(pageView.siteId, siteId),
+    eq(pageView.eventDate, sql`current_date`)
+  ))
+  .groupBy(sql`extract(hour from ${pageView.eventTimestamp})`)
+  .orderBy(sql`extract(hour from ${pageView.eventTimestamp})`);
+
+// Top pages today
+const topPages = await db
+  .select({
+    path: pageView.path,
+    views: count(),
+    uniqueVisitors: sql<number>`count(distinct ${pageView.anonymousId})`,
+  })
+  .from(pageView)
+  .where(and(
+    eq(pageView.siteId, siteId),
+    eq(pageView.eventDate, sql`current_date`)
+  ))
+  .groupBy(pageView.path)
+  .orderBy(sql`count(*) desc`)
+  .limit(10);
+
+// Conversion funnel
+const funnelMetrics = await db
+  .select({
+    funnelStep: conversion.funnelStep,
+    funnelStepName: conversion.funnelStepName,
+    count: count(),
+    uniqueUsers: sql<number>`count(distinct ${conversion.anonymousId})`,
+  })
+  .from(conversion)
+  .where(and(
+    eq(conversion.siteId, siteId),
+    eq(conversion.funnelName, 'checkout'),
+    eq(conversion.eventDate, sql`current_date`)
+  ))
+  .groupBy(conversion.funnelStep, conversion.funnelStepName)
+  .orderBy(conversion.funnelStep);
+```
+
+### Pre-Aggregated Queries (Warm Tier)
+
+For dashboard widgets, use pre-aggregated metrics:
+
+```typescript
+// Traffic overview for date range
+const trafficOverview = await db
+  .select({
+    date: dailyMetrics.metricDate,
+    sessions: sum(dailyMetrics.sessions),
+    pageViews: sum(dailyMetrics.pageViews),
+    uniqueVisitors: sum(dailyMetrics.uniqueVisitors),
+    avgDuration: avg(dailyMetrics.avgSessionDuration),
+    bounceRate: avg(dailyMetrics.bounceRate),
+  })
+  .from(dailyMetrics)
+  .where(and(
+    eq(dailyMetrics.siteId, siteId),
+    eq(dailyMetrics.dimension, 'all'),
+    gte(dailyMetrics.metricDate, startDate),
+    lte(dailyMetrics.metricDate, endDate)
+  ))
+  .groupBy(dailyMetrics.metricDate)
+  .orderBy(dailyMetrics.metricDate);
+
+// Traffic by source
+const trafficBySource = await db
+  .select({
+    source: dailyMetrics.dimensionValue,
+    sessions: sum(dailyMetrics.sessions),
+    conversions: sum(dailyMetrics.conversions),
+    conversionRate: avg(dailyMetrics.conversionRate),
+    conversionValue: sum(dailyMetrics.conversionValue),
+  })
+  .from(dailyMetrics)
+  .where(and(
+    eq(dailyMetrics.siteId, siteId),
+    eq(dailyMetrics.dimension, 'source'),
+    gte(dailyMetrics.metricDate, startDate),
+    lte(dailyMetrics.metricDate, endDate)
+  ))
+  .groupBy(dailyMetrics.dimensionValue)
+  .orderBy(sql`sum(${dailyMetrics.sessions}) desc`);
+
+// Geographic breakdown
+const trafficByCountry = await db
+  .select({
+    country: dailyMetrics.dimensionValue,
+    sessions: sum(dailyMetrics.sessions),
+    uniqueVisitors: sum(dailyMetrics.uniqueVisitors),
+  })
+  .from(dailyMetrics)
+  .where(and(
+    eq(dailyMetrics.siteId, siteId),
+    eq(dailyMetrics.dimension, 'country'),
+    gte(dailyMetrics.metricDate, startDate),
+    lte(dailyMetrics.metricDate, endDate)
+  ))
+  .groupBy(dailyMetrics.dimensionValue)
+  .orderBy(sql`sum(${dailyMetrics.sessions}) desc`)
+  .limit(10);
+```
+
+### Historical Analytics (Cold Tier - Iceberg)
+
+For deep historical analysis, query the Iceberg data lake:
+
+```sql
+-- Using Trino/Spark SQL against Iceberg tables
+
+-- Monthly cohort analysis
+SELECT
+  date_trunc('month', s.started_at) AS cohort_month,
+  date_trunc('month', c.event_timestamp) AS conversion_month,
+  count(DISTINCT s.anonymous_id) AS users,
+  sum(c.conversion_value) AS revenue
+FROM analytics.session s
+LEFT JOIN analytics.conversion c
+  ON s.id = c.session_id
+  AND c.conversion_type = 'purchase'
+WHERE s.site_id = 'my-site'
+  AND s.started_at >= date '2024-01-01'
+GROUP BY 1, 2
+ORDER BY 1, 2;
+
+-- Attribution analysis (30-day lookback)
+SELECT
+  c.first_touch_source,
+  c.first_touch_medium,
+  count(*) AS conversions,
+  sum(c.conversion_value) AS first_touch_revenue,
+  count(DISTINCT c.anonymous_id) AS unique_converters
+FROM analytics.conversion c
+WHERE c.site_id = 'my-site'
+  AND c.event_date >= current_date - interval '30' day
+  AND c.conversion_type = 'purchase'
+GROUP BY 1, 2
+ORDER BY sum(c.conversion_value) DESC
+LIMIT 20;
+
+-- User journey analysis
+WITH user_journeys AS (
+  SELECT
+    pv.anonymous_id,
+    array_agg(pv.path ORDER BY pv.event_timestamp) AS page_sequence,
+    count(*) AS pages_viewed,
+    max(CASE WHEN c.id IS NOT NULL THEN 1 ELSE 0 END) AS converted
+  FROM analytics.page_view pv
+  LEFT JOIN analytics.conversion c
+    ON pv.session_id = c.session_id
+    AND c.conversion_type = 'purchase'
+  WHERE pv.site_id = 'my-site'
+    AND pv.event_date >= current_date - interval '7' day
+  GROUP BY pv.anonymous_id
+)
+SELECT
+  pages_viewed,
+  count(*) AS users,
+  sum(converted) AS converters,
+  cast(sum(converted) AS double) / count(*) AS conversion_rate
+FROM user_journeys
+GROUP BY pages_viewed
+ORDER BY pages_viewed;
+```
+
+## Step 5: Real-Time vs Batch Processing
+
+IceType supports both real-time streaming and batch processing patterns.
+
+### Real-Time Event Ingestion
+
+```typescript
+import { createEventIngester } from '@icetype/core';
+
+const ingester = createEventIngester({
+  schemas: [PageViewSchema, ClickEventSchema, ConversionSchema],
+
+  // Buffer configuration
+  buffer: {
+    maxSize: 1000,                        // Max events before flush
+    maxWait: 1000,                        // Max ms before flush
+  },
+
+  // Hot tier write
+  onFlush: async (events) => {
+    await db.transaction(async (tx) => {
+      // Batch insert events
+      const pageViews = events.filter(e => e.$type === 'PageView');
+      const clicks = events.filter(e => e.$type === 'ClickEvent');
+      const conversions = events.filter(e => e.$type === 'Conversion');
+
+      if (pageViews.length) await tx.insert(pageView).values(pageViews);
+      if (clicks.length) await tx.insert(clickEvent).values(clicks);
+      if (conversions.length) await tx.insert(conversion).values(conversions);
+    });
+  },
+
+  // CDC to Iceberg
+  onCDC: async (events) => {
+    await icebergWriter.write(events);
+  },
+});
+
+// Ingest events from HTTP endpoint
+export async function handleTrackingRequest(request: Request) {
+  const events = await request.json();
+
+  for (const event of events) {
+    // Enrich event
+    const enriched = {
+      ...event,
+      id: crypto.randomUUID(),
+      receivedAt: new Date(),
+      eventDate: event.eventTimestamp.split('T')[0],
+    };
+
+    await ingester.ingest(enriched);
+  }
+
+  return new Response('OK', { status: 200 });
+}
+```
+
+### Batch Aggregation Jobs
+
+```typescript
+import { createAggregationJob } from '@icetype/core';
+
+// Daily aggregation job
+const dailyAggregation = createAggregationJob({
+  name: 'daily-metrics',
+  schedule: '0 1 * * *',                  // Run at 1 AM daily
+
+  async execute(context) {
+    const yesterday = context.date;       // Date being processed
+
+    // Aggregate by different dimensions
+    const dimensions = ['all', 'source', 'country', 'device', 'page'];
+
+    for (const dimension of dimensions) {
+      const metrics = await calculateDailyMetrics(yesterday, dimension);
+
+      // Upsert into DailyMetrics table
+      await db
+        .insert(dailyMetrics)
+        .values(metrics)
+        .onConflictDoUpdate({
+          target: [dailyMetrics.metricDate, dailyMetrics.siteId, dailyMetrics.dimension, dailyMetrics.dimensionValue],
+          set: {
+            sessions: sql`excluded.sessions`,
+            uniqueVisitors: sql`excluded.unique_visitors`,
+            pageViews: sql`excluded.page_views`,
+            // ... other fields
+            calculatedAt: new Date(),
+          },
+        });
+    }
+  },
+});
+
+async function calculateDailyMetrics(date: string, dimension: string) {
+  // Query raw events and aggregate
+  const baseQuery = db
+    .select({
+      metricDate: sql`${date}::date`,
+      siteId: session.siteId,
+      dimension: sql`${dimension}`,
+      sessions: count(session.id),
+      uniqueVisitors: sql<number>`count(distinct ${session.anonymousId})`,
+      pageViews: sum(session.pageViewCount),
+      totalDuration: sum(session.duration),
+      bounces: sql<number>`sum(case when ${session.bounced} then 1 else 0 end)`,
+      conversions: sum(session.conversionCount),
+      conversionValue: sum(session.conversionValue),
+    })
+    .from(session)
+    .where(eq(session.sessionDate, date));
+
+  // Add dimension grouping
+  if (dimension === 'all') {
+    return baseQuery
+      .groupBy(session.siteId)
+      .then(rows => rows.map(r => ({ ...r, dimensionValue: 'all' })));
+  } else if (dimension === 'source') {
+    return baseQuery
+      .groupBy(session.siteId, session.firstSource)
+      .then(rows => rows.map(r => ({ ...r, dimensionValue: r.firstSource || 'direct' })));
+  }
+  // ... other dimensions
+}
+```
+
+### Session Stitching
+
+Real-time session management:
+
+```typescript
+import { createSessionManager } from '@icetype/core';
+
+const sessionManager = createSessionManager({
+  schema: SessionSchema,
+  timeout: 30 * 60 * 1000,                // 30 minute timeout
+
+  // Called when new session starts
+  onSessionStart: async (session) => {
+    await db.insert(sessionTable).values({
+      id: session.id,
+      siteId: session.siteId,
+      anonymousId: session.anonymousId,
+      sessionDate: session.startedAt.toISOString().split('T')[0],
+      startedAt: session.startedAt,
+      landingPage: session.landingPage,
+      firstSource: session.utmSource,
+      firstMedium: session.utmMedium,
+      firstCampaign: session.utmCampaign,
+      referrer: session.referrer,
+      deviceType: session.deviceType,
+      browser: session.browser,
+      os: session.os,
+      country: session.country,
+      createdAt: new Date(),
+    });
+  },
+
+  // Called on each event within session
+  onSessionUpdate: async (sessionId, event) => {
+    await db
+      .update(sessionTable)
+      .set({
+        pageViewCount: sql`${sessionTable.pageViewCount} + 1`,
+        eventCount: sql`${sessionTable.eventCount} + 1`,
+        endedAt: event.eventTimestamp,
+        exitPage: event.path,
+        duration: sql`extract(epoch from ${event.eventTimestamp} - ${sessionTable.startedAt})`,
+        updatedAt: new Date(),
+      })
+      .where(eq(sessionTable.id, sessionId));
+  },
+
+  // Called when session ends (timeout or explicit end)
+  onSessionEnd: async (session) => {
+    await db
+      .update(sessionTable)
+      .set({
+        isActive: false,
+        bounced: session.pageViewCount === 1,
+        updatedAt: new Date(),
+      })
+      .where(eq(sessionTable.id, session.id));
+  },
+});
+```
+
+## Step 6: OLAP Query Patterns
+
+IceType optimizes for common OLAP patterns.
+
+### Time-Range Partitioning
+
+Partition pruning dramatically reduces query scope:
+
+```typescript
+// This query only scans 7 days of partitions
+const weeklyMetrics = await db
+  .select()
+  .from(pageView)
+  .where(and(
+    eq(pageView.siteId, siteId),
+    gte(pageView.eventDate, '2024-01-01'),
+    lte(pageView.eventDate, '2024-01-07')
+  ));
+```
+
+### Columnar Projections
+
+Select only needed columns for efficiency:
+
+```typescript
+// Efficient: only reads required columns
+const pathCounts = await db
+  .select({
+    path: pageView.path,
+    count: count(),
+  })
+  .from(pageView)
+  .where(eq(pageView.eventDate, today))
+  .groupBy(pageView.path);
+
+// Avoid: selecting all columns when not needed
+// const allData = await db.select().from(pageView);
+```
+
+### Approximate Aggregations
+
+For very large datasets, use approximate functions:
+
+```typescript
+// HyperLogLog for approximate distinct counts
+const approxUniqueVisitors = await db
+  .select({
+    approxUnique: sql<number>`approx_distinct(${pageView.anonymousId})`,
+  })
+  .from(pageView)
+  .where(and(
+    eq(pageView.siteId, siteId),
+    gte(pageView.eventDate, startDate)
+  ));
+
+// Approximate percentiles
+const loadTimePercentiles = await db
+  .select({
+    p50: sql<number>`percentile_cont(0.5) within group (order by ${pageView.loadTime})`,
+    p95: sql<number>`percentile_cont(0.95) within group (order by ${pageView.loadTime})`,
+    p99: sql<number>`percentile_cont(0.99) within group (order by ${pageView.loadTime})`,
+  })
+  .from(pageView)
+  .where(and(
+    eq(pageView.siteId, siteId),
+    eq(pageView.eventDate, today),
+    sql`${pageView.loadTime} is not null`
+  ));
+```
+
+### Materialized Views
+
+Pre-compute expensive aggregations:
+
+```typescript
+// Define materialized view for hourly metrics
+const hourlyMetricsView = sql`
+  CREATE MATERIALIZED VIEW IF NOT EXISTS hourly_metrics AS
+  SELECT
+    date_trunc('hour', event_timestamp) AS hour,
+    site_id,
+    count(*) AS page_views,
+    count(distinct anonymous_id) AS unique_visitors,
+    count(distinct session_id) AS sessions
+  FROM page_view
+  WHERE event_date >= current_date - interval '7 days'
+  GROUP BY 1, 2
+`;
+
+// Refresh periodically
+const refreshHourlyMetrics = sql`
+  REFRESH MATERIALIZED VIEW CONCURRENTLY hourly_metrics
+`;
+```
+
+## Best Practices
+
+### 1. Partition by Time First
+
+Always make the date/time the first partition key for analytics:
+
+```typescript
+// Good: Date first enables efficient time-range queries
+$partitionBy: ['eventDate', 'siteId'],
+
+// Avoid: Non-temporal first partition
+// $partitionBy: ['siteId', 'eventDate'],
+```
+
+### 2. Use Appropriate Granularity
+
+Match partition granularity to query patterns:
+
+```typescript
+// Daily partitions for most analytics
+eventDate: 'date!',
+
+// Hourly partitions for high-volume, short-retention data
+// eventHour: 'timestamp!',  // Truncated to hour
+```
+
+### 3. Separate Hot and Cold Schemas
+
+Consider different schemas for different tiers:
+
+```typescript
+// Hot tier: minimal fields for real-time
+const PageViewHotSchema = parseSchema({
+  $type: 'PageViewHot',
+  id: 'uuid!',
+  eventTimestamp: 'timestamp!',
+  sessionId: 'string!',
+  path: 'string!',
+  // ... minimal fields
+});
+
+// Cold tier: full schema for historical analysis
+const PageViewColdSchema = parseSchema({
+  $type: 'PageViewCold',
+  // ... all fields including device, geo, UTM, etc.
+});
+```
+
+### 4. Pre-Aggregate for Dashboards
+
+Don't query raw events for dashboard metrics:
+
+```typescript
+// Good: Query pre-aggregated daily metrics
+const overview = await db.select().from(dailyMetrics);
+
+// Avoid: Aggregating raw events on every request
+// const overview = await db.select({ count: count() }).from(pageView);
+```
+
+### 5. Use Sampling for Large Scans
+
+For exploratory queries on large datasets:
+
+```sql
+-- Sample 1% of data for quick exploration
+SELECT * FROM analytics.page_view
+TABLESAMPLE BERNOULLI(1)
+WHERE event_date >= '2024-01-01';
+```
+
+### 6. Index for Filter Patterns
+
+Index columns that appear in WHERE clauses:
+
+```typescript
+$index: [
+  ['eventDate', 'siteId'],      // Common filter combination
+  ['sessionId'],                 // Session lookups
+  ['path'],                      // Page-level queries
+],
+```
+
+## Next Steps
+
+<Cards>
+  <Card
+    title="Iceberg Analytics"
+    description="Deep dive into Iceberg integration and data lake patterns."
+    href="/tutorials/iceberg-analytics"
+  />
+  <Card
+    title="Schema Language"
+    description="Complete reference for IceType schema syntax."
+    href="/schema-language"
+  />
+  <Card
+    title="E-Commerce Example"
+    description="OLTP patterns for transactional workloads."
+    href="/walkthroughs/e-commerce"
+  />
+  <Card
+    title="API Reference"
+    description="Complete API documentation for IceType."
+    href="/api"
+  />
+</Cards>

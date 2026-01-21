@@ -1,0 +1,1561 @@
+---
+title: Production Deployment Guide
+description: Comprehensive guide to deploying IceType schemas in production environments with best practices for configuration, migrations, monitoring, and security.
+---
+
+# Production Deployment Guide
+
+This guide covers everything you need to deploy IceType-powered applications to production, including environment configuration, database connection management, migration strategies, monitoring, backup procedures, and security best practices.
+
+<Callout type="warn">
+Production deployments require careful planning. Review each section thoroughly and adapt the recommendations to your specific infrastructure and compliance requirements.
+</Callout>
+
+## Overview
+
+A production-ready IceType deployment involves:
+
+| Component | Description |
+|-----------|-------------|
+| **Environment Configuration** | Secure secrets management and environment-specific settings |
+| **Connection Pooling** | Efficient database connection management |
+| **Migration Strategy** | Safe schema updates with zero or minimal downtime |
+| **Monitoring** | Observability, metrics, and alerting |
+| **Backup & Recovery** | Data protection and disaster recovery |
+| **Performance Tuning** | Query optimization and resource management |
+| **Security** | Access control, encryption, and audit logging |
+
+## Prerequisites
+
+Before deploying to production:
+
+```bash
+# Install required packages
+npm install icetype @icetype/core @icetype/drizzle
+npm install drizzle-orm pg
+
+# Development tools
+npm install -D drizzle-kit tsx
+```
+
+Ensure you have:
+
+- A production database (PostgreSQL 14+, MySQL 8+, or compatible)
+- Secret management solution (AWS Secrets Manager, Vault, etc.)
+- CI/CD pipeline for automated deployments
+- Monitoring infrastructure (Prometheus, Datadog, etc.)
+
+## Environment Configuration
+
+### Environment Variables
+
+Structure your environment configuration for different deployment stages:
+
+```typescript
+// src/config/database.ts
+import { z } from 'zod';
+
+const DatabaseConfigSchema = z.object({
+  // Connection settings
+  DATABASE_URL: z.string().url(),
+  DATABASE_POOL_MIN: z.coerce.number().default(2),
+  DATABASE_POOL_MAX: z.coerce.number().default(10),
+  DATABASE_POOL_IDLE_TIMEOUT: z.coerce.number().default(30000),
+  DATABASE_CONNECTION_TIMEOUT: z.coerce.number().default(5000),
+  DATABASE_STATEMENT_TIMEOUT: z.coerce.number().default(30000),
+
+  // SSL settings
+  DATABASE_SSL_MODE: z.enum(['disable', 'require', 'verify-ca', 'verify-full']).default('require'),
+  DATABASE_SSL_CERT: z.string().optional(),
+  DATABASE_SSL_KEY: z.string().optional(),
+  DATABASE_SSL_CA: z.string().optional(),
+
+  // Environment
+  NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
+});
+
+export type DatabaseConfig = z.infer<typeof DatabaseConfigSchema>;
+
+export function loadDatabaseConfig(): DatabaseConfig {
+  const result = DatabaseConfigSchema.safeParse(process.env);
+
+  if (!result.success) {
+    console.error('Invalid database configuration:', result.error.format());
+    process.exit(1);
+  }
+
+  return result.data;
+}
+```
+
+### Secrets Management
+
+Never store secrets in code. Use environment-specific secret management:
+
+```typescript
+// src/config/secrets.ts
+import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+
+interface DatabaseSecrets {
+  host: string;
+  port: number;
+  database: string;
+  username: string;
+  password: string;
+}
+
+export async function loadDatabaseSecrets(secretId: string): Promise<DatabaseSecrets> {
+  const client = new SecretsManagerClient({
+    region: process.env.AWS_REGION || 'us-east-1',
+  });
+
+  const command = new GetSecretValueCommand({
+    SecretId: secretId,
+  });
+
+  const response = await client.send(command);
+
+  if (!response.SecretString) {
+    throw new Error(`Secret ${secretId} not found or empty`);
+  }
+
+  return JSON.parse(response.SecretString);
+}
+
+export function buildConnectionString(secrets: DatabaseSecrets): string {
+  const { host, port, database, username, password } = secrets;
+  return `postgresql://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
+}
+```
+
+### Environment-Specific Configuration
+
+```typescript
+// src/config/index.ts
+import { loadDatabaseConfig } from './database';
+import { loadDatabaseSecrets, buildConnectionString } from './secrets';
+
+export interface AppConfig {
+  database: {
+    connectionString: string;
+    poolMin: number;
+    poolMax: number;
+    idleTimeout: number;
+    connectionTimeout: number;
+    statementTimeout: number;
+    ssl: {
+      mode: string;
+      cert?: string;
+      key?: string;
+      ca?: string;
+    };
+  };
+  environment: 'development' | 'staging' | 'production';
+}
+
+export async function loadConfig(): Promise<AppConfig> {
+  const dbConfig = loadDatabaseConfig();
+
+  let connectionString = dbConfig.DATABASE_URL;
+
+  // In production, load secrets from AWS Secrets Manager
+  if (dbConfig.NODE_ENV === 'production' && process.env.DATABASE_SECRET_ID) {
+    const secrets = await loadDatabaseSecrets(process.env.DATABASE_SECRET_ID);
+    connectionString = buildConnectionString(secrets);
+  }
+
+  return {
+    database: {
+      connectionString,
+      poolMin: dbConfig.DATABASE_POOL_MIN,
+      poolMax: dbConfig.DATABASE_POOL_MAX,
+      idleTimeout: dbConfig.DATABASE_POOL_IDLE_TIMEOUT,
+      connectionTimeout: dbConfig.DATABASE_CONNECTION_TIMEOUT,
+      statementTimeout: dbConfig.DATABASE_STATEMENT_TIMEOUT,
+      ssl: {
+        mode: dbConfig.DATABASE_SSL_MODE,
+        cert: dbConfig.DATABASE_SSL_CERT,
+        key: dbConfig.DATABASE_SSL_KEY,
+        ca: dbConfig.DATABASE_SSL_CA,
+      },
+    },
+    environment: dbConfig.NODE_ENV,
+  };
+}
+```
+
+## Database Connection Pooling
+
+### Production Pool Configuration
+
+```typescript
+// src/db/pool.ts
+import { Pool, PoolConfig } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import * as schema from './schema';
+import type { AppConfig } from '../config';
+
+export function createDatabasePool(config: AppConfig) {
+  const poolConfig: PoolConfig = {
+    connectionString: config.database.connectionString,
+    min: config.database.poolMin,
+    max: config.database.poolMax,
+    idleTimeoutMillis: config.database.idleTimeout,
+    connectionTimeoutMillis: config.database.connectionTimeout,
+    statement_timeout: config.database.statementTimeout,
+
+    // SSL configuration
+    ssl: config.database.ssl.mode === 'disable' ? false : {
+      rejectUnauthorized: config.database.ssl.mode === 'verify-full',
+      ca: config.database.ssl.ca,
+      cert: config.database.ssl.cert,
+      key: config.database.ssl.key,
+    },
+  };
+
+  const pool = new Pool(poolConfig);
+
+  // Connection error handling
+  pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+    // Don't exit - let the pool recover
+  });
+
+  // Connection lifecycle logging (development only)
+  if (config.environment === 'development') {
+    pool.on('connect', () => console.log('Pool: New connection'));
+    pool.on('remove', () => console.log('Pool: Connection removed'));
+  }
+
+  return pool;
+}
+
+export function createDatabase(pool: Pool) {
+  return drizzle(pool, { schema });
+}
+```
+
+### Connection Health Checks
+
+```typescript
+// src/db/health.ts
+import { Pool } from 'pg';
+import { sql } from 'drizzle-orm';
+
+interface HealthCheckResult {
+  healthy: boolean;
+  latencyMs: number;
+  poolStats: {
+    total: number;
+    idle: number;
+    waiting: number;
+  };
+  error?: string;
+}
+
+export async function checkDatabaseHealth(pool: Pool): Promise<HealthCheckResult> {
+  const start = Date.now();
+
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query('SELECT 1');
+
+      return {
+        healthy: true,
+        latencyMs: Date.now() - start,
+        poolStats: {
+          total: pool.totalCount,
+          idle: pool.idleCount,
+          waiting: pool.waitingCount,
+        },
+      };
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    return {
+      healthy: false,
+      latencyMs: Date.now() - start,
+      poolStats: {
+        total: pool.totalCount,
+        idle: pool.idleCount,
+        waiting: pool.waitingCount,
+      },
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+// Express health endpoint example
+export function healthEndpoint(pool: Pool) {
+  return async (req: any, res: any) => {
+    const health = await checkDatabaseHealth(pool);
+
+    res.status(health.healthy ? 200 : 503).json({
+      status: health.healthy ? 'healthy' : 'unhealthy',
+      database: health,
+      timestamp: new Date().toISOString(),
+    });
+  };
+}
+```
+
+### Connection Pool Sizing
+
+| Workload Type | Pool Min | Pool Max | Idle Timeout |
+|---------------|----------|----------|--------------|
+| **API Server** | 2 | 10-20 | 30s |
+| **Background Jobs** | 1 | 5 | 60s |
+| **Serverless (Lambda)** | 1 | 2 | 10s |
+| **High-throughput** | 5 | 50 | 30s |
+
+<Callout type="info">
+Rule of thumb: `pool_max = (cores * 2) + disk_spindles`. For cloud databases with SSDs, start with `cores * 4` and tune based on monitoring.
+</Callout>
+
+## Migration Strategies
+
+### Migration Workflow
+
+```typescript
+// drizzle.config.ts
+import type { Config } from 'drizzle-kit';
+
+export default {
+  schema: './src/db/schema.ts',
+  out: './migrations',
+  dialect: 'postgresql',
+  dbCredentials: {
+    url: process.env.DATABASE_URL!,
+  },
+  // Production migrations should be verbose
+  verbose: true,
+  strict: true,
+} satisfies Config;
+```
+
+### Blue-Green Deployment
+
+Blue-green deployment runs two identical environments, switching traffic after validation:
+
+```typescript
+// scripts/migrate-blue-green.ts
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { Pool } from 'pg';
+
+interface BlueGreenConfig {
+  blueUrl: string;
+  greenUrl: string;
+  migrationsFolder: string;
+}
+
+async function blueGreenMigration(config: BlueGreenConfig) {
+  console.log('Starting blue-green migration...');
+
+  // Step 1: Migrate green environment
+  console.log('Step 1: Migrating green environment...');
+  const greenPool = new Pool({ connectionString: config.greenUrl });
+  const greenDb = drizzle(greenPool);
+
+  try {
+    await migrate(greenDb, { migrationsFolder: config.migrationsFolder });
+    console.log('Green environment migrated successfully');
+  } catch (error) {
+    console.error('Green migration failed:', error);
+    await greenPool.end();
+    throw error;
+  }
+
+  // Step 2: Validate green environment
+  console.log('Step 2: Validating green environment...');
+  const greenValid = await validateSchema(greenPool);
+  if (!greenValid) {
+    await greenPool.end();
+    throw new Error('Green environment validation failed');
+  }
+  console.log('Green environment validated');
+
+  // Step 3: Run smoke tests on green
+  console.log('Step 3: Running smoke tests on green...');
+  const smokeTestsPassed = await runSmokeTests(greenPool);
+  if (!smokeTestsPassed) {
+    await greenPool.end();
+    throw new Error('Smoke tests failed on green environment');
+  }
+  console.log('Smoke tests passed');
+
+  // Step 4: Switch traffic (update load balancer / DNS)
+  console.log('Step 4: Ready for traffic switch');
+  console.log('  - Update load balancer to point to green environment');
+  console.log('  - Monitor error rates and latency');
+  console.log('  - Keep blue running for quick rollback');
+
+  await greenPool.end();
+
+  return { success: true };
+}
+
+async function validateSchema(pool: Pool): Promise<boolean> {
+  const client = await pool.connect();
+  try {
+    // Verify expected tables exist
+    const result = await client.query(`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+    `);
+
+    const expectedTables = ['user', 'post', 'comment']; // Your tables
+    const existingTables = result.rows.map(r => r.table_name);
+
+    return expectedTables.every(t => existingTables.includes(t));
+  } finally {
+    client.release();
+  }
+}
+
+async function runSmokeTests(pool: Pool): Promise<boolean> {
+  const client = await pool.connect();
+  try {
+    // Test basic operations
+    await client.query('SELECT 1');
+    await client.query('SELECT count(*) FROM "user"');
+    return true;
+  } catch {
+    return false;
+  } finally {
+    client.release();
+  }
+}
+```
+
+### Rolling Deployment
+
+Rolling deployment updates instances gradually with backward-compatible migrations:
+
+```typescript
+// scripts/migrate-rolling.ts
+import { sql } from 'drizzle-orm';
+
+interface RollingMigrationStep {
+  name: string;
+  up: string;
+  down: string;
+  isBackwardCompatible: boolean;
+}
+
+// Example: Adding a new column with default value (backward compatible)
+const addColumnMigration: RollingMigrationStep = {
+  name: 'add_user_preferences',
+  up: `
+    ALTER TABLE "user"
+    ADD COLUMN IF NOT EXISTS "preferences" jsonb DEFAULT '{}'::jsonb;
+  `,
+  down: `
+    ALTER TABLE "user"
+    DROP COLUMN IF EXISTS "preferences";
+  `,
+  isBackwardCompatible: true,
+};
+
+// Example: Renaming a column (NOT backward compatible - use expand/contract)
+const renameColumnMigration = {
+  // Phase 1: Add new column (backward compatible)
+  expand: {
+    name: 'expand_user_display_name',
+    up: `
+      ALTER TABLE "user"
+      ADD COLUMN IF NOT EXISTS "display_name" varchar(255);
+
+      -- Backfill from old column
+      UPDATE "user" SET "display_name" = "name" WHERE "display_name" IS NULL;
+
+      -- Create trigger to keep columns in sync
+      CREATE OR REPLACE FUNCTION sync_user_display_name()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+          NEW.display_name := COALESCE(NEW.display_name, NEW.name);
+          NEW.name := COALESCE(NEW.name, NEW.display_name);
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      DROP TRIGGER IF EXISTS user_display_name_sync ON "user";
+      CREATE TRIGGER user_display_name_sync
+        BEFORE INSERT OR UPDATE ON "user"
+        FOR EACH ROW EXECUTE FUNCTION sync_user_display_name();
+    `,
+    isBackwardCompatible: true,
+  },
+
+  // Phase 2: Remove old column (after all code uses new column)
+  contract: {
+    name: 'contract_user_display_name',
+    up: `
+      DROP TRIGGER IF EXISTS user_display_name_sync ON "user";
+      DROP FUNCTION IF EXISTS sync_user_display_name();
+      ALTER TABLE "user" DROP COLUMN IF EXISTS "name";
+    `,
+    isBackwardCompatible: false, // Old code will break
+  },
+};
+
+async function executeRollingMigration(
+  db: any,
+  migration: RollingMigrationStep,
+  options: { dryRun?: boolean } = {}
+) {
+  console.log(`Executing migration: ${migration.name}`);
+  console.log(`Backward compatible: ${migration.isBackwardCompatible}`);
+
+  if (!migration.isBackwardCompatible) {
+    console.warn('WARNING: This migration is NOT backward compatible!');
+    console.warn('Ensure all application instances are updated before running.');
+  }
+
+  if (options.dryRun) {
+    console.log('DRY RUN - SQL to execute:');
+    console.log(migration.up);
+    return;
+  }
+
+  await db.execute(sql.raw(migration.up));
+  console.log(`Migration ${migration.name} completed successfully`);
+}
+```
+
+### Zero-Downtime Migration Patterns
+
+```typescript
+// migrations/patterns.ts
+
+// Pattern 1: Add nullable column (safe)
+const addNullableColumn = `
+  ALTER TABLE "order"
+  ADD COLUMN "tracking_url" varchar(500);
+`;
+
+// Pattern 2: Add column with default (safe, but can be slow on large tables)
+const addColumnWithDefault = `
+  ALTER TABLE "order"
+  ADD COLUMN "priority" int DEFAULT 0 NOT NULL;
+`;
+
+// Pattern 3: Add NOT NULL constraint (unsafe - use in two steps)
+// Step 1: Add nullable column
+const step1AddNullable = `
+  ALTER TABLE "product"
+  ADD COLUMN "category_id" uuid;
+`;
+
+// Step 2: Backfill data
+const step2Backfill = `
+  UPDATE "product"
+  SET "category_id" = 'default-category-uuid'
+  WHERE "category_id" IS NULL;
+`;
+
+// Step 3: Add NOT NULL constraint (after all data is backfilled)
+const step3AddConstraint = `
+  ALTER TABLE "product"
+  ALTER COLUMN "category_id" SET NOT NULL;
+`;
+
+// Pattern 4: Create index concurrently (safe, doesn't lock table)
+const createIndexConcurrently = `
+  CREATE INDEX CONCURRENTLY IF NOT EXISTS "order_status_idx"
+  ON "order" ("status");
+`;
+
+// Pattern 5: Drop column (safe if code doesn't reference it)
+const dropColumn = `
+  ALTER TABLE "user"
+  DROP COLUMN IF EXISTS "legacy_field";
+`;
+```
+
+## Monitoring and Observability
+
+### Database Metrics Collection
+
+```typescript
+// src/monitoring/metrics.ts
+import { Pool } from 'pg';
+import { Counter, Gauge, Histogram, Registry } from 'prom-client';
+
+export function createDatabaseMetrics(registry: Registry) {
+  const queryDuration = new Histogram({
+    name: 'db_query_duration_seconds',
+    help: 'Duration of database queries',
+    labelNames: ['operation', 'table', 'status'],
+    buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5],
+    registers: [registry],
+  });
+
+  const queryTotal = new Counter({
+    name: 'db_queries_total',
+    help: 'Total number of database queries',
+    labelNames: ['operation', 'table', 'status'],
+    registers: [registry],
+  });
+
+  const poolConnections = new Gauge({
+    name: 'db_pool_connections',
+    help: 'Number of connections in the pool',
+    labelNames: ['state'],
+    registers: [registry],
+  });
+
+  const poolWaiting = new Gauge({
+    name: 'db_pool_waiting_clients',
+    help: 'Number of clients waiting for a connection',
+    registers: [registry],
+  });
+
+  return {
+    queryDuration,
+    queryTotal,
+    poolConnections,
+    poolWaiting,
+
+    // Helper to record query metrics
+    recordQuery(operation: string, table: string, durationMs: number, success: boolean) {
+      const status = success ? 'success' : 'error';
+      queryDuration.observe({ operation, table, status }, durationMs / 1000);
+      queryTotal.inc({ operation, table, status });
+    },
+
+    // Update pool metrics
+    updatePoolMetrics(pool: Pool) {
+      poolConnections.set({ state: 'total' }, pool.totalCount);
+      poolConnections.set({ state: 'idle' }, pool.idleCount);
+      poolConnections.set({ state: 'active' }, pool.totalCount - pool.idleCount);
+      poolWaiting.set(pool.waitingCount);
+    },
+  };
+}
+```
+
+### Query Performance Logging
+
+```typescript
+// src/db/instrumented.ts
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import * as schema from './schema';
+
+interface QueryLog {
+  query: string;
+  params: unknown[];
+  durationMs: number;
+  timestamp: Date;
+}
+
+export function createInstrumentedDatabase(pool: Pool, options: {
+  logSlowQueries?: boolean;
+  slowQueryThresholdMs?: number;
+  onQuery?: (log: QueryLog) => void;
+} = {}) {
+  const {
+    logSlowQueries = true,
+    slowQueryThresholdMs = 100,
+    onQuery,
+  } = options;
+
+  return drizzle(pool, {
+    schema,
+    logger: {
+      logQuery(query: string, params: unknown[]) {
+        const start = Date.now();
+
+        // Log on completion (this is simplified - real implementation would wrap the query)
+        const durationMs = Date.now() - start;
+
+        const log: QueryLog = {
+          query,
+          params,
+          durationMs,
+          timestamp: new Date(),
+        };
+
+        onQuery?.(log);
+
+        if (logSlowQueries && durationMs > slowQueryThresholdMs) {
+          console.warn(`Slow query (${durationMs}ms):`, query);
+        }
+      },
+    },
+  });
+}
+```
+
+### Alerting Configuration
+
+```yaml
+# prometheus/alerts.yml
+groups:
+  - name: database
+    rules:
+      - alert: DatabaseConnectionPoolExhausted
+        expr: db_pool_waiting_clients > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database connection pool exhausted"
+          description: "{{ $value }} clients waiting for database connections"
+
+      - alert: DatabaseSlowQueries
+        expr: histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database queries are slow"
+          description: "95th percentile query latency is {{ $value }}s"
+
+      - alert: DatabaseHighErrorRate
+        expr: rate(db_queries_total{status="error"}[5m]) / rate(db_queries_total[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High database error rate"
+          description: "{{ $value | humanizePercentage }} of queries are failing"
+
+      - alert: DatabaseConnectionsLow
+        expr: db_pool_connections{state="idle"} == 0 and db_pool_connections{state="total"} > 0
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "No idle database connections"
+          description: "All database connections are in use"
+```
+
+### Structured Logging
+
+```typescript
+// src/logging/database.ts
+import pino from 'pino';
+
+export const dbLogger = pino({
+  name: 'database',
+  level: process.env.LOG_LEVEL || 'info',
+  formatters: {
+    level: (label) => ({ level: label }),
+  },
+});
+
+export function logDatabaseOperation(
+  operation: 'query' | 'transaction' | 'migration',
+  details: {
+    table?: string;
+    action?: string;
+    durationMs: number;
+    rowsAffected?: number;
+    error?: Error;
+  }
+) {
+  const logData = {
+    operation,
+    ...details,
+    timestamp: new Date().toISOString(),
+  };
+
+  if (details.error) {
+    dbLogger.error(logData, `Database ${operation} failed`);
+  } else if (details.durationMs > 1000) {
+    dbLogger.warn(logData, `Slow database ${operation}`);
+  } else {
+    dbLogger.debug(logData, `Database ${operation} completed`);
+  }
+}
+```
+
+## Backup and Recovery
+
+### Automated Backups
+
+```typescript
+// scripts/backup.ts
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { createReadStream } from 'fs';
+import { unlink } from 'fs/promises';
+
+const execAsync = promisify(exec);
+
+interface BackupConfig {
+  databaseUrl: string;
+  s3Bucket: string;
+  s3Prefix: string;
+  retentionDays: number;
+}
+
+export async function createBackup(config: BackupConfig) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = `backup-${timestamp}.sql.gz`;
+  const localPath = `/tmp/${filename}`;
+
+  console.log(`Creating backup: ${filename}`);
+
+  // Create compressed backup using pg_dump
+  const pgDumpCmd = `pg_dump "${config.databaseUrl}" | gzip > ${localPath}`;
+
+  try {
+    await execAsync(pgDumpCmd, {
+      env: {
+        ...process.env,
+        PGPASSWORD: new URL(config.databaseUrl).password,
+      },
+    });
+
+    console.log('Backup created, uploading to S3...');
+
+    // Upload to S3
+    const s3Client = new S3Client({});
+    const s3Key = `${config.s3Prefix}/${filename}`;
+
+    await s3Client.send(new PutObjectCommand({
+      Bucket: config.s3Bucket,
+      Key: s3Key,
+      Body: createReadStream(localPath),
+      ContentType: 'application/gzip',
+      Metadata: {
+        'backup-timestamp': timestamp,
+        'backup-type': 'full',
+      },
+    }));
+
+    console.log(`Backup uploaded to s3://${config.s3Bucket}/${s3Key}`);
+
+    // Cleanup local file
+    await unlink(localPath);
+
+    return {
+      success: true,
+      filename,
+      s3Location: `s3://${config.s3Bucket}/${s3Key}`,
+      timestamp,
+    };
+  } catch (error) {
+    console.error('Backup failed:', error);
+    // Cleanup on failure
+    try {
+      await unlink(localPath);
+    } catch {}
+    throw error;
+  }
+}
+
+// Schedule with cron or CloudWatch Events
+// Example: Run daily at 2 AM UTC
+// 0 2 * * * node scripts/backup.js
+```
+
+### Point-in-Time Recovery
+
+```typescript
+// scripts/restore.ts
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { createWriteStream } from 'fs';
+import { pipeline } from 'stream/promises';
+import { unlink } from 'fs/promises';
+
+const execAsync = promisify(exec);
+
+interface RestoreConfig {
+  databaseUrl: string;
+  s3Bucket: string;
+  backupKey: string;
+  targetDatabase: string;
+}
+
+export async function restoreBackup(config: RestoreConfig) {
+  const localPath = `/tmp/restore-${Date.now()}.sql.gz`;
+
+  console.log(`Downloading backup from s3://${config.s3Bucket}/${config.backupKey}`);
+
+  // Download from S3
+  const s3Client = new S3Client({});
+  const response = await s3Client.send(new GetObjectCommand({
+    Bucket: config.s3Bucket,
+    Key: config.backupKey,
+  }));
+
+  const writeStream = createWriteStream(localPath);
+  await pipeline(response.Body as any, writeStream);
+
+  console.log('Backup downloaded, restoring...');
+
+  // Create target database if it doesn't exist
+  const baseUrl = new URL(config.databaseUrl);
+  baseUrl.pathname = '/postgres';
+
+  await execAsync(
+    `psql "${baseUrl.toString()}" -c "CREATE DATABASE ${config.targetDatabase}"`,
+    { env: { ...process.env, PGPASSWORD: baseUrl.password } }
+  ).catch(() => {}); // Ignore if exists
+
+  // Restore backup
+  baseUrl.pathname = `/${config.targetDatabase}`;
+  const restoreCmd = `gunzip -c ${localPath} | psql "${baseUrl.toString()}"`;
+
+  try {
+    await execAsync(restoreCmd, {
+      env: {
+        ...process.env,
+        PGPASSWORD: baseUrl.password,
+      },
+    });
+
+    console.log(`Backup restored to database: ${config.targetDatabase}`);
+
+    // Cleanup
+    await unlink(localPath);
+
+    return { success: true, targetDatabase: config.targetDatabase };
+  } catch (error) {
+    console.error('Restore failed:', error);
+    try {
+      await unlink(localPath);
+    } catch {}
+    throw error;
+  }
+}
+```
+
+### Backup Verification
+
+```typescript
+// scripts/verify-backup.ts
+import { Pool } from 'pg';
+
+interface VerificationResult {
+  success: boolean;
+  tableCount: number;
+  rowCounts: Record<string, number>;
+  errors: string[];
+}
+
+export async function verifyBackup(connectionString: string): Promise<VerificationResult> {
+  const pool = new Pool({ connectionString });
+  const errors: string[] = [];
+
+  try {
+    // Get all tables
+    const tablesResult = await pool.query(`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+      AND table_type = 'BASE TABLE'
+    `);
+
+    const tables = tablesResult.rows.map(r => r.table_name);
+    const rowCounts: Record<string, number> = {};
+
+    // Count rows in each table
+    for (const table of tables) {
+      try {
+        const countResult = await pool.query(`SELECT count(*) FROM "${table}"`);
+        rowCounts[table] = parseInt(countResult.rows[0].count);
+      } catch (error) {
+        errors.push(`Failed to count rows in ${table}: ${error}`);
+      }
+    }
+
+    // Verify critical tables exist
+    const criticalTables = ['user', 'order', 'product'];
+    for (const table of criticalTables) {
+      if (!tables.includes(table)) {
+        errors.push(`Critical table missing: ${table}`);
+      }
+    }
+
+    return {
+      success: errors.length === 0,
+      tableCount: tables.length,
+      rowCounts,
+      errors,
+    };
+  } finally {
+    await pool.end();
+  }
+}
+```
+
+## Performance Tuning
+
+### Query Optimization
+
+```typescript
+// src/db/optimized-queries.ts
+import { db } from './index';
+import { user, order, orderItem, product } from './schema';
+import { eq, desc, and, gte, lte, sql, inArray } from 'drizzle-orm';
+
+// Bad: N+1 query pattern
+async function getOrdersBad(userId: string) {
+  const orders = await db.select().from(order).where(eq(order.customerId, userId));
+
+  // N+1: One query per order for items
+  for (const o of orders) {
+    const items = await db.select().from(orderItem).where(eq(orderItem.orderId, o.id));
+    // ...
+  }
+}
+
+// Good: Single query with join
+async function getOrdersGood(userId: string) {
+  const ordersWithItems = await db
+    .select({
+      order: order,
+      item: orderItem,
+      product: product,
+    })
+    .from(order)
+    .leftJoin(orderItem, eq(orderItem.orderId, order.id))
+    .leftJoin(product, eq(orderItem.productId, product.id))
+    .where(eq(order.customerId, userId))
+    .orderBy(desc(order.createdAt));
+
+  // Group items by order
+  const orderMap = new Map();
+  for (const row of ordersWithItems) {
+    if (!orderMap.has(row.order.id)) {
+      orderMap.set(row.order.id, { ...row.order, items: [] });
+    }
+    if (row.item) {
+      orderMap.get(row.order.id).items.push({ ...row.item, product: row.product });
+    }
+  }
+
+  return Array.from(orderMap.values());
+}
+
+// Good: Batch loading with IN clause
+async function getProductsByIds(productIds: string[]) {
+  if (productIds.length === 0) return [];
+
+  return db
+    .select()
+    .from(product)
+    .where(inArray(product.id, productIds));
+}
+
+// Good: Pagination with cursor (more efficient than offset)
+async function getOrdersPaginated(
+  userId: string,
+  cursor?: string,
+  limit = 20
+) {
+  let query = db
+    .select()
+    .from(order)
+    .where(eq(order.customerId, userId))
+    .orderBy(desc(order.createdAt))
+    .limit(limit + 1); // Fetch one extra to check if there's more
+
+  if (cursor) {
+    query = db
+      .select()
+      .from(order)
+      .where(and(
+        eq(order.customerId, userId),
+        lte(order.createdAt, new Date(cursor))
+      ))
+      .orderBy(desc(order.createdAt))
+      .limit(limit + 1);
+  }
+
+  const results = await query;
+  const hasMore = results.length > limit;
+  const items = hasMore ? results.slice(0, limit) : results;
+  const nextCursor = hasMore ? items[items.length - 1].createdAt.toISOString() : null;
+
+  return { items, nextCursor, hasMore };
+}
+```
+
+### Index Optimization
+
+```typescript
+// src/schema/indexes.ts
+import { parseSchema } from 'icetype';
+
+export const OrderSchema = parseSchema({
+  $type: 'Order',
+  $index: [
+    // Single column indexes for common filters
+    ['customerId'],
+    ['status'],
+    ['createdAt'],
+
+    // Composite index for common query patterns
+    ['customerId', 'status'],           // Orders by customer and status
+    ['customerId', 'createdAt'],        // Customer order history
+    ['status', 'createdAt'],            // Orders by status with date range
+
+    // Partial indexes (defined in raw SQL for specific cases)
+  ],
+
+  // Index for date range queries (partition key)
+  $partitionBy: ['orderDate'],
+
+  id: 'uuid!',
+  customerId: 'uuid!',
+  status: 'string = "pending"',
+  orderDate: 'date!',
+  createdAt: 'timestamp',
+  // ...
+});
+
+// Additional indexes via raw SQL for advanced cases
+const additionalIndexes = `
+  -- Partial index for active orders only
+  CREATE INDEX CONCURRENTLY IF NOT EXISTS order_active_status_idx
+  ON "order" (status, created_at)
+  WHERE status NOT IN ('completed', 'cancelled');
+
+  -- Expression index for case-insensitive search
+  CREATE INDEX CONCURRENTLY IF NOT EXISTS order_number_lower_idx
+  ON "order" (lower(order_number));
+
+  -- GIN index for JSON field
+  CREATE INDEX CONCURRENTLY IF NOT EXISTS order_metadata_idx
+  ON "order" USING GIN (metadata jsonb_path_ops);
+`;
+```
+
+### Connection and Query Timeouts
+
+```typescript
+// src/db/timeouts.ts
+import { sql } from 'drizzle-orm';
+
+// Set statement timeout for long-running queries
+export async function withTimeout<T>(
+  db: any,
+  operation: () => Promise<T>,
+  timeoutMs: number
+): Promise<T> {
+  await db.execute(sql`SET statement_timeout = ${timeoutMs}`);
+
+  try {
+    return await operation();
+  } finally {
+    // Reset to default
+    await db.execute(sql`SET statement_timeout = 0`);
+  }
+}
+
+// Example usage
+const results = await withTimeout(db, async () => {
+  return db.select().from(largeTable).where(/* complex conditions */);
+}, 5000); // 5 second timeout
+```
+
+## Security Best Practices
+
+### Role-Based Access Control
+
+```typescript
+// src/db/roles.ts
+const createRoles = `
+  -- Application role with limited privileges
+  CREATE ROLE app_user;
+  GRANT CONNECT ON DATABASE myapp TO app_user;
+  GRANT USAGE ON SCHEMA public TO app_user;
+
+  -- Read/write access to application tables
+  GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
+  GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
+
+  -- Deny access to sensitive columns
+  REVOKE SELECT (password_hash) ON "user" FROM app_user;
+
+  -- Read-only role for reporting
+  CREATE ROLE readonly_user;
+  GRANT CONNECT ON DATABASE myapp TO readonly_user;
+  GRANT USAGE ON SCHEMA public TO readonly_user;
+  GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly_user;
+
+  -- Migration role (for CI/CD)
+  CREATE ROLE migration_user;
+  GRANT CONNECT ON DATABASE myapp TO migration_user;
+  GRANT ALL PRIVILEGES ON SCHEMA public TO migration_user;
+  GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO migration_user;
+  GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO migration_user;
+`;
+```
+
+### Row-Level Security
+
+```typescript
+// src/db/rls.ts
+const enableRLS = `
+  -- Enable RLS on sensitive tables
+  ALTER TABLE "order" ENABLE ROW LEVEL SECURITY;
+
+  -- Policy: Users can only see their own orders
+  CREATE POLICY user_orders ON "order"
+    FOR ALL
+    USING (customer_id = current_setting('app.current_user_id')::uuid);
+
+  -- Policy: Admins can see all orders
+  CREATE POLICY admin_orders ON "order"
+    FOR ALL
+    USING (current_setting('app.user_role') = 'admin');
+`;
+
+// Set user context before queries
+export async function setUserContext(db: any, userId: string, role: string) {
+  await db.execute(sql`SET app.current_user_id = ${userId}`);
+  await db.execute(sql`SET app.user_role = ${role}`);
+}
+```
+
+### Audit Logging
+
+```typescript
+// src/schema/audit.ts
+import { parseSchema } from 'icetype';
+
+export const AuditLogSchema = parseSchema({
+  $type: 'AuditLog',
+  $partitionBy: ['createdAt'],
+  $index: [
+    ['entityType', 'entityId'],
+    ['userId'],
+    ['action'],
+    ['createdAt'],
+  ],
+
+  id: 'uuid!',
+
+  // What changed
+  entityType: 'string!',              // 'user', 'order', 'product', etc.
+  entityId: 'uuid!',
+  action: 'string!',                  // 'create', 'update', 'delete'
+
+  // Change details
+  previousValues: 'json?',            // Before state
+  newValues: 'json?',                 // After state
+  changedFields: 'string[]',          // List of changed field names
+
+  // Who made the change
+  userId: 'uuid?',                    // Null for system changes
+  userEmail: 'string?',
+  ipAddress: 'string?',
+  userAgent: 'string?',
+
+  // Context
+  requestId: 'string?',               // Correlation ID
+  source: 'string = "api"',           // 'api', 'admin', 'migration', 'system'
+
+  createdAt: 'timestamp',
+});
+
+// Audit logging helper
+export async function auditLog(
+  db: any,
+  log: {
+    entityType: string;
+    entityId: string;
+    action: 'create' | 'update' | 'delete';
+    previousValues?: Record<string, unknown>;
+    newValues?: Record<string, unknown>;
+    userId?: string;
+    context?: {
+      ipAddress?: string;
+      userAgent?: string;
+      requestId?: string;
+    };
+  }
+) {
+  const changedFields = log.previousValues && log.newValues
+    ? Object.keys(log.newValues).filter(
+        key => JSON.stringify(log.previousValues![key]) !== JSON.stringify(log.newValues![key])
+      )
+    : [];
+
+  await db.insert(auditLogTable).values({
+    entityType: log.entityType,
+    entityId: log.entityId,
+    action: log.action,
+    previousValues: log.previousValues,
+    newValues: log.newValues,
+    changedFields,
+    userId: log.userId,
+    ipAddress: log.context?.ipAddress,
+    userAgent: log.context?.userAgent,
+    requestId: log.context?.requestId,
+    createdAt: new Date(),
+  });
+}
+```
+
+### Data Encryption
+
+```typescript
+// src/db/encryption.ts
+import { createCipheriv, createDecipheriv, randomBytes, scrypt } from 'crypto';
+import { promisify } from 'util';
+
+const scryptAsync = promisify(scrypt);
+
+const ALGORITHM = 'aes-256-gcm';
+const KEY_LENGTH = 32;
+const IV_LENGTH = 16;
+const TAG_LENGTH = 16;
+
+export async function deriveKey(secret: string, salt: string): Promise<Buffer> {
+  return (await scryptAsync(secret, salt, KEY_LENGTH)) as Buffer;
+}
+
+export function encrypt(plaintext: string, key: Buffer): string {
+  const iv = randomBytes(IV_LENGTH);
+  const cipher = createCipheriv(ALGORITHM, key, iv);
+
+  let encrypted = cipher.update(plaintext, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+
+  const tag = cipher.getAuthTag();
+
+  // Format: iv:tag:ciphertext
+  return `${iv.toString('hex')}:${tag.toString('hex')}:${encrypted}`;
+}
+
+export function decrypt(ciphertext: string, key: Buffer): string {
+  const [ivHex, tagHex, encrypted] = ciphertext.split(':');
+
+  const iv = Buffer.from(ivHex, 'hex');
+  const tag = Buffer.from(tagHex, 'hex');
+
+  const decipher = createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(tag);
+
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+
+  return decrypted;
+}
+
+// Example: Encrypting sensitive fields before storage
+export function encryptSensitiveData<T extends Record<string, unknown>>(
+  data: T,
+  sensitiveFields: (keyof T)[],
+  key: Buffer
+): T {
+  const result = { ...data };
+
+  for (const field of sensitiveFields) {
+    if (result[field] && typeof result[field] === 'string') {
+      result[field] = encrypt(result[field] as string, key) as T[keyof T];
+    }
+  }
+
+  return result;
+}
+```
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+#### Connection Pool Exhaustion
+
+**Symptoms**: Requests timing out, "too many connections" errors
+
+```typescript
+// Diagnose
+SELECT count(*) FROM pg_stat_activity WHERE datname = 'myapp';
+SELECT state, count(*) FROM pg_stat_activity WHERE datname = 'myapp' GROUP BY state;
+
+// Fix: Ensure connections are properly released
+async function queryWithRelease(pool: Pool) {
+  const client = await pool.connect();
+  try {
+    return await client.query('SELECT * FROM users');
+  } finally {
+    client.release(); // Always release, even on error
+  }
+}
+
+// Fix: Add connection timeouts
+const pool = new Pool({
+  connectionTimeoutMillis: 5000,
+  idleTimeoutMillis: 30000,
+  max: 20,
+});
+```
+
+#### Slow Queries
+
+**Symptoms**: High latency, database CPU spikes
+
+```sql
+-- Find slow queries
+SELECT query, calls, mean_exec_time, total_exec_time
+FROM pg_stat_statements
+ORDER BY mean_exec_time DESC
+LIMIT 10;
+
+-- Analyze query plan
+EXPLAIN ANALYZE SELECT * FROM "order" WHERE status = 'pending';
+
+-- Check for missing indexes
+SELECT schemaname, tablename, attname, n_distinct, correlation
+FROM pg_stats
+WHERE tablename = 'order';
+```
+
+#### Lock Contention
+
+**Symptoms**: Queries hanging, deadlocks
+
+```sql
+-- Find blocking queries
+SELECT
+  blocked.pid AS blocked_pid,
+  blocked.query AS blocked_query,
+  blocking.pid AS blocking_pid,
+  blocking.query AS blocking_query
+FROM pg_stat_activity blocked
+JOIN pg_locks blocked_locks ON blocked.pid = blocked_locks.pid
+JOIN pg_locks blocking_locks ON blocked_locks.locktype = blocking_locks.locktype
+  AND blocked_locks.database = blocking_locks.database
+  AND blocked_locks.relation = blocking_locks.relation
+  AND blocked_locks.pid != blocking_locks.pid
+JOIN pg_stat_activity blocking ON blocking_locks.pid = blocking.pid
+WHERE NOT blocked_locks.granted;
+
+-- Kill blocking query (use with caution)
+SELECT pg_terminate_backend(blocking_pid);
+```
+
+#### Memory Issues
+
+**Symptoms**: Out of memory errors, database restarts
+
+```sql
+-- Check memory usage
+SELECT name, setting, unit FROM pg_settings
+WHERE name IN ('shared_buffers', 'work_mem', 'maintenance_work_mem', 'effective_cache_size');
+
+-- Tune for your workload
+ALTER SYSTEM SET work_mem = '256MB';
+ALTER SYSTEM SET maintenance_work_mem = '512MB';
+SELECT pg_reload_conf();
+```
+
+### Diagnostic Queries
+
+```sql
+-- Database size
+SELECT pg_size_pretty(pg_database_size('myapp'));
+
+-- Table sizes
+SELECT
+  tablename,
+  pg_size_pretty(pg_total_relation_size('"' || tablename || '"')) AS total_size,
+  pg_size_pretty(pg_relation_size('"' || tablename || '"')) AS table_size,
+  pg_size_pretty(pg_indexes_size('"' || tablename || '"')) AS index_size
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY pg_total_relation_size('"' || tablename || '"') DESC;
+
+-- Index usage
+SELECT
+  indexrelname,
+  idx_scan,
+  idx_tup_read,
+  idx_tup_fetch
+FROM pg_stat_user_indexes
+ORDER BY idx_scan DESC;
+
+-- Unused indexes (candidates for removal)
+SELECT
+  indexrelname,
+  pg_size_pretty(pg_relation_size(indexrelid))
+FROM pg_stat_user_indexes
+WHERE idx_scan = 0
+AND indexrelname NOT LIKE '%_pkey';
+
+-- Cache hit ratio (should be > 99%)
+SELECT
+  sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read)) AS cache_hit_ratio
+FROM pg_statio_user_tables;
+```
+
+## Deployment Checklist
+
+Before deploying to production:
+
+- [ ] **Configuration**
+  - [ ] Database URL uses secrets management (not hardcoded)
+  - [ ] SSL/TLS enabled for database connections
+  - [ ] Connection pool sizes configured appropriately
+  - [ ] Statement timeouts configured
+
+- [ ] **Migrations**
+  - [ ] All migrations tested in staging
+  - [ ] Migrations are backward compatible (or deployment coordinated)
+  - [ ] Rollback plan documented and tested
+
+- [ ] **Monitoring**
+  - [ ] Database metrics exported to monitoring system
+  - [ ] Slow query logging enabled
+  - [ ] Alerts configured for critical metrics
+  - [ ] Health check endpoint implemented
+
+- [ ] **Backup & Recovery**
+  - [ ] Automated backup schedule configured
+  - [ ] Backup verification process in place
+  - [ ] Recovery procedure documented and tested
+  - [ ] Point-in-time recovery tested
+
+- [ ] **Security**
+  - [ ] Database user has minimal required privileges
+  - [ ] Sensitive data encrypted at rest
+  - [ ] Audit logging enabled for critical operations
+  - [ ] Row-level security implemented where needed
+
+- [ ] **Performance**
+  - [ ] Indexes created for common query patterns
+  - [ ] N+1 queries eliminated
+  - [ ] Query performance tested under load
+  - [ ] Connection pool tested under load
+
+## Next Steps
+
+<Cards>
+  <Card
+    title="E-Commerce Example"
+    description="See production deployment patterns in a full e-commerce implementation."
+    href="/walkthroughs/e-commerce"
+  />
+  <Card
+    title="Analytics Pipeline"
+    description="Deploy analytics with three-tier storage and Iceberg integration."
+    href="/walkthroughs/analytics-pipeline"
+  />
+  <Card
+    title="Migration Workflow"
+    description="Learn how to migrate existing schemas to IceType."
+    href="/tutorials/migration-workflow"
+  />
+  <Card
+    title="Drizzle Integration"
+    description="Set up Drizzle ORM with IceType for type-safe queries."
+    href="/tutorials/drizzle-integration"
+  />
+</Cards>

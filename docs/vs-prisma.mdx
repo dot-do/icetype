@@ -1,0 +1,305 @@
+---
+title: IceType vs Prisma
+description: Comparing IceType and Prisma for schema definition and database management.
+---
+
+# IceType vs Prisma
+
+This page compares IceType with Prisma to help you understand when to use each tool and how they can work together.
+
+## Overview
+
+| Aspect | IceType | Prisma |
+|--------|---------|--------|
+| **Primary Purpose** | Schema definition and multi-target generation | ORM with database client |
+| **Schema Language** | TypeScript/JavaScript | Prisma Schema Language (PSL) |
+| **Type System** | TypeScript native | Custom DSL with generated types |
+| **Database Support** | Any (via adapters) | PostgreSQL, MySQL, SQLite, SQL Server, MongoDB |
+| **Query Engine** | None (generates for ORMs) | Built-in Prisma Client |
+| **Migrations** | Generates DDL (use external tools) | Built-in Prisma Migrate |
+| **Data Lake Support** | Native (Iceberg, Parquet) | None |
+
+## Schema Definition Comparison
+
+### Prisma Schema
+
+```prisma
+// schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  posts     Post[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id          String    @id @default(uuid())
+  title       String
+  content     String?
+  published   Boolean   @default(false)
+  author      User      @relation(fields: [authorId], references: [id])
+  authorId    String
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+```
+
+### IceType Schema
+
+```typescript
+// schema.ts
+import { parseSchema } from 'icetype';
+
+export const UserSchema = parseSchema({
+  $type: 'User',
+  $index: [['email'], ['createdAt']],
+
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string?',
+  posts: '<- Post.author[]',
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp?',
+});
+
+export const PostSchema = parseSchema({
+  $type: 'Post',
+  $index: [['authorId'], ['publishedAt']],
+
+  id: 'uuid!',
+  title: 'string!',
+  content: 'text?',
+  published: 'bool = false',
+  authorId: 'uuid!',
+  author: '-> User!',
+  publishedAt: 'timestamp?',
+  createdAt: 'timestamp',
+});
+```
+
+## Feature Comparison
+
+### Syntax Conciseness
+
+| Feature | Prisma | IceType |
+|---------|--------|---------|
+| Required field | `String` (default) | `'string!'` |
+| Optional field | `String?` | `'string?'` |
+| Unique field | `@unique` | `'#'` modifier |
+| Default value | `@default(value)` | `'type = value'` |
+| Relation | `@relation(fields: [...], references: [...])` | `'-> Entity'` / `'<- Entity.field[]'` |
+| Index | `@@index([field])` | `$index: [['field']]` |
+| UUID | `@default(uuid())` | `'uuid!'` (auto default) |
+
+### Type Mapping
+
+| Type | Prisma | IceType |
+|------|--------|---------|
+| String | `String` | `'string'` |
+| Long text | `String` | `'text'` |
+| Integer | `Int` | `'int'` |
+| Big integer | `BigInt` | `'long'` / `'bigint'` |
+| Float | `Float` | `'float'` |
+| Decimal | `Decimal` | `'decimal'` |
+| Boolean | `Boolean` | `'bool'` |
+| DateTime | `DateTime` | `'timestamp'` |
+| Date only | `DateTime` | `'date'` |
+| JSON | `Json` | `'json'` |
+| Bytes | `Bytes` | `'binary'` |
+| UUID | `String @default(uuid())` | `'uuid!'` |
+| Array | `Type[]` | `'type[]'` |
+
+## Use Cases
+
+### When to Use Prisma
+
+1. **Full-stack TypeScript applications** - Prisma provides an integrated ORM experience
+2. **Rapid prototyping** - Built-in migrations and studio make iteration fast
+3. **Single database target** - When you only need one database
+4. **Team familiar with Prisma** - Lower learning curve for existing Prisma users
+
+### When to Use IceType
+
+1. **Multi-database architecture** - Generate schemas for PostgreSQL, MySQL, SQLite, ClickHouse, etc.
+2. **Data lake integration** - Native support for Apache Iceberg and Parquet
+3. **Schema as code** - Keep schemas in TypeScript for better tooling
+4. **ORM flexibility** - Use with Drizzle, Prisma, or raw SQL
+5. **Analytics pipelines** - Same schema for OLTP and OLAP systems
+
+### When to Use Both
+
+IceType can generate Prisma schemas, enabling a workflow where:
+
+1. Define schemas in IceType (single source of truth)
+2. Generate Prisma schema for ORM features
+3. Generate Iceberg metadata for analytics
+4. Generate Drizzle schemas for type-safe queries
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { generatePrismaSchema } from '@icetype/prisma';
+import { transformToDrizzle } from '@icetype/drizzle';
+import { generateIcebergMetadata } from '@icetype/iceberg';
+
+// Single source of truth
+const schemas = [UserSchema, PostSchema];
+
+// Generate for Prisma ORM
+const prisma = generatePrismaSchema(schemas, { provider: 'postgresql' });
+
+// Generate for Drizzle ORM
+const drizzle = schemas.map(s => transformToDrizzle(s, { dialect: 'pg' }));
+
+// Generate for data lake
+const iceberg = schemas.map(s => generateIcebergMetadata(s, `s3://lake/${s.name}`));
+```
+
+## Migration Workflow
+
+### Prisma Migrations
+
+```bash
+# Generate migration
+npx prisma migrate dev --name add_posts
+
+# Apply migrations
+npx prisma migrate deploy
+
+# Reset database
+npx prisma migrate reset
+```
+
+### IceType with External Migrations
+
+```bash
+# Generate DDL
+npx icetype generate --format postgres -o migrations/001_initial.sql
+
+# Use external tool for migrations
+npx drizzle-kit migrate
+# or
+npx flyway migrate
+# or
+psql -f migrations/001_initial.sql
+```
+
+## Query Comparison
+
+### Prisma Client
+
+```typescript
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+// Find users with posts
+const users = await prisma.user.findMany({
+  where: { email: { contains: '@example.com' } },
+  include: { posts: true },
+});
+
+// Create user with post
+const user = await prisma.user.create({
+  data: {
+    email: 'user@example.com',
+    name: 'John',
+    posts: {
+      create: { title: 'First Post' },
+    },
+  },
+  include: { posts: true },
+});
+```
+
+### IceType + Drizzle
+
+```typescript
+import { db } from './db';
+import { user, post } from './db/schema';
+import { eq, like } from 'drizzle-orm';
+
+// Find users with posts
+const users = await db
+  .select()
+  .from(user)
+  .leftJoin(post, eq(post.authorId, user.id))
+  .where(like(user.email, '%@example.com%'));
+
+// Create user
+const [newUser] = await db
+  .insert(user)
+  .values({ email: 'user@example.com', name: 'John' })
+  .returning();
+
+// Create post
+await db.insert(post).values({
+  title: 'First Post',
+  authorId: newUser.id,
+});
+```
+
+## Performance Considerations
+
+| Aspect | Prisma | IceType + Drizzle |
+|--------|--------|-------------------|
+| Query generation | Runtime | Compile time |
+| Bundle size | ~2MB (query engine) | ~50KB |
+| Cold start | Slower (engine init) | Faster |
+| Edge deployment | Limited | Full support |
+| N+1 prevention | Built-in includes | Manual joins |
+
+## Interoperability
+
+### Import Prisma to IceType
+
+```typescript
+import { parsePrismaFile } from '@icetype/prisma';
+
+// Convert existing Prisma schema
+const schemas = await parsePrismaFile('./prisma/schema.prisma');
+
+// Now you can generate for other targets
+for (const schema of schemas) {
+  const iceberg = generateIcebergMetadata(schema, `s3://lake/${schema.$type}`);
+  // ...
+}
+```
+
+### Export IceType to Prisma
+
+```typescript
+import { generatePrismaSchema } from '@icetype/prisma';
+
+const prismaSchema = generatePrismaSchema([UserSchema, PostSchema], {
+  provider: 'postgresql',
+  databaseUrl: 'env("DATABASE_URL")',
+});
+
+writeFileSync('./prisma/schema.prisma', prismaSchema);
+```
+
+## Summary
+
+| Choose | When |
+|--------|------|
+| **Prisma only** | Single database, full-stack app, rapid development |
+| **IceType only** | Multi-target generation, data lake, analytics-focused |
+| **IceType + Prisma** | Want Prisma features but need multi-target support |
+| **IceType + Drizzle** | Edge deployment, minimal bundle, type-safe queries |
+
+## Next Steps
+
+- [IceType vs Drizzle](/vs-drizzle) - Compare with Drizzle ORM
+- [Migration Workflow](/tutorials/migration-workflow) - Migrate from Prisma to IceType
+- [Prisma API Reference](/api/prisma) - Full Prisma adapter documentation

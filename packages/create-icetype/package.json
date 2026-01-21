@@ -1,0 +1,53 @@
+{
+  "name": "create-icetype",
+  "version": "0.1.0",
+  "description": "Create IceType projects - scaffolds new schema-driven TypeScript projects",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "create-icetype": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "icetype",
+    "create",
+    "scaffold",
+    "generator",
+    "cli",
+    "schema",
+    "typescript"
+  ],
+  "author": "Nathan Clevenger",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dot-do/icetype.git"
+  },
+  "homepage": "https://github.com/dot-do/icetype",
+  "bugs": {
+    "url": "https://github.com/dot-do/icetype/issues"
+  },
+  "dependencies": {
+    "@icetype/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

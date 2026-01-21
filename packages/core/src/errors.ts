@@ -345,6 +345,63 @@ export class AdapterError extends IceTypeError {
 // =============================================================================
 
 /**
+ * Documentation links for common schema loading errors.
+ */
+export const SchemaLoadErrorDocs = {
+  /** Link to module resolution troubleshooting */
+  MODULE_RESOLUTION: 'https://icetype.dev/docs/troubleshooting/module-resolution',
+  /** Link to tsconfig path aliases setup */
+  PATH_ALIASES: 'https://icetype.dev/docs/guides/path-aliases',
+  /** Link to supported file types documentation */
+  FILE_TYPES: 'https://icetype.dev/docs/guides/schema-files',
+  /** Link to schema export format documentation */
+  SCHEMA_FORMAT: 'https://icetype.dev/docs/guides/schema-format',
+  /** Link to syntax error debugging guide */
+  SYNTAX_ERRORS: 'https://icetype.dev/docs/troubleshooting/syntax-errors',
+  /** Link to JSON schema format documentation */
+  JSON_FORMAT: 'https://icetype.dev/docs/guides/json-schemas',
+} as const;
+
+/**
+ * Suggestion for fixing a schema load error.
+ */
+export interface SchemaLoadSuggestion {
+  /** Short description of the suggestion */
+  message: string;
+  /** Optional command to run */
+  command?: string;
+  /** Link to relevant documentation */
+  docLink?: string;
+}
+
+/**
+ * Structured context for schema load errors.
+ */
+export interface SchemaLoadErrorContext {
+  /** The type of error encountered */
+  errorType: 'file_not_found' | 'unsupported_extension' | 'module_load' | 'syntax_error' |
+             'import_error' | 'runtime_error' | 'no_schemas_found' | 'json_parse' | 'unknown';
+  /** File path that caused the error */
+  filePath?: string;
+  /** File extension */
+  extension?: string;
+  /** Line number where error occurred (if available) */
+  line?: number;
+  /** Column number where error occurred (if available) */
+  column?: number;
+  /** Missing module name (for import errors) */
+  missingModule?: string;
+  /** Whether the error is from a path alias */
+  isPathAlias?: boolean;
+  /** Suggestions for fixing the error */
+  suggestions?: SchemaLoadSuggestion[];
+  /** Link to relevant documentation */
+  docLink?: string;
+  /** Additional data specific to the error type */
+  [key: string]: unknown;
+}
+
+/**
  * Options for SchemaLoadError.
  */
 export interface SchemaLoadErrorOptions extends IceTypeErrorOptions {
@@ -352,16 +409,40 @@ export interface SchemaLoadErrorOptions extends IceTypeErrorOptions {
   filePath?: string;
   /** File extension if relevant */
   extension?: string;
+  /** Structured error context */
+  errorContext?: SchemaLoadErrorContext;
 }
 
 /**
  * Error thrown when schema loading fails.
  *
+ * Provides structured error context for programmatic error handling:
+ * - Error type classification
+ * - Location information (file, line, column)
+ * - Actionable suggestions
+ * - Documentation links
+ *
  * @example
  * ```typescript
+ * // Basic usage
  * throw new SchemaLoadError('File not found', {
  *   filePath: './schema.ts',
  *   code: ErrorCodes.FILE_NOT_FOUND,
+ * });
+ *
+ * // With structured context
+ * throw new SchemaLoadError('Module not found', {
+ *   filePath: './schema.ts',
+ *   code: ErrorCodes.MODULE_LOAD_ERROR,
+ *   errorContext: {
+ *     errorType: 'import_error',
+ *     missingModule: '@myapp/shared',
+ *     isPathAlias: true,
+ *     suggestions: [
+ *       { message: 'Check your tsconfig.json paths configuration', docLink: SchemaLoadErrorDocs.PATH_ALIASES },
+ *     ],
+ *     docLink: SchemaLoadErrorDocs.MODULE_RESOLUTION,
+ *   },
  * });
  * ```
  */
@@ -370,9 +451,11 @@ export class SchemaLoadError extends IceTypeError {
   public readonly filePath?: string;
   /** File extension if relevant */
   public readonly extension?: string;
+  /** Structured error context */
+  public readonly errorContext?: SchemaLoadErrorContext;
 
   constructor(message: string, options: SchemaLoadErrorOptions = {}) {
-    const { filePath, extension } = options;
+    const { filePath, extension, errorContext } = options;
 
     let fullMessage = message;
     if (filePath) {
@@ -386,13 +469,112 @@ export class SchemaLoadError extends IceTypeError {
         ...options.context,
         filePath,
         extension,
+        errorContext,
       },
     });
     this.name = 'SchemaLoadError';
     this.filePath = filePath;
     this.extension = extension;
+    this.errorContext = errorContext;
 
     Object.setPrototypeOf(this, SchemaLoadError.prototype);
+  }
+
+  /**
+   * Format error with structured context, including suggestions and documentation links.
+   *
+   * @returns Formatted error string with suggestions and documentation links
+   */
+  override format(): string {
+    let output = super.format();
+
+    if (this.errorContext) {
+      const { suggestions, docLink, line, column } = this.errorContext;
+
+      // Add location info if available
+      if (line !== undefined && column !== undefined) {
+        output += `\n  Location: line ${line}, column ${column}`;
+      } else if (line !== undefined) {
+        output += `\n  Location: line ${line}`;
+      }
+
+      // Add suggestions
+      if (suggestions && suggestions.length > 0) {
+        output += '\n\n  Suggestions:';
+        for (const suggestion of suggestions) {
+          output += `\n    - ${suggestion.message}`;
+          if (suggestion.command) {
+            output += `\n      Run: ${suggestion.command}`;
+          }
+          if (suggestion.docLink) {
+            output += `\n      See: ${suggestion.docLink}`;
+          }
+        }
+      }
+
+      // Add documentation link
+      if (docLink) {
+        output += `\n\n  Documentation: ${docLink}`;
+      }
+    }
+
+    return output;
+  }
+
+  /**
+   * Get suggestions for fixing this error.
+   *
+   * @returns Array of suggestions, or empty array if none
+   */
+  getSuggestions(): SchemaLoadSuggestion[] {
+    return this.errorContext?.suggestions ?? [];
+  }
+
+  /**
+   * Get documentation link for this error.
+   *
+   * @returns Documentation URL or undefined
+   */
+  getDocLink(): string | undefined {
+    return this.errorContext?.docLink;
+  }
+
+  /**
+   * Check if this error has location information.
+   *
+   * @returns True if line number is available
+   */
+  hasLocation(): boolean {
+    return this.errorContext?.line !== undefined;
+  }
+
+  /**
+   * Get the location in file:line:column format for editor navigation.
+   *
+   * @returns Location string or undefined if not available
+   */
+  getLocationString(): string | undefined {
+    if (!this.errorContext?.line) return undefined;
+    const { line, column } = this.errorContext;
+    if (this.filePath) {
+      return column !== undefined
+        ? `${this.filePath}:${line}:${column}`
+        : `${this.filePath}:${line}`;
+    }
+    return column !== undefined ? `line ${line}, column ${column}` : `line ${line}`;
+  }
+
+  /**
+   * Convert error to a plain object for serialization.
+   * Includes errorContext for structured error handling.
+   */
+  override toJSON(): Record<string, unknown> {
+    return {
+      ...super.toJSON(),
+      filePath: this.filePath,
+      extension: this.extension,
+      errorContext: this.errorContext,
+    };
   }
 }
 

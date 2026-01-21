@@ -19,8 +19,21 @@ export default async function Page(props: {
 
   const MDXContent = page.data.body;
 
+  // Build the path to the source file in GitHub
+  // page.path is the virtualized path relative to the content directory (e.g., "api/core.mdx")
+  const filePath = page.path;
+
   return (
-    <DocsPage toc={page.data.toc} full={page.data.full}>
+    <DocsPage
+      toc={page.data.toc}
+      full={page.data.full}
+      editOnGithub={{
+        owner: 'dot-do',
+        repo: 'icetype',
+        sha: 'main',
+        path: `docs/${filePath}`,
+      }}
+    >
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>

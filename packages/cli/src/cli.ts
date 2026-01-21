@@ -166,17 +166,35 @@ const DRIZZLE_HELP: HelpCommand = {
 
 const MIGRATE_HELP: HelpCommand = {
   name: 'migrate',
-  description: 'Generate and manage database migrations',
+  description: `Generate and manage database migrations from IceType schemas.
+
+Supported dialects: postgres, clickhouse, duckdb
+
+Common workflow:
+  1. Edit your schema.ts file
+  2. Run 'ice migrate dev' to detect changes
+  3. Review the generated migration
+  4. Apply with --yes or manually execute the SQL`,
   usage: 'ice migrate <subcommand> [options]',
   options: [],
   subcommands: [
-    { name: 'generate', description: 'Generate migration from schema diff' },
-    { name: 'diff', description: 'Show diff between two schemas' },
-    { name: 'plan', description: 'Show migration plan without executing' },
+    { name: 'dev', description: 'Interactive development workflow - detect changes, generate & apply migrations' },
+    { name: 'generate', description: 'Generate migration from schema version diff' },
+    { name: 'diff', description: 'Compare two schema files and show differences' },
+    { name: 'plan', description: 'Show what SQL would be generated (preview mode)' },
   ],
   examples: [
-    'ice migrate generate --schema ./schema.ts --from 1 --to 2 --dialect postgres',
+    '# Most common: develop with automatic change detection',
+    'ice migrate dev --schema ./schema.ts --dialect postgres',
+    '',
+    '# Preview changes without applying',
+    'ice migrate dev --schema ./schema.ts --dialect postgres --dry-run',
+    '',
+    '# Compare two schema versions',
     'ice migrate diff --old ./schema-v1.ts --new ./schema-v2.ts',
+    '',
+    '# Generate migration between versions',
+    'ice migrate generate --schema ./schema.ts --from 1 --to 2 --dialect postgres',
     'ice migrate plan --schema ./schema.ts --dialect postgres',
   ],
 };
@@ -317,6 +335,7 @@ async function main() {
       case 'migrate':
         if (
           hasHelpFlag(commandArgs) &&
+          commandArgs[0] !== 'dev' &&
           commandArgs[0] !== 'generate' &&
           commandArgs[0] !== 'diff' &&
           commandArgs[0] !== 'plan'

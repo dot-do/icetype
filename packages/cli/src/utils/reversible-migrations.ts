@@ -89,6 +89,115 @@ export interface ReversibleMigrationOptions {
 }
 
 // =============================================================================
+// Safety and Validation Types
+// =============================================================================
+
+/**
+ * Represents a dangerous operation that requires confirmation.
+ */
+export interface DangerousOperation {
+  /** Type of dangerous operation */
+  type: 'data_loss' | 'schema_destruction' | 'type_narrowing' | 'constraint_change' | 'index_removal';
+  /** Severity level */
+  severity: 'warning' | 'critical';
+  /** Human-readable description */
+  description: string;
+  /** The SQL statement that is dangerous */
+  statement: string;
+  /** Suggested backup command */
+  backupSuggestion?: string;
+  /** Whether this operation requires explicit confirmation */
+  requiresConfirmation: boolean;
+}
+
+/**
+ * Result of pre-flight validation.
+ */
+export interface PreFlightValidationResult {
+  /** Whether the migration can proceed */
+  canProceed: boolean;
+  /** Dangerous operations that were detected */
+  dangerousOperations: DangerousOperation[];
+  /** Backup suggestions before running */
+  backupSuggestions: string[];
+  /** Common mistakes detected */
+  commonMistakes: MigrationMistake[];
+  /** Whether confirmation is required before running */
+  requiresConfirmation: boolean;
+  /** Summary message */
+  summary: string;
+}
+
+/**
+ * Represents a common mistake in migrations.
+ */
+export interface MigrationMistake {
+  /** Type of mistake */
+  type:
+    | 'missing_down'
+    | 'down_not_inverse'
+    | 'concurrent_without_lock'
+    | 'missing_default_for_not_null'
+    | 'dropping_with_foreign_key'
+    | 'renaming_without_index_update'
+    | 'type_change_without_cast'
+    | 'missing_if_exists'
+    | 'missing_if_not_exists';
+  /** Human-readable description */
+  description: string;
+  /** The problematic statement */
+  statement?: string;
+  /** Suggested fix */
+  suggestion: string;
+  /** Severity */
+  severity: 'info' | 'warning' | 'error';
+}
+
+/**
+ * Options for pre-flight validation.
+ */
+export interface PreFlightValidationOptions {
+  /** SQL dialect */
+  dialect: 'sqlite' | 'postgres' | 'mysql' | 'duckdb';
+  /** Check for common mistakes */
+  checkCommonMistakes?: boolean;
+  /** Validate DOWN section thoroughly */
+  validateDown?: boolean;
+  /** Require confirmation for critical operations */
+  requireConfirmation?: boolean;
+}
+
+/**
+ * Result of dry-run validation.
+ */
+export interface DryRunResult {
+  /** Whether the dry run passed */
+  passed: boolean;
+  /** Validation errors */
+  errors: string[];
+  /** Warnings */
+  warnings: string[];
+  /** Simulated state changes */
+  stateChanges: StateChange[];
+  /** Whether DOWN properly reverses UP */
+  downReversesUp: boolean;
+}
+
+/**
+ * Represents a state change from running a migration.
+ */
+export interface StateChange {
+  /** Type of change */
+  type: 'add_column' | 'drop_column' | 'rename_column' | 'change_type' | 'add_index' | 'drop_index' | 'add_constraint' | 'drop_constraint';
+  /** Table affected */
+  table: string;
+  /** Column affected (if applicable) */
+  column?: string;
+  /** Additional details */
+  details: Record<string, unknown>;
+}
+
+// =============================================================================
 // Type Mappings
 // =============================================================================
 
@@ -1040,4 +1149,855 @@ export function formatMigrationFile(migration: ReversibleMigration): string {
   }
 
   return lines.join('\n');
+}
+
+// =============================================================================
+// Pre-Flight Validation
+// =============================================================================
+
+/**
+ * Perform pre-flight validation before running a migration.
+ *
+ * This function checks for:
+ * - Dangerous operations that may cause data loss
+ * - Common mistakes in migration design
+ * - Whether the DOWN section properly reverses UP
+ * - Backup suggestions for destructive operations
+ *
+ * @param migration - The migration to validate
+ * @param options - Validation options
+ * @returns Pre-flight validation result
+ */
+export function preFlightValidation(
+  migration: ReversibleMigration,
+  options: PreFlightValidationOptions
+): PreFlightValidationResult {
+  const {
+    dialect,
+    checkCommonMistakes = true,
+    validateDown = true,
+    requireConfirmation = true,
+  } = options;
+
+  const dangerousOperations: DangerousOperation[] = [];
+  const backupSuggestions: string[] = [];
+  const commonMistakes: MigrationMistake[] = [];
+
+  // Detect dangerous operations in UP section
+  for (const stmt of migration.up) {
+    const dangerous = detectDangerousOperation(stmt, dialect);
+    if (dangerous) {
+      dangerousOperations.push(dangerous);
+
+      // Generate backup suggestion for this operation
+      const backup = generateBackupSuggestion(stmt, dialect);
+      if (backup) {
+        backupSuggestions.push(backup);
+      }
+    }
+  }
+
+  // Check for common mistakes
+  if (checkCommonMistakes) {
+    const mistakes = detectCommonMistakes(migration, dialect);
+    commonMistakes.push(...mistakes);
+  }
+
+  // Validate DOWN section
+  if (validateDown && migration.down.length > 0) {
+    const downMistakes = validateDownSection(migration, dialect);
+    commonMistakes.push(...downMistakes);
+  }
+
+  // Determine if confirmation is required
+  const hasCriticalOperations = dangerousOperations.some((op) => op.severity === 'critical');
+  const hasErrors = commonMistakes.some((m) => m.severity === 'error');
+  const needsConfirmation =
+    requireConfirmation &&
+    (hasCriticalOperations || dangerousOperations.some((op) => op.requiresConfirmation));
+
+  // Generate summary
+  const summary = generatePreFlightSummary(
+    dangerousOperations,
+    commonMistakes,
+    backupSuggestions
+  );
+
+  return {
+    canProceed: !hasErrors,
+    dangerousOperations,
+    backupSuggestions,
+    commonMistakes,
+    requiresConfirmation: needsConfirmation,
+    summary,
+  };
+}
+
+/**
+ * Detect dangerous operations in a SQL statement.
+ */
+function detectDangerousOperation(
+  stmt: string,
+  dialect: string
+): DangerousOperation | null {
+  const upper = stmt.toUpperCase();
+
+  // DROP TABLE - critical data loss
+  if (upper.includes('DROP TABLE')) {
+    const match = stmt.match(/DROP TABLE\s+(?:IF EXISTS\s+)?["'`]?(\w+)["'`]?/i);
+    const tableName = match?.[1] ?? 'unknown';
+
+    return {
+      type: 'schema_destruction',
+      severity: 'critical',
+      description: `Dropping table "${tableName}" will permanently delete all data and cannot be undone`,
+      statement: stmt,
+      backupSuggestion: `-- Backup before dropping:\n-- ${dialect === 'postgres' ? `pg_dump -t ${tableName} > ${tableName}_backup.sql` : dialect === 'mysql' ? `mysqldump --tables ${tableName} > ${tableName}_backup.sql` : `sqlite3 db.sqlite ".dump ${tableName}" > ${tableName}_backup.sql`}`,
+      requiresConfirmation: true,
+    };
+  }
+
+  // DROP COLUMN - data loss
+  if (upper.includes('DROP COLUMN')) {
+    const tableMatch = stmt.match(/ALTER TABLE\s+["'`]?(\w+)["'`]?/i);
+    const colMatch = stmt.match(/DROP COLUMN\s+["'`]?(\w+)["'`]?/i);
+    const tableName = tableMatch?.[1] ?? 'unknown';
+    const columnName = colMatch?.[1] ?? 'unknown';
+
+    return {
+      type: 'data_loss',
+      severity: 'critical',
+      description: `Dropping column "${columnName}" from table "${tableName}" will permanently delete data`,
+      statement: stmt,
+      backupSuggestion: `-- Backup column data before dropping:\nCREATE TABLE ${tableName}_${columnName}_backup AS SELECT id, ${columnName} FROM ${tableName};`,
+      requiresConfirmation: true,
+    };
+  }
+
+  // TRUNCATE - data loss
+  if (upper.includes('TRUNCATE')) {
+    const match = stmt.match(/TRUNCATE\s+(?:TABLE\s+)?["'`]?(\w+)["'`]?/i);
+    const tableName = match?.[1] ?? 'unknown';
+
+    return {
+      type: 'data_loss',
+      severity: 'critical',
+      description: `TRUNCATE on "${tableName}" will delete all rows and cannot be undone`,
+      statement: stmt,
+      backupSuggestion: `-- Backup before truncate:\nCREATE TABLE ${tableName}_backup AS SELECT * FROM ${tableName};`,
+      requiresConfirmation: true,
+    };
+  }
+
+  // DELETE without WHERE - potential data loss
+  if (upper.includes('DELETE FROM') && !upper.includes('WHERE')) {
+    const match = stmt.match(/DELETE FROM\s+["'`]?(\w+)["'`]?/i);
+    const tableName = match?.[1] ?? 'unknown';
+
+    return {
+      type: 'data_loss',
+      severity: 'critical',
+      description: `DELETE without WHERE clause on "${tableName}" will delete all rows`,
+      statement: stmt,
+      backupSuggestion: `-- Backup before delete:\nCREATE TABLE ${tableName}_backup AS SELECT * FROM ${tableName};`,
+      requiresConfirmation: true,
+    };
+  }
+
+  // Type narrowing - potential data loss
+  if (upper.includes('TYPE') && upper.includes('ALTER')) {
+    if (
+      upper.includes('SMALLINT') ||
+      upper.includes('TINYINT') ||
+      (upper.includes('VARCHAR') && /VARCHAR\s*\(\s*\d+\s*\)/i.test(upper))
+    ) {
+      const colMatch = stmt.match(/ALTER COLUMN\s+["'`]?(\w+)["'`]?/i);
+      const columnName = colMatch?.[1] ?? 'unknown';
+
+      return {
+        type: 'type_narrowing',
+        severity: 'warning',
+        description: `Type change on "${columnName}" may truncate data if values exceed new type limits`,
+        statement: stmt,
+        requiresConfirmation: true,
+      };
+    }
+  }
+
+  // DROP INDEX - not data loss but may affect performance
+  if (upper.includes('DROP INDEX')) {
+    const match = stmt.match(/DROP INDEX\s+(?:IF EXISTS\s+)?["'`]?(\w+)["'`]?/i);
+    const indexName = match?.[1] ?? 'unknown';
+
+    return {
+      type: 'index_removal',
+      severity: 'warning',
+      description: `Dropping index "${indexName}" may significantly impact query performance`,
+      statement: stmt,
+      requiresConfirmation: false,
+    };
+  }
+
+  // SET NOT NULL - may fail if NULLs exist
+  if (upper.includes('SET NOT NULL')) {
+    const colMatch = stmt.match(/ALTER COLUMN\s+["'`]?(\w+)["'`]?/i);
+    const columnName = colMatch?.[1] ?? 'unknown';
+
+    return {
+      type: 'constraint_change',
+      severity: 'warning',
+      description: `Setting NOT NULL on "${columnName}" will fail if existing NULL values exist`,
+      statement: stmt,
+      requiresConfirmation: false,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Generate a backup suggestion for a SQL statement.
+ */
+function generateBackupSuggestion(stmt: string, dialect: string): string | null {
+  const upper = stmt.toUpperCase();
+
+  // DROP TABLE
+  if (upper.includes('DROP TABLE')) {
+    const match = stmt.match(/DROP TABLE\s+(?:IF EXISTS\s+)?["'`]?(\w+)["'`]?/i);
+    const tableName = match?.[1] ?? 'table';
+
+    if (dialect === 'postgres') {
+      return `pg_dump -t ${tableName} database > ${tableName}_backup.sql`;
+    } else if (dialect === 'mysql') {
+      return `mysqldump database ${tableName} > ${tableName}_backup.sql`;
+    } else if (dialect === 'sqlite') {
+      return `sqlite3 database.db ".dump ${tableName}" > ${tableName}_backup.sql`;
+    } else {
+      return `-- Export table ${tableName} before dropping`;
+    }
+  }
+
+  // DROP COLUMN
+  if (upper.includes('DROP COLUMN')) {
+    const tableMatch = stmt.match(/ALTER TABLE\s+["'`]?(\w+)["'`]?/i);
+    const colMatch = stmt.match(/DROP COLUMN\s+["'`]?(\w+)["'`]?/i);
+    const tableName = tableMatch?.[1] ?? 'table';
+    const columnName = colMatch?.[1] ?? 'column';
+
+    return `CREATE TABLE ${tableName}_${columnName}_backup AS SELECT id, ${columnName} FROM ${tableName};`;
+  }
+
+  // TRUNCATE
+  if (upper.includes('TRUNCATE')) {
+    const match = stmt.match(/TRUNCATE\s+(?:TABLE\s+)?["'`]?(\w+)["'`]?/i);
+    const tableName = match?.[1] ?? 'table';
+
+    return `CREATE TABLE ${tableName}_backup AS SELECT * FROM ${tableName};`;
+  }
+
+  return null;
+}
+
+// =============================================================================
+// Common Mistakes Detection
+// =============================================================================
+
+/**
+ * Detect common mistakes in a migration.
+ */
+function detectCommonMistakes(
+  migration: ReversibleMigration,
+  dialect: string
+): MigrationMistake[] {
+  const mistakes: MigrationMistake[] = [];
+
+  // Check for missing DOWN section
+  if (migration.up.length > 0 && migration.down.length === 0) {
+    mistakes.push({
+      type: 'missing_down',
+      description: 'Migration has UP statements but no DOWN statements',
+      suggestion:
+        'Add DOWN statements to make the migration reversible. Use generateDownFromUp() to auto-generate them.',
+      severity: 'warning',
+    });
+  }
+
+  // Check each UP statement for common mistakes
+  for (const stmt of migration.up) {
+    const upper = stmt.toUpperCase();
+
+    // Missing IF NOT EXISTS for CREATE
+    if (upper.includes('CREATE TABLE') && !upper.includes('IF NOT EXISTS')) {
+      mistakes.push({
+        type: 'missing_if_not_exists',
+        description: 'CREATE TABLE without IF NOT EXISTS may fail if table already exists',
+        statement: stmt,
+        suggestion: 'Add IF NOT EXISTS to prevent errors on repeated runs',
+        severity: 'warning',
+      });
+    }
+
+    if (upper.includes('CREATE INDEX') && !upper.includes('IF NOT EXISTS')) {
+      mistakes.push({
+        type: 'missing_if_not_exists',
+        description: 'CREATE INDEX without IF NOT EXISTS may fail if index already exists',
+        statement: stmt,
+        suggestion: 'Add IF NOT EXISTS to prevent errors on repeated runs',
+        severity: 'info',
+      });
+    }
+
+    // Missing IF EXISTS for DROP
+    if (
+      (upper.includes('DROP TABLE') || upper.includes('DROP INDEX')) &&
+      !upper.includes('IF EXISTS')
+    ) {
+      mistakes.push({
+        type: 'missing_if_exists',
+        description: 'DROP without IF EXISTS may fail if object does not exist',
+        statement: stmt,
+        suggestion: 'Add IF EXISTS to prevent errors when running rollback multiple times',
+        severity: 'info',
+      });
+    }
+
+    // ADD COLUMN with NOT NULL but no DEFAULT
+    if (upper.includes('ADD COLUMN') && upper.includes('NOT NULL') && !upper.includes('DEFAULT')) {
+      // Check if the table might have data
+      const tableMatch = stmt.match(/ALTER TABLE\s+["'`]?(\w+)["'`]?/i);
+      const tableName = tableMatch?.[1] ?? 'table';
+
+      mistakes.push({
+        type: 'missing_default_for_not_null',
+        description: `Adding NOT NULL column without DEFAULT to "${tableName}" will fail if table has existing rows`,
+        statement: stmt,
+        suggestion:
+          'Either add a DEFAULT value, make the column nullable initially, or ensure the table is empty',
+        severity: 'error',
+      });
+    }
+
+    // Type change without USING clause (PostgreSQL specific)
+    if (
+      dialect === 'postgres' &&
+      upper.includes('TYPE') &&
+      upper.includes('ALTER COLUMN') &&
+      !upper.includes('USING')
+    ) {
+      // Check if types are incompatible
+      const typeMatch = stmt.match(/TYPE\s+(\w+)/i);
+      const newType = typeMatch?.[1]?.toUpperCase() ?? '';
+
+      // Warn for potentially incompatible conversions
+      if (['INTEGER', 'BIGINT', 'SMALLINT', 'REAL', 'DOUBLE'].includes(newType)) {
+        mistakes.push({
+          type: 'type_change_without_cast',
+          description: 'Type change without USING clause may fail for incompatible values',
+          statement: stmt,
+          suggestion: `Add USING clause for explicit conversion, e.g., TYPE ${newType} USING column::${newType}`,
+          severity: 'warning',
+        });
+      }
+    }
+  }
+
+  return mistakes;
+}
+
+/**
+ * Validate the DOWN section of a migration.
+ */
+function validateDownSection(
+  migration: ReversibleMigration,
+  dialect: string
+): MigrationMistake[] {
+  const mistakes: MigrationMistake[] = [];
+
+  // Check that DOWN statement count roughly matches UP
+  if (migration.up.length !== migration.down.length) {
+    const upCount = migration.up.length;
+    const downCount = migration.down.length;
+
+    // Not necessarily an error - some operations may combine or split
+    if (Math.abs(upCount - downCount) > upCount * 0.5) {
+      mistakes.push({
+        type: 'down_not_inverse',
+        description: `DOWN section has ${downCount} statements but UP has ${upCount} - significant mismatch`,
+        suggestion: 'Review DOWN section to ensure it properly reverses all UP operations',
+        severity: 'warning',
+      });
+    }
+  }
+
+  // Check for comment-only DOWN statements
+  const nonCommentDown = migration.down.filter((d) => !d.trim().startsWith('--'));
+  if (migration.up.length > 0 && nonCommentDown.length === 0) {
+    mistakes.push({
+      type: 'down_not_inverse',
+      description: 'DOWN section contains only comments, no actual SQL statements',
+      suggestion: 'Add proper DOWN statements to make migration reversible',
+      severity: 'warning',
+    });
+  }
+
+  // Check for placeholder/template statements in DOWN
+  for (const stmt of migration.down) {
+    if (
+      stmt.includes('<original_type>') ||
+      stmt.includes('<original_schema>') ||
+      stmt.includes('...')
+    ) {
+      mistakes.push({
+        type: 'down_not_inverse',
+        description: 'DOWN section contains placeholder that needs to be filled in',
+        statement: stmt,
+        suggestion: 'Replace placeholder with actual value',
+        severity: 'error',
+      });
+    }
+  }
+
+  return mistakes;
+}
+
+/**
+ * Generate pre-flight validation summary.
+ */
+function generatePreFlightSummary(
+  dangerousOps: DangerousOperation[],
+  mistakes: MigrationMistake[],
+  backups: string[]
+): string {
+  const lines: string[] = [];
+
+  const criticalCount = dangerousOps.filter((op) => op.severity === 'critical').length;
+  const warningCount = dangerousOps.filter((op) => op.severity === 'warning').length;
+  const errorCount = mistakes.filter((m) => m.severity === 'error').length;
+  const mistakeWarningCount = mistakes.filter((m) => m.severity === 'warning').length;
+
+  if (criticalCount > 0) {
+    lines.push(`CRITICAL: ${criticalCount} operation(s) will cause data loss`);
+  }
+
+  if (warningCount > 0) {
+    lines.push(`WARNING: ${warningCount} potentially dangerous operation(s) detected`);
+  }
+
+  if (errorCount > 0) {
+    lines.push(`ERROR: ${errorCount} issue(s) that may cause migration to fail`);
+  }
+
+  if (mistakeWarningCount > 0) {
+    lines.push(`INFO: ${mistakeWarningCount} common mistake(s) detected`);
+  }
+
+  if (backups.length > 0) {
+    lines.push(`BACKUP: ${backups.length} backup suggestion(s) available`);
+  }
+
+  if (lines.length === 0) {
+    lines.push('OK: Migration passed pre-flight validation');
+  }
+
+  return lines.join('\n');
+}
+
+// =============================================================================
+// Dry Run Validation
+// =============================================================================
+
+/**
+ * Perform a dry run of a migration to validate UP and DOWN sections.
+ *
+ * This simulates running the migration without actually executing SQL,
+ * tracking state changes to verify that DOWN properly reverses UP.
+ *
+ * @param migration - The migration to validate
+ * @param dialect - SQL dialect
+ * @returns Dry run result
+ */
+export function dryRunValidation(
+  migration: ReversibleMigration,
+  dialect: string
+): DryRunResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const upChanges: StateChange[] = [];
+  const downChanges: StateChange[] = [];
+
+  // Parse UP statements to extract state changes
+  for (const stmt of migration.up) {
+    const change = parseStateChange(stmt);
+    if (change) {
+      upChanges.push(change);
+    }
+  }
+
+  // Parse DOWN statements
+  for (const stmt of migration.down) {
+    const change = parseStateChange(stmt);
+    if (change) {
+      downChanges.push(change);
+    }
+  }
+
+  // Verify that DOWN reverses UP
+  const downReversesUp = verifyDownReversesUp(upChanges, downChanges, errors);
+
+  // Check for common issues
+  if (migration.up.length > 0 && migration.down.length === 0) {
+    errors.push('Migration has no DOWN section - cannot be rolled back');
+  }
+
+  // Validate individual statements
+  for (const stmt of migration.up) {
+    const stmtWarnings = validateStatement(stmt, dialect);
+    warnings.push(...stmtWarnings);
+  }
+
+  for (const stmt of migration.down) {
+    // Skip comments
+    if (stmt.trim().startsWith('--')) continue;
+
+    const stmtWarnings = validateStatement(stmt, dialect);
+    warnings.push(...stmtWarnings);
+  }
+
+  return {
+    passed: errors.length === 0,
+    errors,
+    warnings,
+    stateChanges: upChanges,
+    downReversesUp,
+  };
+}
+
+/**
+ * Parse a SQL statement to extract the state change it represents.
+ */
+function parseStateChange(stmt: string): StateChange | null {
+  const upper = stmt.toUpperCase();
+
+  // Skip comments
+  if (stmt.trim().startsWith('--')) {
+    return null;
+  }
+
+  // ADD COLUMN
+  if (upper.includes('ADD COLUMN')) {
+    const tableMatch = stmt.match(/ALTER TABLE\s+["'`]?(\w+)["'`]?/i);
+    const colMatch = stmt.match(/ADD COLUMN\s+["'`]?(\w+)["'`]?\s+(\w+)/i);
+
+    return {
+      type: 'add_column',
+      table: tableMatch?.[1] ?? 'unknown',
+      column: colMatch?.[1],
+      details: { columnType: colMatch?.[2] },
+    };
+  }
+
+  // DROP COLUMN
+  if (upper.includes('DROP COLUMN')) {
+    const tableMatch = stmt.match(/ALTER TABLE\s+["'`]?(\w+)["'`]?/i);
+    const colMatch = stmt.match(/DROP COLUMN\s+["'`]?(\w+)["'`]?/i);
+
+    return {
+      type: 'drop_column',
+      table: tableMatch?.[1] ?? 'unknown',
+      column: colMatch?.[1],
+      details: {},
+    };
+  }
+
+  // RENAME COLUMN
+  if (upper.includes('RENAME COLUMN')) {
+    const tableMatch = stmt.match(/ALTER TABLE\s+["'`]?(\w+)["'`]?/i);
+    const renameMatch = stmt.match(/RENAME COLUMN\s+["'`]?(\w+)["'`]?\s+TO\s+["'`]?(\w+)["'`]?/i);
+
+    return {
+      type: 'rename_column',
+      table: tableMatch?.[1] ?? 'unknown',
+      column: renameMatch?.[1],
+      details: { newName: renameMatch?.[2] },
+    };
+  }
+
+  // ALTER TYPE
+  if (upper.includes('TYPE') && upper.includes('ALTER COLUMN')) {
+    const tableMatch = stmt.match(/ALTER TABLE\s+["'`]?(\w+)["'`]?/i);
+    const colMatch = stmt.match(/ALTER COLUMN\s+["'`]?(\w+)["'`]?/i);
+    const typeMatch = stmt.match(/TYPE\s+(\w+)/i);
+
+    return {
+      type: 'change_type',
+      table: tableMatch?.[1] ?? 'unknown',
+      column: colMatch?.[1],
+      details: { newType: typeMatch?.[1] },
+    };
+  }
+
+  // CREATE INDEX
+  if (upper.includes('CREATE INDEX')) {
+    const indexMatch = stmt.match(/CREATE INDEX\s+(?:IF NOT EXISTS\s+)?["'`]?(\w+)["'`]?/i);
+    const tableMatch = stmt.match(/ON\s+["'`]?(\w+)["'`]?/i);
+    const colsMatch = stmt.match(/\(\s*([\w\s,"'`]+)\s*\)/i);
+
+    return {
+      type: 'add_index',
+      table: tableMatch?.[1] ?? 'unknown',
+      details: {
+        indexName: indexMatch?.[1],
+        columns: colsMatch?.[1]?.split(',').map((c) => c.trim().replace(/["'`]/g, '')),
+      },
+    };
+  }
+
+  // DROP INDEX
+  if (upper.includes('DROP INDEX')) {
+    const indexMatch = stmt.match(/DROP INDEX\s+(?:IF EXISTS\s+)?["'`]?(\w+)["'`]?/i);
+
+    return {
+      type: 'drop_index',
+      table: 'unknown', // Index drops don't always specify table
+      details: { indexName: indexMatch?.[1] },
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Verify that DOWN changes properly reverse UP changes.
+ */
+function verifyDownReversesUp(
+  upChanges: StateChange[],
+  downChanges: StateChange[],
+  errors: string[]
+): boolean {
+  // Reverse order for comparison (DOWN should undo in reverse order)
+  const reversedDown = [...downChanges];
+
+  // Check that each UP change has a corresponding DOWN reversal
+  for (let i = 0; i < upChanges.length; i++) {
+    const upChange = upChanges[i];
+    const expectedDownIdx = upChanges.length - 1 - i;
+    const downChange = reversedDown[expectedDownIdx];
+
+    if (!downChange) {
+      errors.push(`Missing DOWN statement for UP: ${upChange.type} on ${upChange.table}.${upChange.column ?? ''}`);
+      continue;
+    }
+
+    // Verify the DOWN change is the inverse of the UP change
+    if (!isInverseChange(upChange, downChange)) {
+      errors.push(
+        `DOWN does not reverse UP: UP=${upChange.type} on ${upChange.table}.${upChange.column ?? ''}, DOWN=${downChange.type} on ${downChange.table}.${downChange.column ?? ''}`
+      );
+    }
+  }
+
+  return errors.length === 0;
+}
+
+/**
+ * Check if a DOWN change is the inverse of an UP change.
+ */
+function isInverseChange(upChange: StateChange, downChange: StateChange): boolean {
+  // ADD -> DROP
+  if (upChange.type === 'add_column' && downChange.type === 'drop_column') {
+    return (
+      upChange.table.toLowerCase() === downChange.table.toLowerCase() &&
+      upChange.column?.toLowerCase() === downChange.column?.toLowerCase()
+    );
+  }
+
+  // DROP -> ADD
+  if (upChange.type === 'drop_column' && downChange.type === 'add_column') {
+    return (
+      upChange.table.toLowerCase() === downChange.table.toLowerCase() &&
+      upChange.column?.toLowerCase() === downChange.column?.toLowerCase()
+    );
+  }
+
+  // RENAME -> reverse RENAME
+  if (upChange.type === 'rename_column' && downChange.type === 'rename_column') {
+    return (
+      upChange.table.toLowerCase() === downChange.table.toLowerCase() &&
+      upChange.column?.toLowerCase() === (downChange.details.newName as string)?.toLowerCase() &&
+      (upChange.details.newName as string)?.toLowerCase() === downChange.column?.toLowerCase()
+    );
+  }
+
+  // TYPE change -> TYPE change (back to original)
+  if (upChange.type === 'change_type' && downChange.type === 'change_type') {
+    return (
+      upChange.table.toLowerCase() === downChange.table.toLowerCase() &&
+      upChange.column?.toLowerCase() === downChange.column?.toLowerCase()
+    );
+  }
+
+  // CREATE INDEX -> DROP INDEX
+  if (upChange.type === 'add_index' && downChange.type === 'drop_index') {
+    const upIndexName = (upChange.details.indexName as string)?.toLowerCase();
+    const downIndexName = (downChange.details.indexName as string)?.toLowerCase();
+    return upIndexName === downIndexName;
+  }
+
+  // DROP INDEX -> CREATE INDEX
+  if (upChange.type === 'drop_index' && downChange.type === 'add_index') {
+    const upIndexName = (upChange.details.indexName as string)?.toLowerCase();
+    const downIndexName = (downChange.details.indexName as string)?.toLowerCase();
+    return upIndexName === downIndexName;
+  }
+
+  return false;
+}
+
+/**
+ * Validate a single SQL statement and return warnings.
+ */
+function validateStatement(stmt: string, dialect: string): string[] {
+  const warnings: string[] = [];
+  const upper = stmt.toUpperCase();
+
+  // Check for potentially problematic patterns
+  if (upper.includes('CASCADE') && (upper.includes('DROP') || upper.includes('TRUNCATE'))) {
+    warnings.push(`CASCADE detected in statement: "${stmt.slice(0, 50)}..." - this may affect related objects`);
+  }
+
+  // Check for transaction control in migration
+  if (upper.includes('BEGIN') || upper.includes('COMMIT') || upper.includes('ROLLBACK')) {
+    warnings.push('Transaction control statement detected - migrations should typically not manage their own transactions');
+  }
+
+  // Check for LOCK statements
+  if (upper.includes('LOCK TABLE')) {
+    warnings.push('LOCK TABLE detected - ensure this is necessary and will not cause deadlocks');
+  }
+
+  return warnings;
+}
+
+// =============================================================================
+// Enhanced Validation
+// =============================================================================
+
+/**
+ * Comprehensive validation that checks both UP and DOWN sections.
+ *
+ * @param migration - The migration to validate
+ * @param dialect - SQL dialect
+ * @returns Full validation result
+ */
+export function comprehensiveValidation(
+  migration: ReversibleMigration,
+  dialect: string
+): {
+  preFlightResult: PreFlightValidationResult;
+  reversibilityResult: MigrationValidationResult;
+  dryRunResult: DryRunResult;
+  overallValid: boolean;
+  overallSummary: string;
+} {
+  // Run pre-flight validation
+  const preFlightResult = preFlightValidation(migration, {
+    dialect: dialect as 'sqlite' | 'postgres' | 'mysql' | 'duckdb',
+    checkCommonMistakes: true,
+    validateDown: true,
+    requireConfirmation: true,
+  });
+
+  // Run reversibility validation
+  const reversibilityResult = validateReversibility(migration);
+
+  // Run dry-run validation
+  const dryRunResult = dryRunValidation(migration, dialect);
+
+  // Determine overall validity
+  const overallValid =
+    preFlightResult.canProceed &&
+    reversibilityResult.valid &&
+    dryRunResult.passed;
+
+  // Generate overall summary
+  const summaryLines: string[] = [];
+
+  if (!overallValid) {
+    summaryLines.push('MIGRATION VALIDATION FAILED');
+    summaryLines.push('');
+  } else if (preFlightResult.requiresConfirmation) {
+    summaryLines.push('MIGRATION REQUIRES CONFIRMATION');
+    summaryLines.push('');
+  } else {
+    summaryLines.push('MIGRATION PASSED ALL VALIDATION CHECKS');
+    summaryLines.push('');
+  }
+
+  // Add pre-flight summary
+  if (preFlightResult.dangerousOperations.length > 0) {
+    summaryLines.push(`Dangerous operations: ${preFlightResult.dangerousOperations.length}`);
+    for (const op of preFlightResult.dangerousOperations) {
+      summaryLines.push(`  - [${op.severity.toUpperCase()}] ${op.description}`);
+    }
+  }
+
+  // Add reversibility info
+  if (!reversibilityResult.isReversible) {
+    summaryLines.push('');
+    summaryLines.push('Reversibility issues:');
+    for (const op of reversibilityResult.irreversibleOperations) {
+      summaryLines.push(`  - ${op.type}: ${op.reason}`);
+    }
+  }
+
+  // Add common mistakes
+  if (preFlightResult.commonMistakes.length > 0) {
+    summaryLines.push('');
+    summaryLines.push('Common mistakes detected:');
+    for (const mistake of preFlightResult.commonMistakes) {
+      summaryLines.push(`  - [${mistake.severity.toUpperCase()}] ${mistake.description}`);
+    }
+  }
+
+  // Add backup suggestions
+  if (preFlightResult.backupSuggestions.length > 0) {
+    summaryLines.push('');
+    summaryLines.push('Backup suggestions:');
+    for (const backup of preFlightResult.backupSuggestions) {
+      summaryLines.push(`  ${backup}`);
+    }
+  }
+
+  return {
+    preFlightResult,
+    reversibilityResult,
+    dryRunResult,
+    overallValid,
+    overallSummary: summaryLines.join('\n'),
+  };
+}
+
+/**
+ * Get required confirmations for dangerous operations.
+ *
+ * @param migration - The migration to analyze
+ * @param dialect - SQL dialect
+ * @returns Array of confirmation messages to display to user
+ */
+export function getRequiredConfirmations(
+  migration: ReversibleMigration,
+  dialect: string
+): string[] {
+  const confirmations: string[] = [];
+
+  for (const stmt of migration.up) {
+    const dangerous = detectDangerousOperation(stmt, dialect);
+    if (dangerous?.requiresConfirmation) {
+      confirmations.push(
+        `${dangerous.severity.toUpperCase()}: ${dangerous.description}\n  Statement: ${stmt.slice(0, 100)}${stmt.length > 100 ? '...' : ''}`
+      );
+    }
+  }
+
+  return confirmations;
 }

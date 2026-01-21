@@ -1,0 +1,477 @@
+---
+title: Migration Workflow
+description: Complete guide to migrating your existing database schemas to IceType.
+---
+
+# Migration Workflow
+
+This tutorial walks you through migrating an existing database schema to IceType, allowing you to leverage type-safe schema definitions and multi-target code generation.
+
+## Overview
+
+The migration workflow consists of four main phases:
+
+1. **Assess** - Analyze your current schema
+2. **Import** - Convert existing schema to IceType
+3. **Validate** - Verify the converted schema
+4. **Generate** - Produce outputs for your target platforms
+
+## Prerequisites
+
+Before starting, ensure you have:
+
+```bash
+npm install icetype @icetype/core
+# Install adapters for your source and targets
+npm install @icetype/prisma @icetype/drizzle @icetype/postgres
+```
+
+## Phase 1: Assess Your Current Schema
+
+### Understanding Your Source
+
+Before migrating, document your existing schema:
+
+```typescript
+// Example: Document what you're migrating from
+// Source: PostgreSQL database with Prisma ORM
+// Tables: User, Post, Comment, Category
+// Special features: Full-text search on posts, UUID primary keys
+```
+
+### Identify Schema Features
+
+Make note of:
+- Primary key types (UUID, serial, CUID)
+- Indexes (unique, composite, partial)
+- Relations (one-to-one, one-to-many, many-to-many)
+- Default values and generated columns
+- Full-text search fields
+- JSON columns
+
+## Phase 2: Import Existing Schema
+
+### From Prisma
+
+If you're using Prisma, import your schema directly:
+
+```typescript
+import { parsePrismaFile } from '@icetype/prisma';
+
+// Import from Prisma schema file
+const schemas = await parsePrismaFile('./prisma/schema.prisma', {
+  includeRelations: true,
+  convertUniqueToIndexed: true,
+});
+
+// Inspect the converted schemas
+for (const schema of schemas) {
+  console.log(`Converted: ${schema.$type}`);
+  console.log(JSON.stringify(schema, null, 2));
+}
+```
+
+**Example Prisma to IceType conversion:**
+
+```prisma
+// Original Prisma schema
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  posts     Post[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id        String   @id @default(uuid())
+  title     String
+  content   String?
+  published Boolean  @default(false)
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  createdAt DateTime @default(now())
+}
+```
+
+Converts to:
+
+```typescript
+// Equivalent IceType schemas
+const UserSchema = parseSchema({
+  $type: 'User',
+
+  id: 'uuid!',
+  email: 'string#',      // # indicates indexed/unique
+  name: 'string?',
+  posts: '<- Post.author[]',
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp?',
+});
+
+const PostSchema = parseSchema({
+  $type: 'Post',
+  $index: [['authorId']],
+
+  id: 'uuid!',
+  title: 'string!',
+  content: 'text?',
+  published: 'bool = false',
+  authorId: 'uuid!',
+  author: '-> User!',
+  createdAt: 'timestamp',
+});
+```
+
+### From Drizzle
+
+Import existing Drizzle schemas:
+
+```typescript
+import { parseDrizzleFile } from '@icetype/drizzle';
+
+const schemas = await parseDrizzleFile('./drizzle/schema.ts');
+
+for (const schema of schemas) {
+  console.log(`Converted: ${schema.name}`);
+}
+```
+
+### From Raw SQL
+
+For raw SQL schemas, you can manually convert or use a helper script:
+
+```typescript
+import { parseSchema } from 'icetype';
+
+// Manual conversion from SQL DDL
+// CREATE TABLE users (
+//   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+//   email VARCHAR(255) UNIQUE NOT NULL,
+//   name VARCHAR(255),
+//   created_at TIMESTAMPTZ DEFAULT NOW()
+// );
+
+const UserSchema = parseSchema({
+  $type: 'User',
+
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string?',
+  createdAt: 'timestamp',
+});
+```
+
+### Handling Complex Types
+
+#### JSON Columns
+
+```typescript
+// SQL: metadata JSONB
+// Prisma: metadata Json
+// IceType:
+const schema = parseSchema({
+  $type: 'Config',
+  id: 'uuid!',
+  settings: 'json',      // Generic JSON
+  metadata: 'json?',     // Optional JSON
+});
+```
+
+#### Arrays
+
+```typescript
+// SQL: tags TEXT[]
+// Prisma: tags String[]
+// IceType:
+const schema = parseSchema({
+  $type: 'Post',
+  id: 'uuid!',
+  tags: 'string[]',
+  scores: 'int[]?',      // Optional array
+});
+```
+
+#### Enums
+
+```typescript
+// SQL: status user_status (ENUM)
+// Prisma: status UserStatus
+// IceType: Use string with documented values
+const schema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  // Status: 'active' | 'inactive' | 'pending'
+  status: 'string = "pending"',
+});
+```
+
+## Phase 3: Validate the Converted Schema
+
+### Schema Validation
+
+Always validate your converted schemas:
+
+```typescript
+import { parseSchema, validateSchema } from 'icetype';
+
+const schema = parseSchema({
+  $type: 'User',
+  $index: [['email'], ['createdAt']],
+
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+  createdAt: 'timestamp',
+});
+
+const result = validateSchema(schema);
+
+if (!result.valid) {
+  console.error('Validation errors:');
+  for (const error of result.errors) {
+    console.error(`  [${error.code}] ${error.message}`);
+  }
+  process.exit(1);
+}
+
+console.log('Schema is valid!');
+```
+
+### Cross-Reference Check
+
+Compare your IceType schema against the original:
+
+```typescript
+import { parseSchema, generateTypeScript } from 'icetype';
+
+// Generate TypeScript interfaces
+const typescript = generateTypeScript(schema);
+console.log(typescript);
+
+// Compare with your existing TypeScript types
+// Ensure field names and types match
+```
+
+### Test Data Compatibility
+
+```typescript
+import { inferType } from 'icetype';
+
+// Test that your existing data matches the schema
+const sampleData = {
+  id: '550e8400-e29b-41d4-a716-446655440000',
+  email: 'user@example.com',
+  name: 'John Doe',
+  createdAt: new Date().toISOString(),
+};
+
+// Verify each field type
+for (const [key, value] of Object.entries(sampleData)) {
+  const inferred = inferType(value);
+  console.log(`${key}: ${inferred}`);
+}
+```
+
+## Phase 4: Generate Outputs
+
+### Generate for Multiple Targets
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { transformToPostgresDDL } from '@icetype/postgres';
+import { transformToDrizzle } from '@icetype/drizzle';
+import { generatePrismaSchema } from '@icetype/prisma';
+import { generateIcebergMetadata } from '@icetype/iceberg';
+
+const schemas = [userSchema, postSchema, commentSchema];
+
+// PostgreSQL DDL for production database
+const postgresDDL = schemas
+  .map(s => transformToPostgresDDL(s, { ifNotExists: true }))
+  .join('\n\n');
+
+// Drizzle ORM for application code
+const drizzleSchema = transformToDrizzle(schemas[0], { dialect: 'pg' });
+
+// Prisma for existing Prisma projects
+const prismaSchema = generatePrismaSchema(schemas, {
+  provider: 'postgresql',
+});
+
+// Iceberg for data lake
+const icebergMetadata = generateIcebergMetadata(
+  schemas[0],
+  's3://data-lake/users'
+);
+```
+
+### Write Generated Files
+
+```typescript
+import { writeFileSync, mkdirSync } from 'fs';
+
+// Create output directories
+mkdirSync('./generated', { recursive: true });
+mkdirSync('./drizzle', { recursive: true });
+
+// Write outputs
+writeFileSync('./generated/schema.sql', postgresDDL);
+writeFileSync('./drizzle/schema.ts', drizzleSchema);
+writeFileSync('./prisma/schema.prisma', prismaSchema);
+writeFileSync('./iceberg/user-metadata.json', JSON.stringify(icebergMetadata, null, 2));
+
+console.log('Generated all schema outputs!');
+```
+
+## Migration Script Template
+
+Here's a complete migration script you can adapt:
+
+```typescript
+// migrate-schema.ts
+import { parseSchema, validateSchema } from 'icetype';
+import { parsePrismaFile } from '@icetype/prisma';
+import { transformToPostgresDDL } from '@icetype/postgres';
+import { transformToDrizzle } from '@icetype/drizzle';
+import { writeFileSync, mkdirSync } from 'fs';
+
+async function migrate() {
+  console.log('Phase 1: Importing existing schema...');
+
+  // Import from Prisma
+  const schemas = await parsePrismaFile('./prisma/schema.prisma');
+  console.log(`Imported ${schemas.length} models`);
+
+  console.log('\nPhase 2: Validating schemas...');
+
+  const parsedSchemas = schemas.map(s => {
+    const parsed = parseSchema(s);
+    const result = validateSchema(parsed);
+
+    if (!result.valid) {
+      console.error(`Validation failed for ${s.$type}:`, result.errors);
+      throw new Error(`Schema validation failed`);
+    }
+
+    console.log(`  [OK] ${s.$type}`);
+    return parsed;
+  });
+
+  console.log('\nPhase 3: Generating outputs...');
+
+  mkdirSync('./generated', { recursive: true });
+
+  // Generate PostgreSQL DDL
+  const ddl = parsedSchemas
+    .map(s => transformToPostgresDDL(s, { ifNotExists: true }))
+    .join('\n\n');
+  writeFileSync('./generated/schema.sql', ddl);
+  console.log('  [OK] PostgreSQL DDL -> ./generated/schema.sql');
+
+  // Generate Drizzle schema
+  for (const schema of parsedSchemas) {
+    const drizzle = transformToDrizzle(schema, { dialect: 'pg' });
+    writeFileSync(`./generated/${schema.name.toLowerCase()}.drizzle.ts`, drizzle);
+    console.log(`  [OK] Drizzle -> ./generated/${schema.name.toLowerCase()}.drizzle.ts`);
+  }
+
+  // Save IceType schemas for future use
+  const iceTypeExport = parsedSchemas.map(s => ({
+    $type: s.name,
+    ...Object.fromEntries(s.fields),
+  }));
+  writeFileSync(
+    './generated/schemas.json',
+    JSON.stringify(iceTypeExport, null, 2)
+  );
+  console.log('  [OK] IceType schemas -> ./generated/schemas.json');
+
+  console.log('\nMigration complete!');
+}
+
+migrate().catch(console.error);
+```
+
+## Incremental Migration Strategy
+
+For large projects, consider an incremental approach:
+
+### Step 1: Start with Core Entities
+
+```typescript
+// Week 1: Migrate User and Auth schemas
+const coreSchemas = ['User', 'Session', 'Account'];
+
+const schemas = await parsePrismaFile('./prisma/schema.prisma');
+const core = schemas.filter(s => coreSchemas.includes(s.$type));
+```
+
+### Step 2: Add Feature Modules
+
+```typescript
+// Week 2: Add content schemas
+const contentSchemas = ['Post', 'Comment', 'Category'];
+```
+
+### Step 3: Complete Migration
+
+```typescript
+// Week 3: Migrate remaining schemas
+const remaining = schemas.filter(s =>
+  !coreSchemas.includes(s.$type) &&
+  !contentSchemas.includes(s.$type)
+);
+```
+
+## Common Migration Issues
+
+### Issue: Type Mismatches
+
+```typescript
+// Problem: Prisma uses String for UUIDs
+// Solution: IceType distinguishes uuid from string
+
+// Before (from Prisma import)
+{ id: 'string!' }
+
+// After (corrected)
+{ id: 'uuid!' }
+```
+
+### Issue: Missing Indexes
+
+```typescript
+// Problem: Indexes not captured during import
+// Solution: Add $index directive manually
+
+const schema = parseSchema({
+  $type: 'Event',
+  $index: [['userId'], ['createdAt']],  // Add missing indexes
+
+  id: 'uuid!',
+  userId: 'uuid!',
+  createdAt: 'timestamp',
+});
+```
+
+### Issue: Relation Syntax
+
+```typescript
+// Problem: Relations need adjustment
+// Solution: Use IceType relation syntax
+
+// Forward relation (has foreign key)
+author: '-> User!',
+
+// Backward relation (referenced by other table)
+posts: '<- Post.author[]',
+```
+
+## Next Steps
+
+- [Drizzle Integration](/tutorials/drizzle-integration) - Deep dive into Drizzle ORM integration
+- [Iceberg Analytics](/tutorials/iceberg-analytics) - Set up data lake integration
+- [Examples](/examples) - More schema patterns and use cases
+- [Core API Reference](/api/core) - Detailed API documentation for `parseSchema`, `validateSchema`, and more

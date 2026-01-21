@@ -89,6 +89,23 @@ export interface WatchConfig {
 }
 
 /**
+ * Nullable style for TypeScript type generation.
+ *
+ * - 'union': T | null | undefined (default, most permissive)
+ * - 'optional': T | undefined (TypeScript optional style)
+ * - 'strict': T | null (SQL-style null)
+ */
+export type NullableStyle = 'union' | 'optional' | 'strict';
+
+/**
+ * TypeScript generation configuration.
+ */
+export interface GenerateConfig {
+  /** Nullable style for optional fields. Default: 'union' */
+  nullableStyle?: NullableStyle;
+}
+
+/**
  * IceType project configuration.
  *
  * @example
@@ -117,6 +134,8 @@ export interface IceTypeConfig {
   adapters?: AdaptersConfig;
   /** Watch mode configuration. */
   watch?: WatchConfig;
+  /** TypeScript generation configuration. */
+  generate?: GenerateConfig;
   /** Suppress non-error output. */
   quiet?: boolean;
   /** Enable verbose logging. */

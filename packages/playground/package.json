@@ -1,7 +1,7 @@
 {
-  "name": "@icetype/playground",
+  "name": "@icetype/playground-core",
   "version": "0.1.0",
-  "description": "Interactive web playground for IceType schemas",
+  "description": "Core library for IceType playground - schema parsing, type generation, and SQL output",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

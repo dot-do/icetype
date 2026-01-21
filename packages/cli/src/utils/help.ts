@@ -47,9 +47,22 @@ export interface HelpCommand {
 export function generateHelpText(command: HelpCommand): string {
   const lines: string[] = [];
 
-  // Header
-  lines.push(`ice ${command.name} - ${command.description}`);
+  // Header - split description on newline and use first line for header
+  const descLines = command.description.split('\n');
+  const shortDesc = (descLines[0] ?? '').trim();
+  lines.push(`ice ${command.name} - ${shortDesc}`);
   lines.push('');
+
+  // If description has multiple lines, add them as a description block
+  if (descLines.length > 1) {
+    lines.push('Description:');
+    for (let i = 1; i < descLines.length; i++) {
+      const line = descLines[i] ?? '';
+      // Preserve indentation for multi-line descriptions
+      lines.push(line ? `  ${line}` : '');
+    }
+    lines.push('');
+  }
 
   // Usage
   lines.push('Usage:');

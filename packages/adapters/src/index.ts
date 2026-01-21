@@ -56,3 +56,14 @@ export type {
 // =============================================================================
 
 export { createAdapterRegistry, globalRegistry } from './registry.js';
+
+// =============================================================================
+// Lazy Loading
+// =============================================================================
+
+export {
+  lazyLoadAdapter,
+  createLazyAdapterRegistry,
+  type LazyAdapterRegistry,
+  type AdapterLoader,
+} from './lazy.js';

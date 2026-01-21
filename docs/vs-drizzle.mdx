@@ -1,0 +1,405 @@
+---
+title: IceType vs Drizzle
+description: Comparing IceType and Drizzle ORM for schema definition and database access.
+---
+
+# IceType vs Drizzle
+
+This page compares IceType with Drizzle ORM to help you understand their relationship and how they complement each other.
+
+## Overview
+
+| Aspect | IceType | Drizzle ORM |
+|--------|---------|-------------|
+| **Primary Purpose** | Schema definition and code generation | Type-safe SQL query builder |
+| **Schema Format** | Portable, target-agnostic | Database-specific TypeScript |
+| **Query Capabilities** | None (schema only) | Full SQL query builder |
+| **Runtime** | Build-time only | Runtime query execution |
+| **Output** | Generates Drizzle schemas | Executes queries |
+| **Bundle Size** | 0KB (build-time) | ~50KB |
+| **Database Support** | Any (via adapters) | PostgreSQL, MySQL, SQLite |
+
+## Key Insight: They Work Together
+
+**IceType is not a replacement for Drizzle** - they serve different purposes:
+
+- **IceType** = Schema definition layer (design time)
+- **Drizzle** = Query execution layer (runtime)
+
+```
+IceType Schema → Drizzle Schema → Drizzle Queries → Database
+      ↓
+  Other outputs (Iceberg, PostgreSQL DDL, etc.)
+```
+
+## Schema Definition Comparison
+
+### Drizzle Schema (Native)
+
+```typescript
+// drizzle/schema.ts
+import {
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  boolean,
+  timestamp,
+  index,
+} from 'drizzle-orm/pg-core';
+
+export const user = pgTable('user', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  name: varchar('name', { length: 255 }),
+  bio: text('bio'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at'),
+}, (table) => ({
+  emailIdx: index('user_email_idx').on(table.email),
+}));
+
+export const post = pgTable('post', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: varchar('title', { length: 255 }).notNull(),
+  content: text('content'),
+  published: boolean('published').default(false),
+  authorId: uuid('author_id').notNull().references(() => user.id),
+  publishedAt: timestamp('published_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  authorIdx: index('post_author_idx').on(table.authorId),
+}));
+
+export type User = typeof user.$inferSelect;
+export type NewUser = typeof user.$inferInsert;
+```
+
+### IceType Schema
+
+```typescript
+// schema/icetype.ts
+import { parseSchema } from 'icetype';
+
+export const UserSchema = parseSchema({
+  $type: 'User',
+  $index: [['email']],
+
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string?',
+  bio: 'text?',
+  isActive: 'bool = true',
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp?',
+});
+
+export const PostSchema = parseSchema({
+  $type: 'Post',
+  $index: [['authorId']],
+
+  id: 'uuid!',
+  title: 'string!',
+  content: 'text?',
+  published: 'bool = false',
+  authorId: 'uuid!',
+  author: '-> User!',
+  publishedAt: 'timestamp?',
+  createdAt: 'timestamp',
+});
+```
+
+### Generated Drizzle from IceType
+
+```typescript
+import { transformToDrizzle } from '@icetype/drizzle';
+
+const drizzleCode = transformToDrizzle(UserSchema, { dialect: 'pg' });
+// Outputs the same Drizzle schema code as the native version
+```
+
+## Syntax Comparison
+
+### Field Modifiers
+
+| Feature | Drizzle | IceType |
+|---------|---------|---------|
+| Required | `.notNull()` | `'!'` suffix |
+| Optional | (default) | `'?'` suffix |
+| Unique | `.unique()` | `'#'` suffix |
+| Primary key | `.primaryKey()` | `'!'` on `uuid` |
+| Default value | `.default(value)` | `'= value'` |
+| Array | `.array()` | `'[]'` suffix |
+| References | `.references(() => table.id)` | `'-> Entity!'` |
+
+### Type Mapping
+
+| IceType | Drizzle (PostgreSQL) | Drizzle (MySQL) | Drizzle (SQLite) |
+|---------|---------------------|-----------------|------------------|
+| `'string'` | `varchar` | `varchar` | `text` |
+| `'text'` | `text` | `text` | `text` |
+| `'int'` | `integer` | `int` | `integer` |
+| `'long'` | `bigint` | `bigint` | `integer` |
+| `'float'` | `real` | `float` | `real` |
+| `'double'` | `doublePrecision` | `double` | `real` |
+| `'decimal'` | `decimal` | `decimal` | `real` |
+| `'bool'` | `boolean` | `boolean` | `integer` |
+| `'uuid'` | `uuid` | `varchar(36)` | `text` |
+| `'timestamp'` | `timestamp` | `timestamp` | `text` |
+| `'date'` | `date` | `date` | `text` |
+| `'json'` | `jsonb` | `json` | `text` |
+| `'binary'` | `bytea` | `blob` | `blob` |
+
+## When to Use Each
+
+### Use Drizzle Directly When:
+
+1. **Single database target** - You only need PostgreSQL, MySQL, or SQLite
+2. **No data lake requirements** - You don't need Iceberg or analytics exports
+3. **Existing Drizzle project** - Team already uses Drizzle schemas
+4. **Maximum control** - You want direct control over Drizzle-specific features
+
+### Use IceType + Drizzle When:
+
+1. **Multi-target output** - Need same schema for multiple databases
+2. **Data lake integration** - Export to Iceberg, Parquet, ClickHouse
+3. **Schema portability** - May switch ORMs in the future
+4. **Single source of truth** - Central schema definition for entire data architecture
+5. **Cross-team collaboration** - Data engineers and app developers share schemas
+
+## Workflow Comparison
+
+### Drizzle-Only Workflow
+
+```bash
+# 1. Define schema in Drizzle
+# drizzle/schema.ts
+
+# 2. Generate migrations
+npx drizzle-kit generate
+
+# 3. Apply migrations
+npx drizzle-kit migrate
+
+# 4. Use in application
+# import { user } from './drizzle/schema';
+```
+
+### IceType + Drizzle Workflow
+
+```bash
+# 1. Define schema in IceType
+# schema/icetype.ts
+
+# 2. Generate Drizzle schema
+npx tsx scripts/generate.ts
+
+# 3. Generate migrations (same as Drizzle-only)
+npx drizzle-kit generate
+
+# 4. Apply migrations
+npx drizzle-kit migrate
+
+# 5. Use in application (same as Drizzle-only)
+# import { user } from './drizzle/schema';
+```
+
+```typescript
+// scripts/generate.ts
+import { transformSchemasToDrizzle } from '@icetype/drizzle';
+import { generateIcebergMetadata } from '@icetype/iceberg';
+import { schemas } from '../schema/icetype';
+import { writeFileSync } from 'fs';
+
+// Generate Drizzle schema
+const drizzle = transformSchemasToDrizzle(schemas, { dialect: 'pg' });
+writeFileSync('./drizzle/schema.ts', drizzle);
+
+// Also generate Iceberg metadata for data lake
+for (const schema of schemas) {
+  const metadata = generateIcebergMetadata(schema, `s3://lake/${schema.name}`);
+  writeFileSync(`./iceberg/${schema.name}.json`, JSON.stringify(metadata, null, 2));
+}
+```
+
+## Feature Comparison
+
+### Schema Features
+
+| Feature | Drizzle | IceType |
+|---------|---------|---------|
+| Indexes | Yes | Yes |
+| Composite indexes | Yes | Yes |
+| Full-text search | Manual | `$fts` directive |
+| Partitioning | Manual | `$partitionBy` directive |
+| Relations | References | `->` / `<-` operators |
+| Fuzzy relations | No | `~>` / `<~` (planned) |
+| Vector fields | Manual | `$vector` directive |
+
+### Query Features
+
+| Feature | Drizzle | IceType |
+|---------|---------|---------|
+| Select queries | Yes | N/A |
+| Insert/Update/Delete | Yes | N/A |
+| Joins | Yes | N/A |
+| Subqueries | Yes | N/A |
+| Transactions | Yes | N/A |
+| Raw SQL | Yes | N/A |
+
+### Generation Features
+
+| Feature | Drizzle | IceType |
+|---------|---------|---------|
+| TypeScript types | Yes | Via adapters |
+| PostgreSQL DDL | Via Drizzle Kit | Yes |
+| MySQL DDL | Via Drizzle Kit | Yes |
+| SQLite DDL | Via Drizzle Kit | Yes |
+| Iceberg metadata | No | Yes |
+| ClickHouse DDL | No | Yes |
+| Parquet schema | No | Yes |
+| Prisma schema | No | Yes |
+
+## Interoperability
+
+### Import Drizzle to IceType
+
+```typescript
+import { parseDrizzleFile } from '@icetype/drizzle';
+
+// Convert existing Drizzle schema to IceType
+const schemas = await parseDrizzleFile('./drizzle/schema.ts');
+
+// Now generate for other targets
+for (const schema of schemas) {
+  const iceberg = generateIcebergMetadata(schema, `s3://lake/${schema.name}`);
+  // ...
+}
+```
+
+### Export IceType to Drizzle
+
+```typescript
+import { transformSchemasToDrizzle } from '@icetype/drizzle';
+
+// Generate Drizzle schema from IceType
+const drizzleCode = transformSchemasToDrizzle(schemas, {
+  dialect: 'pg',
+  camelCase: true,
+});
+
+writeFileSync('./drizzle/schema.ts', drizzleCode);
+```
+
+## Code Examples
+
+### Drizzle Query with Generated Schema
+
+```typescript
+// Using schema generated by IceType
+import { db } from './db';
+import { user, post } from './drizzle/schema';
+import { eq, desc, and, like } from 'drizzle-orm';
+
+// Basic queries work exactly the same
+const users = await db.select().from(user);
+
+const activeUsers = await db
+  .select()
+  .from(user)
+  .where(eq(user.isActive, true));
+
+const postsWithAuthors = await db
+  .select({
+    post: post,
+    author: user,
+  })
+  .from(post)
+  .innerJoin(user, eq(post.authorId, user.id))
+  .where(eq(post.published, true))
+  .orderBy(desc(post.publishedAt));
+
+// Inserts and updates
+const [newUser] = await db
+  .insert(user)
+  .values({ email: 'new@example.com', name: 'New User' })
+  .returning();
+
+await db
+  .update(post)
+  .set({ published: true, publishedAt: new Date() })
+  .where(eq(post.id, postId));
+```
+
+### Multi-Database Generation
+
+```typescript
+import { transformSchemasToDrizzle } from '@icetype/drizzle';
+import { schemas } from './icetype-schemas';
+import { writeFileSync, mkdirSync } from 'fs';
+
+mkdirSync('./generated', { recursive: true });
+
+// Generate for PostgreSQL
+const pgSchema = transformSchemasToDrizzle(schemas, { dialect: 'pg' });
+writeFileSync('./generated/schema.pg.ts', pgSchema);
+
+// Generate for SQLite (local development)
+const sqliteSchema = transformSchemasToDrizzle(schemas, { dialect: 'sqlite' });
+writeFileSync('./generated/schema.sqlite.ts', sqliteSchema);
+
+// Generate for MySQL (legacy system)
+const mysqlSchema = transformSchemasToDrizzle(schemas, { dialect: 'mysql' });
+writeFileSync('./generated/schema.mysql.ts', mysqlSchema);
+```
+
+## Performance
+
+Both approaches have identical runtime performance because:
+
+1. **IceType is build-time only** - Zero runtime overhead
+2. **Generated code is standard Drizzle** - Same execution path
+3. **Types are identical** - Same TypeScript inference
+
+The only difference is build time, where IceType adds a generation step.
+
+## Summary
+
+| Choose | When |
+|--------|------|
+| **Drizzle only** | Single database, no analytics needs, team prefers Drizzle syntax |
+| **IceType + Drizzle** | Multi-database, data lake integration, schema portability |
+| **Migrate Drizzle → IceType** | Adding analytics/data lake, want single source of truth |
+
+## Recommended Approach
+
+For most projects, we recommend using **IceType + Drizzle** because:
+
+1. **No runtime cost** - IceType only runs at build time
+2. **Full Drizzle features** - You get all of Drizzle's query capabilities
+3. **Future flexibility** - Easy to add new outputs (Iceberg, ClickHouse, etc.)
+4. **Better abstraction** - Schema intent is clearer without database-specific details
+
+```typescript
+// The best of both worlds
+// 1. Design-time: IceType for schema definition
+const UserSchema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string?',
+});
+
+// 2. Build-time: Generate Drizzle schema
+// npm run generate
+
+// 3. Runtime: Use Drizzle for queries
+const users = await db.select().from(user);
+```
+
+## Next Steps
+
+- [IceType vs Prisma](/vs-prisma) - Compare with Prisma ORM
+- [Drizzle Integration Tutorial](/tutorials/drizzle-integration) - Step-by-step guide
+- [Drizzle API Reference](/api/drizzle) - Full Drizzle adapter documentation

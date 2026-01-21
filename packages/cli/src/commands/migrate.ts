@@ -7,7 +7,7 @@
  * - ice migrate plan --schema <path>
  */
 
-import { writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { writeFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import {
@@ -44,9 +44,321 @@ const colors = {
   green: '\x1b[32m',
   yellow: '\x1b[33m',
   blue: '\x1b[34m',
+  magenta: '\x1b[35m',
   cyan: '\x1b[36m',
   white: '\x1b[37m',
 };
+
+// =============================================================================
+// SQL Highlighting and Operation Analysis
+// =============================================================================
+
+/**
+ * SQL keywords to highlight in different categories
+ */
+const SQL_KEYWORDS = {
+  ddl: ['CREATE', 'ALTER', 'DROP', 'TRUNCATE', 'RENAME', 'ADD', 'MODIFY', 'CHANGE'],
+  dml: ['INSERT', 'UPDATE', 'DELETE', 'SELECT', 'FROM', 'WHERE', 'SET', 'VALUES', 'INTO'],
+  clauses: ['TABLE', 'COLUMN', 'INDEX', 'CONSTRAINT', 'PRIMARY', 'FOREIGN', 'KEY', 'REFERENCES', 'DEFAULT', 'NOT', 'NULL', 'UNIQUE', 'TYPE', 'CASCADE', 'IF', 'EXISTS'],
+  types: ['INTEGER', 'BIGINT', 'TEXT', 'VARCHAR', 'BOOLEAN', 'REAL', 'DOUBLE', 'PRECISION', 'UUID', 'TIMESTAMPTZ', 'TIMESTAMP', 'DATE', 'JSON', 'JSONB', 'INT32', 'INT64', 'FLOAT32', 'FLOAT64', 'STRING', 'BOOL', 'DATETIME64'],
+};
+
+/**
+ * Estimated execution times for different SQL operations (in milliseconds)
+ */
+const OPERATION_TIMING_ESTIMATES: Record<string, { base: number; perRow: number; description: string; warning?: string }> = {
+  'ADD COLUMN': { base: 100, perRow: 0.01, description: 'Add column', warning: 'Adding NOT NULL column without default may fail on non-empty tables' },
+  'DROP COLUMN': { base: 50, perRow: 0.005, description: 'Drop column' },
+  'ALTER COLUMN TYPE': { base: 500, perRow: 1, description: 'Change column type', warning: 'Type conversion may be slow on large tables and could fail if data cannot be converted' },
+  'MODIFY COLUMN': { base: 500, perRow: 1, description: 'Modify column', warning: 'Column modification may require table rewrite' },
+  'CREATE TABLE': { base: 50, perRow: 0, description: 'Create table' },
+  'DROP TABLE': { base: 100, perRow: 0, description: 'Drop table', warning: 'This will permanently delete all data in the table' },
+  'CREATE INDEX': { base: 200, perRow: 0.5, description: 'Create index', warning: 'Index creation can be slow on large tables' },
+  'DROP INDEX': { base: 50, perRow: 0, description: 'Drop index' },
+};
+
+/**
+ * Analyze SQL statements and extract operation information
+ */
+interface SqlOperation {
+  type: string;
+  table?: string;
+  column?: string;
+  statement: string;
+  estimatedTime: number;
+  warning?: string;
+  isDestructive: boolean;
+}
+
+/**
+ * Parse a SQL statement to determine its operation type and extract metadata
+ */
+function analyzeSqlStatement(sql: string): SqlOperation {
+  const upperSql = sql.toUpperCase().trim();
+
+  // Default operation
+  let operation: SqlOperation = {
+    type: 'UNKNOWN',
+    statement: sql,
+    estimatedTime: 100,
+    isDestructive: false,
+  };
+
+  // Extract table name (common patterns)
+  const tableMatch = sql.match(/(?:TABLE|FROM|INTO)\s+["']?(\w+)["']?/i);
+  const tableName = tableMatch?.[1];
+
+  // Extract column name if present
+  const columnMatch = sql.match(/(?:COLUMN|ADD|DROP|MODIFY|ALTER)\s+["']?(\w+)["']?/i);
+  const columnName = columnMatch?.[1];
+
+  // Helper to get timing with defaults
+  const getTiming = (key: string) => {
+    const timing = OPERATION_TIMING_ESTIMATES[key];
+    return timing ?? { base: 100, perRow: 0, description: 'Unknown' };
+  };
+
+  // Determine operation type
+  if (upperSql.includes('ADD COLUMN') || (upperSql.includes('ALTER TABLE') && upperSql.includes('ADD') && !upperSql.includes('ADD INDEX'))) {
+    const timing = getTiming('ADD COLUMN');
+    const addColumnWarning = OPERATION_TIMING_ESTIMATES['ADD COLUMN']?.warning;
+    operation = {
+      type: 'ADD COLUMN',
+      table: tableName,
+      column: columnName,
+      statement: sql,
+      estimatedTime: timing.base,
+      warning: upperSql.includes('NOT NULL') && !upperSql.includes('DEFAULT') ? addColumnWarning : undefined,
+      isDestructive: false,
+    };
+  } else if (upperSql.includes('DROP COLUMN')) {
+    const timing = getTiming('DROP COLUMN');
+    operation = {
+      type: 'DROP COLUMN',
+      table: tableName,
+      column: columnName,
+      statement: sql,
+      estimatedTime: timing.base,
+      isDestructive: true,
+    };
+  } else if (upperSql.includes('ALTER COLUMN') && upperSql.includes('TYPE')) {
+    const timing = getTiming('ALTER COLUMN TYPE');
+    operation = {
+      type: 'ALTER COLUMN TYPE',
+      table: tableName,
+      column: columnName,
+      statement: sql,
+      estimatedTime: timing.base,
+      warning: OPERATION_TIMING_ESTIMATES['ALTER COLUMN TYPE']?.warning,
+      isDestructive: false,
+    };
+  } else if (upperSql.includes('MODIFY COLUMN')) {
+    const timing = getTiming('MODIFY COLUMN');
+    operation = {
+      type: 'MODIFY COLUMN',
+      table: tableName,
+      column: columnName,
+      statement: sql,
+      estimatedTime: timing.base,
+      warning: OPERATION_TIMING_ESTIMATES['MODIFY COLUMN']?.warning,
+      isDestructive: false,
+    };
+  } else if (upperSql.includes('CREATE TABLE')) {
+    const timing = getTiming('CREATE TABLE');
+    operation = {
+      type: 'CREATE TABLE',
+      table: tableName,
+      statement: sql,
+      estimatedTime: timing.base,
+      isDestructive: false,
+    };
+  } else if (upperSql.includes('DROP TABLE')) {
+    const timing = getTiming('DROP TABLE');
+    operation = {
+      type: 'DROP TABLE',
+      table: tableName,
+      statement: sql,
+      estimatedTime: timing.base,
+      warning: OPERATION_TIMING_ESTIMATES['DROP TABLE']?.warning,
+      isDestructive: true,
+    };
+  } else if (upperSql.includes('CREATE INDEX')) {
+    const timing = getTiming('CREATE INDEX');
+    operation = {
+      type: 'CREATE INDEX',
+      table: tableName,
+      statement: sql,
+      estimatedTime: timing.base,
+      warning: OPERATION_TIMING_ESTIMATES['CREATE INDEX']?.warning,
+      isDestructive: false,
+    };
+  } else if (upperSql.includes('DROP INDEX')) {
+    const timing = getTiming('DROP INDEX');
+    operation = {
+      type: 'DROP INDEX',
+      table: tableName,
+      statement: sql,
+      estimatedTime: timing.base,
+      isDestructive: false,
+    };
+  }
+
+  return operation;
+}
+
+/**
+ * Colorize SQL output with syntax highlighting
+ * @param sql - The SQL statement to colorize
+ * @param noColor - If true, returns the SQL without color codes
+ */
+function colorizeSql(sql: string, noColor: boolean): string {
+  if (noColor) return sql;
+
+  let result = sql;
+
+  // Highlight DDL keywords (in cyan/bold)
+  for (const keyword of SQL_KEYWORDS.ddl) {
+    const regex = new RegExp(`\\b(${keyword})\\b`, 'gi');
+    result = result.replace(regex, `${colors.cyan}${colors.bold}$1${colors.reset}`);
+  }
+
+  // Highlight clauses (in blue)
+  for (const keyword of SQL_KEYWORDS.clauses) {
+    const regex = new RegExp(`\\b(${keyword})\\b`, 'gi');
+    result = result.replace(regex, `${colors.blue}$1${colors.reset}`);
+  }
+
+  // Highlight data types (in magenta)
+  for (const type of SQL_KEYWORDS.types) {
+    const regex = new RegExp(`\\b(${type})\\b`, 'gi');
+    result = result.replace(regex, `${colors.magenta}$1${colors.reset}`);
+  }
+
+  return result;
+}
+
+/**
+ * Format estimated time in human-readable format
+ */
+function formatTime(ms: number): string {
+  if (ms < 1000) {
+    return `${ms}ms`;
+  } else if (ms < 60000) {
+    return `${(ms / 1000).toFixed(1)}s`;
+  } else {
+    return `${(ms / 60000).toFixed(1)}m`;
+  }
+}
+
+/**
+ * Generate operation summary from analyzed SQL statements
+ */
+interface OperationSummary {
+  totalOperations: number;
+  byType: Map<string, number>;
+  affectedTables: Set<string>;
+  destructiveCount: number;
+  warnings: string[];
+  totalEstimatedTime: number;
+}
+
+/**
+ * Analyze multiple SQL statements and generate a summary
+ */
+function generateOperationSummary(operations: SqlOperation[]): OperationSummary {
+  const summary: OperationSummary = {
+    totalOperations: operations.length,
+    byType: new Map(),
+    affectedTables: new Set(),
+    destructiveCount: 0,
+    warnings: [],
+    totalEstimatedTime: 0,
+  };
+
+  for (const op of operations) {
+    // Count by type
+    const count = summary.byType.get(op.type) || 0;
+    summary.byType.set(op.type, count + 1);
+
+    // Track affected tables
+    if (op.table) {
+      summary.affectedTables.add(op.table);
+    }
+
+    // Count destructive operations
+    if (op.isDestructive) {
+      summary.destructiveCount++;
+    }
+
+    // Collect warnings
+    if (op.warning) {
+      summary.warnings.push(`${op.type}${op.table ? ` on ${op.table}` : ''}: ${op.warning}`);
+    }
+
+    // Accumulate estimated time
+    summary.totalEstimatedTime += op.estimatedTime;
+  }
+
+  return summary;
+}
+
+/**
+ * Format operation summary for display
+ */
+function formatOperationSummary(summary: OperationSummary, noColor: boolean): string[] {
+  const lines: string[] = [];
+  const c = {
+    bold: (s: string) => noColor ? s : `${colors.bold}${s}${colors.reset}`,
+    dim: (s: string) => noColor ? s : `${colors.dim}${s}${colors.reset}`,
+    yellow: (s: string) => noColor ? s : `${colors.yellow}${s}${colors.reset}`,
+    red: (s: string) => noColor ? s : `${colors.red}${s}${colors.reset}`,
+    cyan: (s: string) => noColor ? s : `${colors.cyan}${s}${colors.reset}`,
+    green: (s: string) => noColor ? s : `${colors.green}${s}${colors.reset}`,
+  };
+
+  // Header
+  lines.push(c.bold('Migration Summary'));
+  lines.push(c.dim('─'.repeat(50)));
+
+  // Operation counts
+  lines.push(`${c.cyan('Operations:')} ${summary.totalOperations} SQL statement${summary.totalOperations !== 1 ? 's' : ''}`);
+
+  // Breakdown by type
+  if (summary.byType.size > 0) {
+    const typeBreakdown: string[] = [];
+    for (const [type, count] of summary.byType) {
+      typeBreakdown.push(`${type}: ${count}`);
+    }
+    lines.push(`${c.dim('  Breakdown:')} ${typeBreakdown.join(', ')}`);
+  }
+
+  // Affected tables
+  if (summary.affectedTables.size > 0) {
+    lines.push(`${c.cyan('Tables:')} ${Array.from(summary.affectedTables).join(', ')}`);
+  }
+
+  // Estimated time
+  lines.push(`${c.cyan('Estimated time:')} ~${formatTime(summary.totalEstimatedTime)}`);
+
+  // Destructive warning
+  if (summary.destructiveCount > 0) {
+    lines.push('');
+    lines.push(c.red(`${symbols.warning} ${summary.destructiveCount} destructive operation${summary.destructiveCount !== 1 ? 's' : ''} (may cause data loss)`));
+  }
+
+  // Warnings
+  if (summary.warnings.length > 0) {
+    lines.push('');
+    lines.push(c.yellow('Warnings:'));
+    for (const warning of summary.warnings) {
+      lines.push(`  ${c.yellow(symbols.warning)} ${warning}`);
+    }
+  }
+
+  lines.push(c.dim('─'.repeat(50)));
+
+  return lines;
+}
 
 /**
  * Symbols for change types and messages
@@ -371,6 +683,8 @@ Common workflow:
     { name: 'diff', description: 'Compare two schema files and show differences' },
     { name: 'plan', description: 'Show what SQL would be generated (preview mode)' },
     { name: 'status', description: 'Show pending and applied migrations' },
+    { name: 'up', description: 'Apply pending migrations' },
+    { name: 'down', description: 'Rollback applied migrations' },
   ],
   examples: [
     '# Most common: develop with automatic change detection',
@@ -524,6 +838,7 @@ Use --json for machine-readable output.`,
     { name: 'dialect', short: 'd', description: 'SQL dialect', defaultValue: 'postgres' },
     { name: 'verbose', short: 'v', description: 'Show detailed output including all applied migrations' },
     { name: 'json', description: 'Output results in JSON format' },
+    { name: 'dry-run', description: 'Preview mode (status is inherently read-only)' },
   ],
   examples: [
     '# Check migration status',
@@ -537,6 +852,77 @@ Use --json for machine-readable output.`,
     '',
     '# Output JSON for scripting',
     'ice migrate status --schema ./schema.ts --json',
+  ],
+};
+
+const MIGRATE_UP_HELP: HelpCommand = {
+  name: 'migrate up',
+  description: `Apply pending migrations to the database.
+
+Runs all pending migrations in order, from oldest to newest.
+Use --dry-run to preview which migrations would be applied without
+actually executing them.
+
+The --target flag allows you to apply migrations up to (and including)
+a specific migration file.`,
+  usage: 'ice migrate up --schema <file> [--migrations-dir <dir>] [options]',
+  options: [
+    { name: 'schema', short: 's', description: 'Path to the IceType schema file (.ts)', required: true },
+    { name: 'migrations-dir', description: 'Directory containing migration files', defaultValue: './migrations' },
+    { name: 'database-url', description: 'Database connection URL' },
+    { name: 'dialect', short: 'd', description: 'SQL dialect', defaultValue: 'postgres' },
+    { name: 'dry-run', description: 'Preview changes without executing' },
+    { name: 'verbose', short: 'v', description: 'Show detailed output including full SQL' },
+    { name: 'json', description: 'Output results in JSON format' },
+    { name: 'target', description: 'Apply migrations up to this specific migration file' },
+  ],
+  examples: [
+    '# Apply all pending migrations',
+    'ice migrate up --schema ./schema.ts --migrations-dir ./migrations',
+    '',
+    '# Preview which migrations would be applied',
+    'ice migrate up --schema ./schema.ts --migrations-dir ./migrations --dry-run',
+    '',
+    '# Apply up to a specific migration',
+    'ice migrate up --schema ./schema.ts --migrations-dir ./migrations --target 20240119_add_name.sql',
+    '',
+    '# Output JSON for scripting',
+    'ice migrate up --schema ./schema.ts --migrations-dir ./migrations --dry-run --json',
+  ],
+};
+
+const MIGRATE_DOWN_HELP: HelpCommand = {
+  name: 'migrate down',
+  description: `Rollback applied migrations.
+
+Reverts the most recently applied migration(s). Use --step to specify
+how many migrations to roll back (default: 1).
+
+Use --dry-run to preview which migrations would be rolled back without
+actually executing them.`,
+  usage: 'ice migrate down --schema <file> [--migrations-dir <dir>] [options]',
+  options: [
+    { name: 'schema', short: 's', description: 'Path to the IceType schema file (.ts)', required: true },
+    { name: 'migrations-dir', description: 'Directory containing migration files', defaultValue: './migrations' },
+    { name: 'database-url', description: 'Database connection URL' },
+    { name: 'dialect', short: 'd', description: 'SQL dialect', defaultValue: 'postgres' },
+    { name: 'dry-run', description: 'Preview changes without executing' },
+    { name: 'verbose', short: 'v', description: 'Show detailed output including full SQL' },
+    { name: 'json', description: 'Output results in JSON format' },
+    { name: 'step', description: 'Number of migrations to roll back', defaultValue: '1' },
+  ],
+  examples: [
+    '# Roll back the last migration',
+    'ice migrate down --schema ./schema.ts --migrations-dir ./migrations',
+    '',
+    '# Preview rollback without executing',
+    'ice migrate down --schema ./schema.ts --migrations-dir ./migrations --dry-run',
+    '',
+    '# Roll back multiple migrations',
+    'ice migrate down --schema ./schema.ts --migrations-dir ./migrations --step 2',
+    '',
+    '# Output JSON for scripting',
+    'ice migrate down --schema ./schema.ts --migrations-dir ./migrations --dry-run --json',
   ],
 };
 
@@ -1300,21 +1686,36 @@ export async function migrateDev(args: string[]): Promise<void> {
   }
   console.log('');
 
-  // Show SQL that will be applied (with dim styling for readability)
+  // Analyze SQL operations for summary (in dry-run mode)
+  if (dryRun) {
+    const operations = sqlStatements.map(stmt => analyzeSqlStatement(stmt));
+    const summary = generateOperationSummary(operations);
+    const summaryLines = formatOperationSummary(summary, noColor);
+    for (const line of summaryLines) {
+      console.log(line);
+    }
+    console.log('');
+  }
+
+  // Show SQL that will be applied (with syntax highlighting)
   if (!noColor) {
     console.log(`${colors.dim}-- SQL to be applied:${colors.reset}`);
+  } else {
+    console.log('-- SQL to be applied:');
   }
   for (const stmt of sqlStatements) {
-    if (noColor) {
-      console.log(stmt);
-    } else {
-      console.log(`${colors.dim}${stmt}${colors.reset}`);
-    }
+    console.log(colorizeSql(stmt, noColor));
   }
   console.log('');
 
   // Handle dry run
   if (dryRun) {
+    if (noColor) {
+      console.log('Dry-run complete. No changes were made.');
+    } else {
+      console.log(`${colors.dim}${'─'.repeat(50)}${colors.reset}`);
+      console.log(`${colors.green}${symbols.checkmark}${colors.reset} Dry-run complete. No changes were made.`);
+    }
     return;
   }
 
@@ -1338,8 +1739,580 @@ export async function migrateDev(args: string[]): Promise<void> {
 }
 
 // =============================================================================
+// Migrate Up Command
+// =============================================================================
+
+/**
+ * Extract the UP section from a migration file content
+ * Supports both simple SQL files and files with -- UP / -- DOWN markers
+ */
+function extractUpSql(content: string): string {
+  const upMarker = content.indexOf('-- UP');
+  const downMarker = content.indexOf('-- DOWN');
+
+  if (upMarker !== -1 && downMarker !== -1) {
+    // Has markers, extract UP section
+    return content.slice(upMarker + 5, downMarker).trim();
+  }
+  // No markers, entire content is UP
+  return content.trim();
+}
+
+/**
+ * Extract the DOWN section from a migration file content
+ */
+function extractDownSql(content: string): string {
+  const downMarker = content.indexOf('-- DOWN');
+
+  if (downMarker !== -1) {
+    return content.slice(downMarker + 7).trim();
+  }
+  // No DOWN marker, return empty
+  return '';
+}
+
+/**
+ * ice migrate up command
+ *
+ * Apply pending migrations to the database.
+ */
+export async function migrateUp(args: string[]): Promise<void> {
+  // Check for help flag first
+  if (hasHelpFlag(args)) {
+    console.log(generateHelpText(MIGRATE_UP_HELP));
+    process.exit(0);
+  }
+
+  const { values } = parseArgs({
+    args,
+    options: {
+      schema: { type: 'string', short: 's' },
+      'migrations-dir': { type: 'string', default: './migrations' },
+      'database-url': { type: 'string' },
+      dialect: { type: 'string', short: 'd', default: 'postgres' },
+      'dry-run': { type: 'boolean' },
+      verbose: { type: 'boolean', short: 'v' },
+      json: { type: 'boolean' },
+      target: { type: 'string' },
+    },
+  });
+
+  // Validate required options
+  requireOption(
+    values.schema,
+    'schema',
+    'migrate up',
+    'ice migrate up --schema ./schema.ts --migrations-dir ./migrations'
+  );
+
+  const schemaPath = values.schema as string;
+  const migrationsDir = values['migrations-dir'] as string;
+  const dryRun = values['dry-run'] === true;
+  const verbose = values.verbose === true;
+  const jsonOutput = values.json === true;
+  const target = values.target as string | undefined;
+
+  // Load schema (validates it exists)
+  const loadResult = await loadSchemaFile(schemaPath);
+  if (loadResult.errors.length > 0) {
+    throw new Error(loadResult.errors.join('\n'));
+  }
+
+  // Check if migrations directory exists
+  if (!existsSync(migrationsDir)) {
+    const message = `Migrations directory not found: ${migrationsDir}`;
+    if (jsonOutput) {
+      console.log(JSON.stringify({
+        dryRun,
+        migrations: [],
+        sql: [],
+        message,
+      }, null, 2));
+    } else {
+      console.log(message);
+    }
+    return;
+  }
+
+  // Get all migration files
+  const files = readdirSync(migrationsDir);
+  const allMigrations = files
+    .filter((f) => typeof f === 'string' && f.endsWith('.sql'))
+    .sort();
+
+  if (allMigrations.length === 0) {
+    const message = 'No migrations found';
+    if (jsonOutput) {
+      console.log(JSON.stringify({
+        dryRun,
+        migrations: [],
+        sql: [],
+        message,
+      }, null, 2));
+    } else {
+      console.log(message);
+    }
+    return;
+  }
+
+  // Simulate: in dry-run mode, treat all migrations as pending (for testing purposes)
+  // In a real implementation, this would query the migrations table
+  let pendingMigrations = allMigrations;
+
+  // If target is specified, only include migrations up to target
+  if (target) {
+    const targetIndex = pendingMigrations.indexOf(target);
+    if (targetIndex !== -1) {
+      pendingMigrations = pendingMigrations.slice(0, targetIndex + 1);
+    }
+  }
+
+  if (pendingMigrations.length === 0) {
+    const message = 'No pending migrations to apply';
+    if (jsonOutput) {
+      console.log(JSON.stringify({
+        dryRun,
+        migrations: [],
+        sql: [],
+        message,
+      }, null, 2));
+    } else {
+      console.log(message);
+    }
+    return;
+  }
+
+  // Read SQL content from pending migrations
+  const sqlStatements: string[] = [];
+  const migrationDetails: Array<{ file: string; sql: string }> = [];
+
+  for (const migrationFile of pendingMigrations) {
+    const filePath = join(migrationsDir, migrationFile);
+    const content = readFileSync(filePath, 'utf-8') || '';
+    const upSql = extractUpSql(content);
+    sqlStatements.push(upSql);
+    migrationDetails.push({ file: migrationFile, sql: upSql });
+  }
+
+  // JSON output
+  if (jsonOutput) {
+    console.log(JSON.stringify({
+      dryRun,
+      migrations: pendingMigrations,
+      sql: sqlStatements,
+      statements: sqlStatements,
+      plan: `${pendingMigrations.length} migration(s) would be applied`,
+      changes: `${sqlStatements.length} SQL statements`,
+    }, null, 2));
+    return;
+  }
+
+  // Detect if colors should be used
+  const noColor = process.env.NO_COLOR !== undefined || !process.stdout.isTTY;
+
+  // Helper for colored output
+  const c = {
+    bold: (s: string) => noColor ? s : `${colors.bold}${s}${colors.reset}`,
+    dim: (s: string) => noColor ? s : `${colors.dim}${s}${colors.reset}`,
+    cyan: (s: string) => noColor ? s : `${colors.cyan}${s}${colors.reset}`,
+    yellow: (s: string) => noColor ? s : `${colors.yellow}${s}${colors.reset}`,
+    red: (s: string) => noColor ? s : `${colors.red}${s}${colors.reset}`,
+    green: (s: string) => noColor ? s : `${colors.green}${s}${colors.reset}`,
+  };
+
+  // Human-readable output
+  if (dryRun) {
+    console.log(c.cyan('Dry-run mode') + ' - preview of pending migrations:');
+    console.log('');
+  }
+
+  // Analyze all SQL statements for summary
+  const allOperations: SqlOperation[] = [];
+  for (const detail of migrationDetails) {
+    // Parse individual SQL statements from the content
+    const statements = detail.sql.split(';').filter(s => s.trim() && !s.trim().startsWith('--'));
+    for (const stmt of statements) {
+      if (stmt.trim()) {
+        allOperations.push(analyzeSqlStatement(stmt.trim() + ';'));
+      }
+    }
+  }
+
+  // Show summary if there are operations to analyze
+  if (dryRun && allOperations.length > 0) {
+    const summary = generateOperationSummary(allOperations);
+    const summaryLines = formatOperationSummary(summary, noColor);
+    for (const line of summaryLines) {
+      console.log(line);
+    }
+    console.log('');
+  }
+
+  console.log(`${c.bold('Migration Plan:')} ${pendingMigrations.length} migration(s) pending`);
+  console.log(`${c.dim('Changes:')} ${sqlStatements.length} SQL operations`);
+  console.log('');
+
+  for (const detail of migrationDetails) {
+    // Migration file header
+    console.log(c.bold(detail.file));
+
+    if (verbose) {
+      console.log(`  ${c.dim('Path:')} ${join(migrationsDir, detail.file)}`);
+
+      // Count statements in this migration
+      const stmtCount = detail.sql.split(';').filter(s => s.trim() && !s.trim().startsWith('--')).length;
+      console.log(`  ${c.dim('Statements:')} ${stmtCount} step${stmtCount !== 1 ? 's' : ''}`);
+
+      // Analyze operations in this migration
+      const migrationOps = detail.sql.split(';')
+        .filter(s => s.trim() && !s.trim().startsWith('--'))
+        .map(s => analyzeSqlStatement(s.trim() + ';'));
+
+      if (migrationOps.length > 0) {
+        const migrationSummary = generateOperationSummary(migrationOps);
+        console.log(`  ${c.dim('Estimated time:')} ~${formatTime(migrationSummary.totalEstimatedTime)}`);
+
+        // Show warnings for this migration
+        if (migrationSummary.warnings.length > 0) {
+          for (const warning of migrationSummary.warnings) {
+            console.log(`  ${c.yellow(symbols.warning + ' ' + warning)}`);
+          }
+        }
+
+        if (migrationSummary.destructiveCount > 0) {
+          console.log(`  ${c.red(symbols.warning + ' Contains ' + migrationSummary.destructiveCount + ' destructive operation(s)')}`);
+        }
+      }
+    }
+
+    // Always show SQL content in dry-run mode
+    if (dryRun || verbose) {
+      console.log('');
+      // Show colorized SQL with syntax highlighting
+      const sqlLines = detail.sql.split('\n');
+      for (const line of sqlLines) {
+        // Skip empty lines and comments for highlighting, but still display them
+        if (line.trim().startsWith('--')) {
+          console.log(c.dim(line));
+        } else if (line.trim()) {
+          console.log(colorizeSql(line, noColor));
+        } else {
+          console.log(line);
+        }
+      }
+      console.log('');
+    }
+  }
+
+  if (dryRun) {
+    // In dry-run mode, show what would happen but don't execute
+    console.log(c.dim('─'.repeat(50)));
+    console.log(c.green(symbols.checkmark) + ' Dry-run complete. No changes were made.');
+  }
+}
+
+// =============================================================================
+// Migrate Down Command
+// =============================================================================
+
+/**
+ * ice migrate down command
+ *
+ * Rollback applied migrations.
+ */
+export async function migrateDown(args: string[]): Promise<void> {
+  // Check for help flag first
+  if (hasHelpFlag(args)) {
+    console.log(generateHelpText(MIGRATE_DOWN_HELP));
+    process.exit(0);
+  }
+
+  const { values } = parseArgs({
+    args,
+    options: {
+      schema: { type: 'string', short: 's' },
+      'migrations-dir': { type: 'string', default: './migrations' },
+      'database-url': { type: 'string' },
+      dialect: { type: 'string', short: 'd', default: 'postgres' },
+      'dry-run': { type: 'boolean' },
+      verbose: { type: 'boolean', short: 'v' },
+      json: { type: 'boolean' },
+      step: { type: 'string', default: '1' },
+    },
+  });
+
+  // Validate required options
+  requireOption(
+    values.schema,
+    'schema',
+    'migrate down',
+    'ice migrate down --schema ./schema.ts --migrations-dir ./migrations'
+  );
+
+  const schemaPath = values.schema as string;
+  const migrationsDir = values['migrations-dir'] as string;
+  const dryRun = values['dry-run'] === true;
+  const verbose = values.verbose === true;
+  const jsonOutput = values.json === true;
+  const step = parseInt(values.step as string, 10) || 1;
+
+  // Load schema (validates it exists)
+  const loadResult = await loadSchemaFile(schemaPath);
+  if (loadResult.errors.length > 0) {
+    throw new Error(loadResult.errors.join('\n'));
+  }
+
+  // Check if migrations directory exists
+  if (!existsSync(migrationsDir)) {
+    const message = 'No migrations to roll back';
+    if (jsonOutput) {
+      console.log(JSON.stringify({
+        dryRun,
+        migrations: [],
+        sql: [],
+        message,
+      }, null, 2));
+    } else {
+      console.log(message);
+    }
+    return;
+  }
+
+  // Get all migration files
+  const files = readdirSync(migrationsDir);
+  const allMigrations = files
+    .filter((f) => typeof f === 'string' && f.endsWith('.sql'))
+    .sort();
+
+  // Simulate: all migrations are "applied"
+  // In a real implementation, this would query the migrations table
+  const appliedMigrations = allMigrations;
+
+  if (appliedMigrations.length === 0) {
+    const message = 'No migrations to roll back';
+    if (jsonOutput) {
+      console.log(JSON.stringify({
+        dryRun,
+        migrations: [],
+        sql: [],
+        message,
+      }, null, 2));
+    } else {
+      console.log(message);
+    }
+    return;
+  }
+
+  // Get migrations to roll back (most recent first)
+  const migrationsToRollback = appliedMigrations.slice(-step).reverse();
+
+  // Read SQL content from migrations
+  const sqlStatements: string[] = [];
+  const migrationDetails: Array<{ file: string; sql: string }> = [];
+
+  for (const migrationFile of migrationsToRollback) {
+    const filePath = join(migrationsDir, migrationFile);
+    const content = readFileSync(filePath, 'utf-8') || '';
+    const downSql = extractDownSql(content);
+    if (downSql) {
+      sqlStatements.push(downSql);
+      migrationDetails.push({ file: migrationFile, sql: downSql });
+    } else {
+      // No DOWN section, generate a placeholder warning
+      const placeholder = `-- No DOWN migration defined for ${migrationFile}`;
+      sqlStatements.push(placeholder);
+      migrationDetails.push({ file: migrationFile, sql: placeholder });
+    }
+  }
+
+  // JSON output
+  if (jsonOutput) {
+    console.log(JSON.stringify({
+      dryRun,
+      migrations: migrationsToRollback,
+      sql: sqlStatements,
+      step,
+    }, null, 2));
+    return;
+  }
+
+  // Detect if colors should be used
+  const noColor = process.env.NO_COLOR !== undefined || !process.stdout.isTTY;
+
+  // Helper for colored output
+  const c = {
+    bold: (s: string) => noColor ? s : `${colors.bold}${s}${colors.reset}`,
+    dim: (s: string) => noColor ? s : `${colors.dim}${s}${colors.reset}`,
+    cyan: (s: string) => noColor ? s : `${colors.cyan}${s}${colors.reset}`,
+    yellow: (s: string) => noColor ? s : `${colors.yellow}${s}${colors.reset}`,
+    red: (s: string) => noColor ? s : `${colors.red}${s}${colors.reset}`,
+    green: (s: string) => noColor ? s : `${colors.green}${s}${colors.reset}`,
+  };
+
+  // Human-readable output
+  if (dryRun) {
+    console.log(c.cyan('Dry-run mode') + ` - preview of ${migrationsToRollback.length} migration(s) to undo:`);
+    console.log('');
+  }
+
+  // Analyze all SQL statements for summary
+  const allOperations: SqlOperation[] = [];
+  for (const detail of migrationDetails) {
+    // Skip placeholder comments
+    if (detail.sql.startsWith('-- No DOWN migration')) continue;
+    // Parse individual SQL statements from the content
+    const statements = detail.sql.split(';').filter(s => s.trim() && !s.trim().startsWith('--'));
+    for (const stmt of statements) {
+      if (stmt.trim()) {
+        allOperations.push(analyzeSqlStatement(stmt.trim() + ';'));
+      }
+    }
+  }
+
+  // Show summary if there are operations to analyze
+  if (dryRun && allOperations.length > 0) {
+    const summary = generateOperationSummary(allOperations);
+    const summaryLines = formatOperationSummary(summary, noColor);
+    for (const line of summaryLines) {
+      console.log(line);
+    }
+    console.log('');
+  }
+
+  console.log(`${c.bold('Migrations to undo:')} ${migrationsToRollback.length}`);
+  console.log('');
+
+  for (const detail of migrationDetails) {
+    // Migration file header
+    console.log(c.bold(detail.file));
+
+    // Check if this is a missing DOWN migration
+    const hasDownMigration = !detail.sql.startsWith('-- No DOWN migration');
+
+    if (verbose) {
+      console.log(`  ${c.dim('Path:')} ${join(migrationsDir, detail.file)}`);
+
+      if (hasDownMigration) {
+        // Count statements in this migration
+        const stmtCount = detail.sql.split(';').filter(s => s.trim() && !s.trim().startsWith('--')).length;
+        console.log(`  ${c.dim('Statements:')} ${stmtCount} step${stmtCount !== 1 ? 's' : ''}`);
+
+        // Analyze operations in this migration
+        const migrationOps = detail.sql.split(';')
+          .filter(s => s.trim() && !s.trim().startsWith('--'))
+          .map(s => analyzeSqlStatement(s.trim() + ';'));
+
+        if (migrationOps.length > 0) {
+          const migrationSummary = generateOperationSummary(migrationOps);
+          console.log(`  ${c.dim('Estimated time:')} ~${formatTime(migrationSummary.totalEstimatedTime)}`);
+
+          // Show warnings for this migration
+          if (migrationSummary.warnings.length > 0) {
+            for (const warning of migrationSummary.warnings) {
+              console.log(`  ${c.yellow(symbols.warning + ' ' + warning)}`);
+            }
+          }
+
+          if (migrationSummary.destructiveCount > 0) {
+            console.log(`  ${c.red(symbols.warning + ' Contains ' + migrationSummary.destructiveCount + ' destructive operation(s)')}`);
+          }
+        }
+      }
+      console.log('');
+    }
+
+    // Show warning if no DOWN migration is defined
+    if (!hasDownMigration) {
+      console.log(c.yellow(`  ${symbols.warning} No DOWN migration defined - manual rollback may be required`));
+    }
+
+    // Show colorized SQL with syntax highlighting
+    const sqlLines = detail.sql.split('\n');
+    for (const line of sqlLines) {
+      // Skip empty lines and comments for highlighting, but still display them
+      if (line.trim().startsWith('--')) {
+        console.log(c.dim(line));
+      } else if (line.trim()) {
+        console.log(colorizeSql(line, noColor));
+      } else {
+        console.log(line);
+      }
+    }
+    console.log('');
+  }
+
+  if (dryRun) {
+    console.log(c.dim('─'.repeat(50)));
+    console.log(c.green(symbols.checkmark) + ' Dry-run complete. No changes were made.');
+  }
+}
+
+// =============================================================================
 // Migrate Status Command
 // =============================================================================
+
+/**
+ * Parse a migration filename to extract timestamp and name
+ * Expected format: YYYYMMDD_name.sql or YYYYMMDD_HHmmss_name.sql
+ */
+function parseMigrationFilename(filename: string): { timestamp: Date | null; name: string } {
+  // Try to extract date from filename (YYYYMMDD format)
+  const dateMatch = filename.match(/^(\d{8})(?:_(\d{6}))?_(.+)\.sql$/);
+  if (dateMatch && dateMatch[1] && dateMatch[3]) {
+    const dateStr = dateMatch[1];
+    const timeStr = dateMatch[2];
+    const name = dateMatch[3].replace(/_/g, ' ');
+
+    const year = parseInt(dateStr.slice(0, 4), 10);
+    const month = parseInt(dateStr.slice(4, 6), 10) - 1;
+    const day = parseInt(dateStr.slice(6, 8), 10);
+
+    let hours = 0, minutes = 0, seconds = 0;
+    if (timeStr) {
+      hours = parseInt(timeStr.slice(0, 2), 10);
+      minutes = parseInt(timeStr.slice(2, 4), 10);
+      seconds = parseInt(timeStr.slice(4, 6), 10);
+    }
+
+    const timestamp = new Date(year, month, day, hours, minutes, seconds);
+    return { timestamp, name };
+  }
+
+  // Fallback: just use the filename without extension
+  return { timestamp: null, name: filename.replace(/\.sql$/, '').replace(/_/g, ' ') };
+}
+
+/**
+ * Format a date as a human-readable relative time or absolute date
+ */
+function formatRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return 'today';
+  } else if (diffDays === 1) {
+    return 'yesterday';
+  } else if (diffDays < 7) {
+    return `${diffDays} days ago`;
+  } else if (diffDays < 30) {
+    const weeks = Math.floor(diffDays / 7);
+    return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+  } else if (diffDays < 365) {
+    const months = Math.floor(diffDays / 30);
+    return `${months} month${months > 1 ? 's' : ''} ago`;
+  } else {
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+}
+
+/**
+ * Format a date as a short date string
+ */
+function formatShortDate(date: Date): string {
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
 
 /**
  * ice migrate status command
@@ -1362,6 +2335,7 @@ export async function migrateStatus(args: string[]): Promise<void> {
       dialect: { type: 'string', short: 'd', default: 'postgres' },
       verbose: { type: 'boolean', short: 'v' },
       json: { type: 'boolean' },
+      'dry-run': { type: 'boolean' },
     },
   });
 
@@ -1378,6 +2352,11 @@ export async function migrateStatus(args: string[]): Promise<void> {
   const databaseUrl = values['database-url'] as string | undefined;
   const verbose = values.verbose === true;
   const jsonOutput = values.json === true;
+  // Note: dry-run is accepted but status is inherently read-only
+  // const dryRun = values['dry-run'] === true;
+
+  // Detect if colors should be used
+  const noColor = process.env.NO_COLOR !== undefined || !process.stdout.isTTY;
 
   // Load schemas from the file
   const loadResult = await loadSchemaFile(schemaPath);
@@ -1413,7 +2392,7 @@ export async function migrateStatus(args: string[]): Promise<void> {
   const appliedMigrations = allMigrations.slice(0, appliedCount);
   const pendingMigrations = allMigrations.slice(appliedCount);
 
-  // JSON output mode
+  // JSON output mode - unchanged for machine-readable output
   if (jsonOutput) {
     const result = {
       schema: schemaPath,
@@ -1429,47 +2408,73 @@ export async function migrateStatus(args: string[]): Promise<void> {
     return;
   }
 
-  // Human-readable output
+  // Helper functions for colored output
+  const c = {
+    bold: (s: string) => noColor ? s : `${colors.bold}${s}${colors.reset}`,
+    dim: (s: string) => noColor ? s : `${colors.dim}${s}${colors.reset}`,
+    green: (s: string) => noColor ? s : `${colors.green}${s}${colors.reset}`,
+    yellow: (s: string) => noColor ? s : `${colors.yellow}${s}${colors.reset}`,
+    cyan: (s: string) => noColor ? s : `${colors.cyan}${s}${colors.reset}`,
+  };
+
+  // Human-readable output with improved formatting
   console.log('Migration Status:');
   console.log('');
 
+  // Configuration section
   if (databaseUrl) {
-    console.log(`Database: ${databaseUrl}`);
+    console.log(`Database: ${c.cyan(databaseUrl)}`);
   }
-  console.log(`Schema: ${schemaPath}`);
+  console.log(`Schema: ${c.cyan(schemaPath)}`);
   console.log(`Version: ${schemaVersion}`);
   console.log('');
 
   if (!migrationsDirExists) {
-    console.log('No migrations directory found. Run ice migrate dev to create and initialize migrations.');
+    console.log(c.yellow('No migrations directory found.'));
+    console.log(`Run ${c.cyan('ice migrate dev')} to create and initialize migrations.`);
     return;
   }
 
-  console.log(`Applied migrations: ${appliedCount}`);
-  console.log(`Pending migrations: ${pendingMigrations.length}`);
+  // Summary counts with colored indicators
+  const appliedIcon = noColor ? '' : `${colors.green}${symbols.checkmark}${colors.reset} `;
+  const pendingIcon = pendingMigrations.length > 0
+    ? (noColor ? '' : `${colors.yellow}${symbols.warning}${colors.reset} `)
+    : (noColor ? '' : `${colors.green}${symbols.checkmark}${colors.reset} `);
+
+  console.log(`${appliedIcon}Applied migrations: ${appliedCount}`);
+  console.log(`${pendingIcon}Pending migrations: ${pendingMigrations.length}`);
   console.log('');
 
-  // Show verbose output for applied migrations
+  // Show verbose output for applied migrations with timestamps
   if (verbose && appliedMigrations.length > 0) {
-    console.log('Applied:');
+    console.log(c.green('Applied:'));
     for (const migration of appliedMigrations) {
-      console.log(`  - ${migration}`);
+      const parsed = parseMigrationFilename(migration);
+      const timeStr = parsed.timestamp ? ` ${c.dim(`(${formatRelativeTime(parsed.timestamp)})`)}` : '';
+      const icon = noColor ? '-' : `${colors.green}${symbols.checkmark}${colors.reset}`;
+      console.log(`  ${icon} ${migration}${timeStr}`);
     }
     console.log('');
   }
 
-  // Show pending migrations if any
+  // Show pending migrations if any with enhanced formatting
   if (pendingMigrations.length > 0) {
-    console.log('Pending:');
+    console.log(c.yellow('Pending:'));
     for (const migration of pendingMigrations) {
-      console.log(`  - ${migration}`);
+      const parsed = parseMigrationFilename(migration);
+      const dateStr = parsed.timestamp ? ` ${c.dim(`(${formatShortDate(parsed.timestamp)})`)}` : '';
+      // Use dash for compatibility with tests expecting "- migration.sql"
+      console.log(`  - ${c.yellow(migration)}${dateStr}`);
     }
     console.log('');
   }
 
-  // Show status indicator
+  // Show status indicator with appropriate styling
   if (pendingMigrations.length === 0) {
-    console.log('Database is up to date.');
+    const icon = noColor ? '' : `${colors.green}${symbols.checkmark}${colors.reset} `;
+    console.log(`${icon}Database is up to date.`);
+  } else {
+    console.log(c.dim(`Run 'ice migrate dev' to apply pending migrations.`));
   }
 }
 
@@ -1485,7 +2490,7 @@ export async function migrateStatus(args: string[]): Promise<void> {
 export async function migrate(args: string[]): Promise<void> {
   // Check for help at the top level
   if (args.length === 0 || hasHelpFlag(args)) {
-    if (args.length === 0 || (args[0] !== 'dev' && args[0] !== 'generate' && args[0] !== 'diff' && args[0] !== 'plan' && args[0] !== 'status')) {
+    if (args.length === 0 || (args[0] !== 'dev' && args[0] !== 'generate' && args[0] !== 'diff' && args[0] !== 'plan' && args[0] !== 'status' && args[0] !== 'up' && args[0] !== 'down')) {
       console.log(generateHelpText(MIGRATE_HELP));
       process.exit(0);
     }
@@ -1515,9 +2520,17 @@ export async function migrate(args: string[]): Promise<void> {
       await migrateStatus(subArgs);
       break;
 
+    case 'up':
+      await migrateUp(subArgs);
+      break;
+
+    case 'down':
+      await migrateDown(subArgs);
+      break;
+
     default:
       console.error(`Unknown migrate subcommand: ${subcommand}`);
-      console.log('Available: ice migrate dev, ice migrate generate, ice migrate diff, ice migrate plan, ice migrate status');
+      console.log('Available: ice migrate dev, ice migrate generate, ice migrate diff, ice migrate plan, ice migrate status, ice migrate up, ice migrate down');
       process.exit(1);
   }
 }

@@ -3,6 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/icetype.svg)](https://www.npmjs.com/package/icetype)
 [![license](https://img.shields.io/npm/l/icetype.svg)](https://github.com/dot-do/icetype/blob/main/LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![Benchmarks](https://github.com/dot-do/icetype/actions/workflows/benchmarks.yml/badge.svg)](https://github.com/dot-do/icetype/actions/workflows/benchmarks.yml)
 
 A type-safe, concise schema language with Apache Iceberg and Parquet schema generation.
 

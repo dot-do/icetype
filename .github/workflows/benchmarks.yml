@@ -1,0 +1,199 @@
+name: Benchmarks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      compare_baseline:
+        description: 'Compare against baseline'
+        required: false
+        default: 'true'
+        type: boolean
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  # Performance regression threshold (percentage)
+  REGRESSION_THRESHOLD: 20
+
+jobs:
+  benchmark:
+    name: Run Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Run benchmarks
+        run: pnpm bench:json
+        working-directory: packages/benchmarks
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: packages/benchmarks/benchmark-results.json
+          retention-days: 30
+
+      - name: Download baseline (main branch)
+        if: github.event_name == 'pull_request'
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        id: download-baseline
+        with:
+          workflow: benchmarks.yml
+          branch: main
+          name: benchmark-results
+          path: baseline
+
+      - name: Compare benchmarks
+        if: github.event_name == 'pull_request' && steps.download-baseline.outcome == 'success'
+        id: compare
+        run: |
+          node << 'EOF'
+          const fs = require('fs');
+
+          // Read current and baseline results
+          const current = JSON.parse(fs.readFileSync('packages/benchmarks/benchmark-results.json', 'utf8'));
+          const baseline = JSON.parse(fs.readFileSync('baseline/benchmark-results.json', 'utf8'));
+
+          const threshold = parseFloat(process.env.REGRESSION_THRESHOLD) / 100;
+          let hasRegression = false;
+          const comparisons = [];
+
+          // Extract benchmark data from vitest format
+          function extractBenchmarks(data) {
+            const benchmarks = {};
+            if (data.testResults) {
+              for (const file of data.testResults) {
+                for (const result of file.assertionResults || []) {
+                  if (result.meta?.benchmark) {
+                    benchmarks[result.fullName] = result.meta.benchmark;
+                  }
+                }
+              }
+            }
+            return benchmarks;
+          }
+
+          const currentBenchmarks = extractBenchmarks(current);
+          const baselineBenchmarks = extractBenchmarks(baseline);
+
+          for (const [name, curr] of Object.entries(currentBenchmarks)) {
+            const base = baselineBenchmarks[name];
+            if (base && curr.hz && base.hz) {
+              const change = (curr.hz - base.hz) / base.hz;
+              const status = change < -threshold ? 'regression' : change > threshold ? 'improvement' : 'stable';
+
+              if (status === 'regression') {
+                hasRegression = true;
+              }
+
+              comparisons.push({
+                name,
+                baseline: base.hz.toFixed(2),
+                current: curr.hz.toFixed(2),
+                change: (change * 100).toFixed(2) + '%',
+                status
+              });
+            }
+          }
+
+          // Generate markdown report
+          let report = '## Benchmark Comparison\n\n';
+
+          if (comparisons.length === 0) {
+            report += 'No comparable benchmarks found.\n';
+          } else {
+            report += '| Benchmark | Baseline (ops/sec) | Current (ops/sec) | Change | Status |\n';
+            report += '|-----------|-------------------|-------------------|--------|--------|\n';
+
+            for (const c of comparisons) {
+              const statusEmoji = c.status === 'regression' ? 'regression' : c.status === 'improvement' ? 'improvement' : 'stable';
+              report += `| ${c.name} | ${c.baseline} | ${c.current} | ${c.change} | ${statusEmoji} |\n`;
+            }
+
+            if (hasRegression) {
+              report += '\n**Warning: Performance regression detected!** Some benchmarks are more than ' + process.env.REGRESSION_THRESHOLD + '% slower than baseline.\n';
+            }
+          }
+
+          // Write outputs
+          fs.writeFileSync(process.env.GITHUB_OUTPUT, `has_regression=${hasRegression}\n`, { flag: 'a' });
+          fs.writeFileSync('benchmark-report.md', report);
+
+          console.log(report);
+
+          if (hasRegression) {
+            process.exit(1);
+          }
+          EOF
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && steps.download-baseline.outcome == 'success'
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('benchmark-report.md', 'utf8');
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' &&
+              c.body.includes('## Benchmark Comparison')
+            );
+
+            const body = report + '\n\n*Generated by benchmark workflow*';
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }
+
+      - name: Fail on regression
+        if: steps.compare.outputs.has_regression == 'true'
+        run: |
+          echo "Performance regression detected beyond ${REGRESSION_THRESHOLD}% threshold"
+          exit 1

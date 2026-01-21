@@ -1,0 +1,9 @@
+{
+  "title": "Walkthroughs",
+  "icon": "BookMarked",
+  "pages": [
+    "e-commerce",
+    "analytics-pipeline",
+    "production-deployment"
+  ]
+}

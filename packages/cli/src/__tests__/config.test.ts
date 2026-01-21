@@ -553,3 +553,65 @@ describe('resolveFullConfig', () => {
     expect(result.schema).toBe('./from-cli.ts');
   });
 });
+
+// =============================================================================
+// Generate Config Tests
+// =============================================================================
+
+describe('GenerateConfig', () => {
+  it('should accept generate config with nullableStyle option', async () => {
+    const { defineConfig } = await import('../utils/config.js');
+
+    const config = defineConfig({
+      schema: './schema.ts',
+      generate: {
+        nullableStyle: 'strict',
+      },
+    });
+
+    expect(config.generate?.nullableStyle).toBe('strict');
+  });
+
+  it('should accept all valid nullableStyle values', async () => {
+    const { defineConfig } = await import('../utils/config.js');
+
+    const unionConfig = defineConfig({
+      schema: './schema.ts',
+      generate: { nullableStyle: 'union' },
+    });
+    expect(unionConfig.generate?.nullableStyle).toBe('union');
+
+    const optionalConfig = defineConfig({
+      schema: './schema.ts',
+      generate: { nullableStyle: 'optional' },
+    });
+    expect(optionalConfig.generate?.nullableStyle).toBe('optional');
+
+    const strictConfig = defineConfig({
+      schema: './schema.ts',
+      generate: { nullableStyle: 'strict' },
+    });
+    expect(strictConfig.generate?.nullableStyle).toBe('strict');
+  });
+
+  it('should merge generate config with CLI options', async () => {
+    const { mergeConfig } = await import('../utils/config.js');
+
+    const fileConfig = {
+      schema: './schema.ts',
+      generate: {
+        nullableStyle: 'union' as const,
+      },
+    };
+
+    const cliOptions = {
+      generate: {
+        nullableStyle: 'strict' as const,
+      },
+    };
+
+    const result = mergeConfig(fileConfig, cliOptions);
+
+    expect(result.generate?.nullableStyle).toBe('strict');
+  });
+});

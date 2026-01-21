@@ -260,6 +260,155 @@ describe('SchemaLoadError', () => {
     const error = new SchemaLoadError('Test');
     expect(error).toBeInstanceOf(IceTypeError);
   });
+
+  describe('structured error context', () => {
+    it('should store errorContext', () => {
+      const error = new SchemaLoadError('Module not found', {
+        filePath: './schema.ts',
+        errorContext: {
+          errorType: 'import_error',
+          missingModule: '@myapp/shared',
+          isPathAlias: true,
+          suggestions: [
+            { message: 'Check your tsconfig.json paths configuration' },
+          ],
+          docLink: 'https://icetype.dev/docs/troubleshooting/module-resolution',
+        },
+      });
+      expect(error.errorContext).toBeDefined();
+      expect(error.errorContext?.errorType).toBe('import_error');
+      expect(error.errorContext?.missingModule).toBe('@myapp/shared');
+      expect(error.errorContext?.isPathAlias).toBe(true);
+    });
+
+    it('should return suggestions via getSuggestions()', () => {
+      const error = new SchemaLoadError('Test', {
+        errorContext: {
+          errorType: 'syntax_error',
+          suggestions: [
+            { message: 'Check for missing commas' },
+            { message: 'Check for missing brackets', command: 'npm run lint' },
+          ],
+        },
+      });
+      const suggestions = error.getSuggestions();
+      expect(suggestions).toHaveLength(2);
+      expect(suggestions[0].message).toBe('Check for missing commas');
+      expect(suggestions[1].command).toBe('npm run lint');
+    });
+
+    it('should return empty array from getSuggestions() when no errorContext', () => {
+      const error = new SchemaLoadError('Test');
+      expect(error.getSuggestions()).toEqual([]);
+    });
+
+    it('should return docLink via getDocLink()', () => {
+      const error = new SchemaLoadError('Test', {
+        errorContext: {
+          errorType: 'file_not_found',
+          docLink: 'https://icetype.dev/docs/guides/schema-files',
+        },
+      });
+      expect(error.getDocLink()).toBe('https://icetype.dev/docs/guides/schema-files');
+    });
+
+    it('should return undefined from getDocLink() when no docLink', () => {
+      const error = new SchemaLoadError('Test');
+      expect(error.getDocLink()).toBeUndefined();
+    });
+
+    it('should detect location via hasLocation()', () => {
+      const errorWithLocation = new SchemaLoadError('Test', {
+        errorContext: {
+          errorType: 'syntax_error',
+          line: 10,
+          column: 5,
+        },
+      });
+      const errorWithoutLocation = new SchemaLoadError('Test');
+
+      expect(errorWithLocation.hasLocation()).toBe(true);
+      expect(errorWithoutLocation.hasLocation()).toBe(false);
+    });
+
+    it('should format location string via getLocationString()', () => {
+      const error = new SchemaLoadError('Test', {
+        filePath: '/path/to/schema.ts',
+        errorContext: {
+          errorType: 'syntax_error',
+          line: 10,
+          column: 5,
+        },
+      });
+      expect(error.getLocationString()).toBe('/path/to/schema.ts:10:5');
+    });
+
+    it('should format location without column', () => {
+      const error = new SchemaLoadError('Test', {
+        filePath: '/path/to/schema.ts',
+        errorContext: {
+          errorType: 'syntax_error',
+          line: 10,
+        },
+      });
+      expect(error.getLocationString()).toBe('/path/to/schema.ts:10');
+    });
+
+    it('should return undefined from getLocationString() without line', () => {
+      const error = new SchemaLoadError('Test');
+      expect(error.getLocationString()).toBeUndefined();
+    });
+
+    it('should include suggestions in format()', () => {
+      const error = new SchemaLoadError('Test error', {
+        errorContext: {
+          errorType: 'import_error',
+          suggestions: [
+            { message: 'Install the package', command: 'npm install foo' },
+            { message: 'Check documentation', docLink: 'https://example.com' },
+          ],
+          docLink: 'https://icetype.dev/docs/main',
+        },
+      });
+      const formatted = error.format();
+      expect(formatted).toContain('Suggestions:');
+      expect(formatted).toContain('Install the package');
+      expect(formatted).toContain('npm install foo');
+      expect(formatted).toContain('Check documentation');
+      expect(formatted).toContain('https://example.com');
+      expect(formatted).toContain('Documentation: https://icetype.dev/docs/main');
+    });
+
+    it('should include location in format()', () => {
+      const error = new SchemaLoadError('Test error', {
+        errorContext: {
+          errorType: 'syntax_error',
+          line: 10,
+          column: 5,
+        },
+      });
+      const formatted = error.format();
+      expect(formatted).toContain('Location: line 10, column 5');
+    });
+
+    it('should include errorContext in toJSON()', () => {
+      const error = new SchemaLoadError('Test', {
+        filePath: './schema.ts',
+        extension: '.ts',
+        errorContext: {
+          errorType: 'module_load',
+          line: 5,
+        },
+      });
+      const json = error.toJSON();
+      expect(json.filePath).toBe('./schema.ts');
+      expect(json.extension).toBe('.ts');
+      expect(json.errorContext).toEqual({
+        errorType: 'module_load',
+        line: 5,
+      });
+    });
+  });
 });
 
 // =============================================================================

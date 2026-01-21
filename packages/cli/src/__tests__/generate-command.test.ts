@@ -1479,3 +1479,355 @@ describe('additional type mappings', () => {
     expect(content).toContain('files: Uint8Array[]');
   });
 });
+
+// =============================================================================
+// Nullable Style Tests
+// =============================================================================
+
+describe('nullable style configuration', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should use union style by default (T | null | undefined)', async () => {
+    const fields = new Map<string, FieldDefinition>();
+    fields.set('name', {
+      name: 'name',
+      type: 'string',
+      modifier: '?',
+      isArray: false,
+      isOptional: true,
+      isUnique: false,
+      isIndexed: false,
+    });
+
+    const schema: IceTypeSchema = {
+      name: 'User',
+      version: 1,
+      fields,
+      directives: {},
+      relations: new Map(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const mockWriteFileSync = vi.fn();
+
+    vi.doMock('node:fs', async () => {
+      const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
+      return {
+        ...actual,
+        writeFileSync: mockWriteFileSync,
+      };
+    });
+
+    vi.doMock('../utils/schema-loader.js', () => ({
+      loadSchemaFile: vi.fn().mockResolvedValue({
+        schemas: [{ name: 'User', schema }],
+        errors: [],
+      }),
+    }));
+
+    const { runGeneration } = await import('../commands/generate.js');
+
+    await runGeneration({
+      schema: './schema.ts',
+      quiet: true,
+    });
+
+    const [, content] = mockWriteFileSync.mock.calls[0];
+    expect(content).toContain('name?: string | null | undefined;');
+  });
+
+  it('should generate optional style (T | undefined) when nullableStyle is optional', async () => {
+    const fields = new Map<string, FieldDefinition>();
+    fields.set('name', {
+      name: 'name',
+      type: 'string',
+      modifier: '?',
+      isArray: false,
+      isOptional: true,
+      isUnique: false,
+      isIndexed: false,
+    });
+
+    const schema: IceTypeSchema = {
+      name: 'User',
+      version: 1,
+      fields,
+      directives: {},
+      relations: new Map(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const mockWriteFileSync = vi.fn();
+
+    vi.doMock('node:fs', async () => {
+      const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
+      return {
+        ...actual,
+        writeFileSync: mockWriteFileSync,
+      };
+    });
+
+    vi.doMock('../utils/schema-loader.js', () => ({
+      loadSchemaFile: vi.fn().mockResolvedValue({
+        schemas: [{ name: 'User', schema }],
+        errors: [],
+      }),
+    }));
+
+    const { runGeneration } = await import('../commands/generate.js');
+
+    await runGeneration({
+      schema: './schema.ts',
+      quiet: true,
+      nullableStyle: 'optional',
+    });
+
+    const [, content] = mockWriteFileSync.mock.calls[0];
+    expect(content).toContain('name?: string | undefined;');
+    expect(content).not.toContain('| null |');
+  });
+
+  it('should generate strict style (T | null) when nullableStyle is strict', async () => {
+    const fields = new Map<string, FieldDefinition>();
+    fields.set('name', {
+      name: 'name',
+      type: 'string',
+      modifier: '?',
+      isArray: false,
+      isOptional: true,
+      isUnique: false,
+      isIndexed: false,
+    });
+
+    const schema: IceTypeSchema = {
+      name: 'User',
+      version: 1,
+      fields,
+      directives: {},
+      relations: new Map(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const mockWriteFileSync = vi.fn();
+
+    vi.doMock('node:fs', async () => {
+      const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
+      return {
+        ...actual,
+        writeFileSync: mockWriteFileSync,
+      };
+    });
+
+    vi.doMock('../utils/schema-loader.js', () => ({
+      loadSchemaFile: vi.fn().mockResolvedValue({
+        schemas: [{ name: 'User', schema }],
+        errors: [],
+      }),
+    }));
+
+    const { runGeneration } = await import('../commands/generate.js');
+
+    await runGeneration({
+      schema: './schema.ts',
+      quiet: true,
+      nullableStyle: 'strict',
+    });
+
+    const [, content] = mockWriteFileSync.mock.calls[0];
+    expect(content).toContain('name?: string | null;');
+    expect(content).not.toContain('| undefined');
+  });
+
+  it('should apply nullable style to optional relations', async () => {
+    const fields = new Map<string, FieldDefinition>();
+    fields.set('author', {
+      name: 'author',
+      type: 'User',
+      modifier: '?',
+      isArray: false,
+      isOptional: true,
+      isUnique: false,
+      isIndexed: false,
+      relation: {
+        operator: '->',
+        targetType: 'User',
+      },
+    });
+
+    const schema: IceTypeSchema = {
+      name: 'Post',
+      version: 1,
+      fields,
+      directives: {},
+      relations: new Map(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const mockWriteFileSync = vi.fn();
+
+    vi.doMock('node:fs', async () => {
+      const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
+      return {
+        ...actual,
+        writeFileSync: mockWriteFileSync,
+      };
+    });
+
+    vi.doMock('../utils/schema-loader.js', () => ({
+      loadSchemaFile: vi.fn().mockResolvedValue({
+        schemas: [{ name: 'Post', schema }],
+        errors: [],
+      }),
+    }));
+
+    const { runGeneration } = await import('../commands/generate.js');
+
+    await runGeneration({
+      schema: './schema.ts',
+      quiet: true,
+      nullableStyle: 'strict',
+    });
+
+    const [, content] = mockWriteFileSync.mock.calls[0];
+    expect(content).toContain('author?: string | null;');
+  });
+
+  it('should not apply nullable suffix to required fields', async () => {
+    const fields = new Map<string, FieldDefinition>();
+    fields.set('name', {
+      name: 'name',
+      type: 'string',
+      modifier: '!',
+      isArray: false,
+      isOptional: false,
+      isUnique: false,
+      isIndexed: false,
+    });
+
+    const schema: IceTypeSchema = {
+      name: 'User',
+      version: 1,
+      fields,
+      directives: {},
+      relations: new Map(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const mockWriteFileSync = vi.fn();
+
+    vi.doMock('node:fs', async () => {
+      const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
+      return {
+        ...actual,
+        writeFileSync: mockWriteFileSync,
+      };
+    });
+
+    vi.doMock('../utils/schema-loader.js', () => ({
+      loadSchemaFile: vi.fn().mockResolvedValue({
+        schemas: [{ name: 'User', schema }],
+        errors: [],
+      }),
+    }));
+
+    const { runGeneration } = await import('../commands/generate.js');
+
+    await runGeneration({
+      schema: './schema.ts',
+      quiet: true,
+      nullableStyle: 'union',
+    });
+
+    const [, content] = mockWriteFileSync.mock.calls[0];
+    expect(content).toContain('name: string;');
+    expect(content).not.toContain('name: string | null');
+    expect(content).not.toContain('name: string | undefined');
+  });
+
+  it('should support --nullable-style CLI flag', async () => {
+    const fields = new Map<string, FieldDefinition>();
+    fields.set('name', {
+      name: 'name',
+      type: 'string',
+      modifier: '?',
+      isArray: false,
+      isOptional: true,
+      isUnique: false,
+      isIndexed: false,
+    });
+
+    const schema: IceTypeSchema = {
+      name: 'User',
+      version: 1,
+      fields,
+      directives: {},
+      relations: new Map(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const mockWriteFileSync = vi.fn();
+
+    vi.doMock('node:fs', async () => {
+      const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
+      return {
+        ...actual,
+        writeFileSync: mockWriteFileSync,
+      };
+    });
+
+    vi.doMock('../utils/schema-loader.js', () => ({
+      loadSchemaFile: vi.fn().mockResolvedValue({
+        schemas: [{ name: 'User', schema }],
+        errors: [],
+      }),
+    }));
+
+    vi.doMock('../utils/watcher.js', () => ({
+      watchGenerate: vi.fn(),
+    }));
+
+    const { generate } = await import('../commands/generate.js');
+
+    await generate(['--schema', './schema.ts', '--nullable-style', 'optional', '-q']);
+
+    const [, content] = mockWriteFileSync.mock.calls[0];
+    expect(content).toContain('name?: string | undefined;');
+  });
+
+  it('should reject invalid --nullable-style values', async () => {
+    vi.doMock('node:fs', async () => {
+      const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
+      return {
+        ...actual,
+        writeFileSync: vi.fn(),
+      };
+    });
+
+    vi.doMock('../utils/schema-loader.js', () => ({
+      loadSchemaFile: vi.fn(),
+    }));
+
+    vi.doMock('../utils/watcher.js', () => ({
+      watchGenerate: vi.fn(),
+    }));
+
+    const { generate } = await import('../commands/generate.js');
+
+    await expect(
+      generate(['--schema', './schema.ts', '--nullable-style', 'invalid', '-q'])
+    ).rejects.toThrow("Invalid --nullable-style value 'invalid'. Must be one of: union, optional, strict");
+  });
+});

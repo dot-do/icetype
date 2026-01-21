@@ -17,14 +17,16 @@ import {
   checkSchemaLoadErrors,
   checkSchemasExist,
 } from '../utils/cli-error.js';
+import type { NullableStyle } from '../utils/config.js';
 
 const GENERATE_HELP: HelpCommand = {
   name: 'generate',
   description: 'Generate TypeScript types from IceType schema',
-  usage: 'ice generate --schema <file> [--output <file>] [--watch]',
+  usage: 'ice generate --schema <file> [--output <file>] [--watch] [--nullable-style <style>]',
   options: [
     { name: 'schema', short: 's', description: 'Path to the schema file', required: true },
     { name: 'output', short: 'o', description: 'Output file path (default: <schema>.generated.ts)' },
+    { name: 'nullable-style', description: 'Nullable type style: union (T | null | undefined), optional (T | undefined), strict (T | null). Default: union' },
     { name: 'watch', short: 'w', description: 'Watch mode for automatic regeneration' },
     { name: 'quiet', short: 'q', description: 'Suppress non-error output' },
     { name: 'verbose', short: 'v', description: 'Enable verbose logging' },
@@ -32,6 +34,7 @@ const GENERATE_HELP: HelpCommand = {
   examples: [
     'ice generate --schema ./schema.ts --output ./types.ts',
     'ice generate -s ./schema.ts -o ./types.ts --watch',
+    'ice generate --schema ./schema.ts --nullable-style=strict',
   ],
 };
 
@@ -49,6 +52,8 @@ export interface GenerateOptions {
   quiet?: boolean;
   /** Enable verbose logging. */
   verbose?: boolean;
+  /** Nullable type style for optional fields. */
+  nullableStyle?: NullableStyle;
 }
 
 /**
@@ -58,7 +63,7 @@ export interface GenerateOptions {
  * @throws Error if generation fails
  */
 export async function runGeneration(options: GenerateOptions): Promise<void> {
-  const { schema: schemaPath, output, quiet = false, verbose = false } = options;
+  const { schema: schemaPath, output, quiet = false, verbose = false, nullableStyle = 'union' } = options;
 
   const logger = createLogger({
     quiet,
@@ -82,7 +87,7 @@ export async function runGeneration(options: GenerateOptions): Promise<void> {
   logger.debug(`Found ${loadResult.schemas.length} schema(s)`);
 
   // Generate types for all schemas
-  const types = generateTypesFromSchemas(loadResult.schemas.map(s => s.schema));
+  const types = generateTypesFromSchemas(loadResult.schemas.map(s => s.schema), nullableStyle);
 
   try {
     writeFileSync(outputPath, types);
@@ -105,6 +110,7 @@ export async function generate(args: string[]) {
     options: {
       schema: { type: 'string', short: 's' },
       output: { type: 'string', short: 'o' },
+      'nullable-style': { type: 'string' },
       watch: { type: 'boolean', short: 'w' },
       quiet: { type: 'boolean', short: 'q' },
       verbose: { type: 'boolean', short: 'v' },
@@ -123,12 +129,25 @@ export async function generate(args: string[]) {
   const schemaPath = values.schema;
   const outputPath = typeof values.output === 'string' ? values.output : schemaPath.replace(/\.(ts|js|mjs|json)$/, '.generated.ts');
 
+  // Validate nullable-style option
+  const nullableStyleValue = values['nullable-style'];
+  let nullableStyle: NullableStyle = 'union';
+  if (nullableStyleValue !== undefined) {
+    if (nullableStyleValue !== 'union' && nullableStyleValue !== 'optional' && nullableStyleValue !== 'strict') {
+      throw new Error(
+        `Invalid --nullable-style value '${nullableStyleValue}'. Must be one of: union, optional, strict`
+      );
+    }
+    nullableStyle = nullableStyleValue;
+  }
+
   const options: GenerateOptions = {
     schema: schemaPath,
     output: outputPath,
     watch: values.watch ?? false,
     quiet: values.quiet ?? false,
     verbose: values.verbose ?? false,
+    nullableStyle,
   };
 
   const logger = createLogger({
@@ -157,7 +176,7 @@ export async function generate(args: string[]) {
 /**
  * Generate TypeScript types from multiple schemas
  */
-function generateTypesFromSchemas(schemas: IceTypeSchema[]): string {
+function generateTypesFromSchemas(schemas: IceTypeSchema[], nullableStyle: NullableStyle = 'union'): string {
   const lines: string[] = [];
 
   lines.push(`/**`);
@@ -171,7 +190,7 @@ function generateTypesFromSchemas(schemas: IceTypeSchema[]): string {
   lines.push(``);
 
   for (const schema of schemas) {
-    lines.push(generateTypeScriptInterface(schema));
+    lines.push(generateTypeScriptInterface(schema, nullableStyle));
     lines.push(``);
   }
 
@@ -181,7 +200,7 @@ function generateTypesFromSchemas(schemas: IceTypeSchema[]): string {
 /**
  * Generate TypeScript interface from IceType schema
  */
-export function generateTypeScriptInterface(schema: IceTypeSchema): string {
+export function generateTypeScriptInterface(schema: IceTypeSchema, nullableStyle: NullableStyle = 'union'): string {
   const lines: string[] = [];
 
   lines.push(`/**`);
@@ -209,7 +228,7 @@ export function generateTypeScriptInterface(schema: IceTypeSchema): string {
   for (const [fieldName, field] of schema.fields) {
     if (fieldName.startsWith('$')) continue;
 
-    const tsType = fieldToTypeScript(field);
+    const tsType = fieldToTypeScript(field, nullableStyle);
     const optional = field.isOptional ? '?' : '';
     lines.push(`  ${fieldName}${optional}: ${tsType};`);
   }
@@ -224,7 +243,7 @@ export function generateTypeScriptInterface(schema: IceTypeSchema): string {
   for (const [fieldName, field] of schema.fields) {
     if (fieldName.startsWith('$')) continue;
 
-    const tsType = fieldToTypeScript(field);
+    const tsType = fieldToTypeScript(field, nullableStyle);
     const optional = field.isOptional || field.defaultValue !== undefined ? '?' : '';
     lines.push(`  ${fieldName}${optional}: ${tsType};`);
   }
@@ -235,15 +254,40 @@ export function generateTypeScriptInterface(schema: IceTypeSchema): string {
 }
 
 /**
- * Convert IceType field to TypeScript type
+ * Get the nullable suffix based on the configured style.
+ *
+ * @param style - The nullable style to use
+ * @returns The nullable type suffix to append
  */
-function fieldToTypeScript(field: FieldDefinition): string {
+function getNullableSuffix(style: NullableStyle): string {
+  switch (style) {
+    case 'union':
+      return ' | null | undefined';
+    case 'optional':
+      return ' | undefined';
+    case 'strict':
+      return ' | null';
+  }
+}
+
+/**
+ * Convert IceType field to TypeScript type
+ *
+ * Handles nullable types based on the configured style:
+ * - 'union' (default): Optional fields generate `T | null | undefined`
+ * - 'optional': Optional fields generate `T | undefined`
+ * - 'strict': Optional fields generate `T | null`
+ *
+ * Required fields (!) always generate just `T`.
+ */
+function fieldToTypeScript(field: FieldDefinition, nullableStyle: NullableStyle = 'union'): string {
   if (field.relation) {
     // Relations become string IDs or arrays of string IDs
-    if (field.isArray) {
-      return 'string[]';
+    const baseType = field.isArray ? 'string[]' : 'string';
+    if (field.isOptional) {
+      return `${baseType}${getNullableSuffix(nullableStyle)}`;
     }
-    return 'string';
+    return baseType;
   }
 
   let baseType: string;
@@ -283,7 +327,11 @@ function fieldToTypeScript(field: FieldDefinition): string {
   }
 
   if (field.isArray) {
-    return `${baseType}[]`;
+    baseType = `${baseType}[]`;
+  }
+
+  if (field.isOptional) {
+    return `${baseType}${getNullableSuffix(nullableStyle)}`;
   }
 
   return baseType;

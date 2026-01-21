@@ -23,10 +23,16 @@ import {
   generateDownFromUp,
   parseMigrationFile,
   formatMigrationFile,
+  preFlightValidation,
+  dryRunValidation,
+  comprehensiveValidation,
+  getRequiredConfirmations,
   type ReversibleMigration,
   type MigrationValidationResult,
   type IrreversibleOperation,
   type ReversibleMigrationOptions,
+  type PreFlightValidationResult,
+  type DryRunResult,
 } from '../utils/reversible-migrations.js';
 
 // =============================================================================
@@ -852,6 +858,393 @@ ALTER TABLE users ADD COLUMN email TEXT;
       // DOWN should restore from backup
       expect(migration.down.some((s) => s.includes('ADD COLUMN'))).toBe(true);
       expect(migration.down.some((s) => s.includes('UPDATE'))).toBe(true);
+    });
+  });
+
+  // =============================================================================
+  // Safety Features Tests
+  // =============================================================================
+
+  describe('preFlightValidation', () => {
+    it('should detect dangerous DROP TABLE operations', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Drop table',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 2, minor: 0, patch: 0 },
+        up: ['DROP TABLE users;'],
+        down: ['-- Cannot restore'],
+        reversible: false,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = preFlightValidation(migration, { dialect: 'postgres' });
+
+      expect(result.dangerousOperations).toHaveLength(1);
+      expect(result.dangerousOperations[0].severity).toBe('critical');
+      expect(result.dangerousOperations[0].type).toBe('schema_destruction');
+      expect(result.requiresConfirmation).toBe(true);
+    });
+
+    it('should detect dangerous DROP COLUMN operations', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Drop column',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 1, minor: 1, patch: 0 },
+        up: ['ALTER TABLE users DROP COLUMN email;'],
+        down: ['-- Cannot restore'],
+        reversible: false,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = preFlightValidation(migration, { dialect: 'postgres' });
+
+      expect(result.dangerousOperations).toHaveLength(1);
+      expect(result.dangerousOperations[0].severity).toBe('critical');
+      expect(result.dangerousOperations[0].type).toBe('data_loss');
+      expect(result.backupSuggestions.length).toBeGreaterThan(0);
+    });
+
+    it('should detect TRUNCATE as dangerous', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Truncate table',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 1, minor: 1, patch: 0 },
+        up: ['TRUNCATE TABLE audit_log;'],
+        down: ['-- Cannot restore'],
+        reversible: false,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = preFlightValidation(migration, { dialect: 'postgres' });
+
+      expect(result.dangerousOperations).toHaveLength(1);
+      expect(result.dangerousOperations[0].type).toBe('data_loss');
+    });
+
+    it('should generate backup suggestions for destructive operations', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Drop table',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 2, minor: 0, patch: 0 },
+        up: ['DROP TABLE users;'],
+        down: [],
+        reversible: false,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = preFlightValidation(migration, { dialect: 'postgres' });
+
+      expect(result.backupSuggestions.length).toBeGreaterThan(0);
+      expect(result.backupSuggestions[0]).toContain('pg_dump');
+    });
+
+    it('should detect missing DOWN section as a mistake', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Add column',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 1, minor: 1, patch: 0 },
+        up: ['ALTER TABLE users ADD COLUMN email TEXT;'],
+        down: [],
+        reversible: false,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = preFlightValidation(migration, {
+        dialect: 'postgres',
+        checkCommonMistakes: true,
+      });
+
+      expect(result.commonMistakes.some((m) => m.type === 'missing_down')).toBe(true);
+    });
+
+    it('should detect ADD COLUMN NOT NULL without DEFAULT as error', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Add column',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 1, minor: 1, patch: 0 },
+        up: ['ALTER TABLE users ADD COLUMN email TEXT NOT NULL;'],
+        down: ['ALTER TABLE users DROP COLUMN email;'],
+        reversible: true,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = preFlightValidation(migration, {
+        dialect: 'postgres',
+        checkCommonMistakes: true,
+      });
+
+      expect(result.commonMistakes.some((m) => m.type === 'missing_default_for_not_null')).toBe(true);
+      expect(result.commonMistakes.find((m) => m.type === 'missing_default_for_not_null')?.severity).toBe('error');
+    });
+
+    it('should detect missing IF NOT EXISTS in CREATE TABLE', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Create table',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 1, minor: 1, patch: 0 },
+        up: ['CREATE TABLE users (id UUID PRIMARY KEY);'],
+        down: ['DROP TABLE users;'],
+        reversible: true,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = preFlightValidation(migration, {
+        dialect: 'postgres',
+        checkCommonMistakes: true,
+      });
+
+      expect(result.commonMistakes.some((m) => m.type === 'missing_if_not_exists')).toBe(true);
+    });
+
+    it('should pass validation for safe migrations', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Rename column',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 1, minor: 1, patch: 0 },
+        up: ['ALTER TABLE users RENAME COLUMN first_name TO given_name;'],
+        down: ['ALTER TABLE users RENAME COLUMN given_name TO first_name;'],
+        reversible: true,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = preFlightValidation(migration, { dialect: 'postgres' });
+
+      expect(result.canProceed).toBe(true);
+      expect(result.dangerousOperations).toHaveLength(0);
+    });
+  });
+
+  describe('dryRunValidation', () => {
+    it('should validate that DOWN reverses UP for ADD/DROP COLUMN', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Add column',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 1, minor: 1, patch: 0 },
+        up: ['ALTER TABLE users ADD COLUMN email TEXT;'],
+        down: ['ALTER TABLE users DROP COLUMN email;'],
+        reversible: true,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = dryRunValidation(migration, 'postgres');
+
+      expect(result.passed).toBe(true);
+      expect(result.downReversesUp).toBe(true);
+      expect(result.stateChanges).toHaveLength(1);
+      expect(result.stateChanges[0].type).toBe('add_column');
+    });
+
+    it('should detect when DOWN does not reverse UP', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Add column',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 1, minor: 1, patch: 0 },
+        up: ['ALTER TABLE users ADD COLUMN email TEXT;'],
+        down: ['ALTER TABLE users DROP COLUMN phone;'], // Wrong column!
+        reversible: true,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = dryRunValidation(migration, 'postgres');
+
+      expect(result.downReversesUp).toBe(false);
+      expect(result.errors.length).toBeGreaterThan(0);
+    });
+
+    it('should validate RENAME operations', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Rename column',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 1, minor: 1, patch: 0 },
+        up: ['ALTER TABLE users RENAME COLUMN first_name TO given_name;'],
+        down: ['ALTER TABLE users RENAME COLUMN given_name TO first_name;'],
+        reversible: true,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = dryRunValidation(migration, 'postgres');
+
+      expect(result.passed).toBe(true);
+      expect(result.downReversesUp).toBe(true);
+    });
+
+    it('should validate INDEX operations', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Add index',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 1, minor: 1, patch: 0 },
+        up: ['CREATE INDEX idx_users_email ON users (email);'],
+        down: ['DROP INDEX idx_users_email;'],
+        reversible: true,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = dryRunValidation(migration, 'postgres');
+
+      expect(result.passed).toBe(true);
+      expect(result.downReversesUp).toBe(true);
+    });
+
+    it('should fail validation for missing DOWN section', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Add column',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 1, minor: 1, patch: 0 },
+        up: ['ALTER TABLE users ADD COLUMN email TEXT;'],
+        down: [],
+        reversible: false,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = dryRunValidation(migration, 'postgres');
+
+      expect(result.passed).toBe(false);
+      expect(result.errors).toContainEqual(expect.stringContaining('no DOWN section'));
+    });
+
+    it('should warn about CASCADE in statements', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Drop with cascade',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 2, minor: 0, patch: 0 },
+        up: ['DROP TABLE users CASCADE;'],
+        down: ['-- Cannot restore'],
+        reversible: false,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = dryRunValidation(migration, 'postgres');
+
+      expect(result.warnings).toContainEqual(expect.stringContaining('CASCADE'));
+    });
+  });
+
+  describe('comprehensiveValidation', () => {
+    it('should run all validation checks', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Safe migration',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 1, minor: 1, patch: 0 },
+        up: ['ALTER TABLE users RENAME COLUMN first_name TO given_name;'],
+        down: ['ALTER TABLE users RENAME COLUMN given_name TO first_name;'],
+        reversible: true,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = comprehensiveValidation(migration, 'postgres');
+
+      expect(result.overallValid).toBe(true);
+      expect(result.preFlightResult).toBeDefined();
+      expect(result.reversibilityResult).toBeDefined();
+      expect(result.dryRunResult).toBeDefined();
+      expect(result.overallSummary).toContain('PASSED');
+    });
+
+    it('should fail overall validation when any check fails', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Problematic migration',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 1, minor: 1, patch: 0 },
+        up: ['ALTER TABLE users ADD COLUMN email TEXT NOT NULL;'],
+        down: [],
+        reversible: false,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = comprehensiveValidation(migration, 'postgres');
+
+      expect(result.overallValid).toBe(false);
+    });
+
+    it('should provide comprehensive summary', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Dangerous migration',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 2, minor: 0, patch: 0 },
+        up: ['DROP TABLE users;'],
+        down: [],
+        reversible: false,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const result = comprehensiveValidation(migration, 'postgres');
+
+      expect(result.overallSummary).toContain('Dangerous operations');
+      expect(result.overallSummary).toContain('CRITICAL');
+    });
+  });
+
+  describe('getRequiredConfirmations', () => {
+    it('should return confirmation messages for dangerous operations', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Dangerous migration',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 2, minor: 0, patch: 0 },
+        up: ['DROP TABLE users;', 'ALTER TABLE posts DROP COLUMN author;'],
+        down: [],
+        reversible: false,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const confirmations = getRequiredConfirmations(migration, 'postgres');
+
+      expect(confirmations.length).toBe(2);
+      expect(confirmations[0]).toContain('CRITICAL');
+      expect(confirmations[1]).toContain('CRITICAL');
+    });
+
+    it('should return empty array for safe operations', () => {
+      const migration: ReversibleMigration = {
+        id: 'migration-1',
+        name: 'Safe migration',
+        fromVersion: { major: 1, minor: 0, patch: 0 },
+        toVersion: { major: 1, minor: 1, patch: 0 },
+        up: ['ALTER TABLE users RENAME COLUMN first_name TO given_name;'],
+        down: ['ALTER TABLE users RENAME COLUMN given_name TO first_name;'],
+        reversible: true,
+        warnings: [],
+        createdAt: new Date(),
+      };
+
+      const confirmations = getRequiredConfirmations(migration, 'postgres');
+
+      expect(confirmations).toHaveLength(0);
     });
   });
 });

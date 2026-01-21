@@ -76,14 +76,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## Architecture Decision: LSP Not Implemented
+
+After evaluating Language Server Protocol (LSP) integration for the VS Code extension, we decided **not** to implement LSP for the following reasons:
+
+### Why LSP is Not Needed
+
+1. **IceType schemas are TypeScript/JavaScript** - The primary usage is `DB({...})` or `parseSchema({...})` inside TypeScript files. TypeScript already provides syntax validation, type checking, and go-to-definition.
+
+2. **String-based DSL** - Field definitions like `'string! #unique'` are strings. Parsing these for LSP validation adds complexity for marginal benefit when TypeScript already validates the object structure.
+
+3. **Self-contained schemas** - Unlike SQL or GraphQL, IceType schemas are self-contained objects with no import system or cross-file references that would benefit from LSP.
+
+4. **Current approach works well** - The TextMate grammar provides excellent syntax highlighting, and the completion provider offers context-aware IntelliSense with comprehensive documentation.
+
+5. **Maintenance burden** - LSP would require a separate server process, additional dependencies, and significantly more code to maintain.
+
+### When LSP Would Be Reconsidered
+
+- Standalone `.ice` files with import/export support
+- Cross-file entity references and validation
+- Complex validation rules that TypeScript can't check
+- Schema-level diagnostics beyond what TypeScript provides
+
+### Current Capabilities
+
+The extension provides a full-featured editing experience without LSP:
+- Syntax highlighting (TextMate grammar with injection)
+- Context-aware completions with rich documentation
+- Snippets for common patterns
+- Semantic token support
+- Status bar integration
+
+---
+
 ## Future Releases
 
 Planned features for upcoming versions:
 
-- Language Server Protocol (LSP) support
-- Enhanced autocomplete with entity name suggestions
-- Schema validation and diagnostics
-- Go to definition for entity references
-- Hover information for types and fields
-- Code actions and quick fixes
-- Formatting support
+- Enhanced autocomplete with entity name suggestions from workspace
+- Schema validation diagnostics (if needed beyond TypeScript checking)
+- Hover information for embedded type strings
+- Code actions and quick fixes for common patterns
+- Formatting support for standalone `.ice` files

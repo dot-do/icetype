@@ -1,0 +1,588 @@
+---
+title: Iceberg Analytics
+description: Setting up Apache Iceberg for analytics with IceType schemas.
+---
+
+# Iceberg Analytics
+
+This tutorial covers integrating IceType with Apache Iceberg for building a modern data lake architecture that enables real-time analytics on your operational data.
+
+## What is Apache Iceberg?
+
+Apache Iceberg is an open table format for huge analytic datasets. It brings reliability and simplicity to data lakes with:
+
+- **ACID transactions** - Safe concurrent writes
+- **Schema evolution** - Add, drop, rename columns without rewriting data
+- **Time travel** - Query historical data snapshots
+- **Partition evolution** - Change partitioning without rewriting data
+- **Hidden partitioning** - Users don't need to know how data is partitioned
+
+## Why IceType + Iceberg?
+
+IceType bridges your operational database schemas and data lake:
+
+- **Schema consistency** - Same schema definition for PostgreSQL and Iceberg
+- **Automated metadata** - Generate Iceberg table metadata from IceType schemas
+- **Parquet schemas** - Generate compatible Parquet schemas for data files
+- **CDC integration** - Change Data Capture to stream updates to your data lake
+
+## Getting Started
+
+### Installation
+
+```bash
+npm install icetype @icetype/core @icetype/iceberg
+```
+
+### Basic Setup
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { generateIcebergMetadata, generateParquetSchema } from '@icetype/iceberg';
+
+// Define your schema
+const EventSchema = parseSchema({
+  $type: 'Event',
+  $partitionBy: ['date'],
+  $index: [['userId'], ['eventType'], ['timestamp']],
+
+  id: 'uuid!',
+  userId: 'string!',
+  sessionId: 'string!',
+  eventType: 'string!',
+  payload: 'json',
+  timestamp: 'timestamp!',
+  date: 'date!',
+});
+
+// Generate Iceberg table metadata
+const metadata = generateIcebergMetadata(
+  EventSchema,
+  's3://my-data-lake/events',
+  {
+    'write.parquet.compression-codec': 'zstd',
+    'write.metadata.compression-codec': 'gzip',
+  }
+);
+
+// Generate Parquet schema for data files
+const parquetSchema = generateParquetSchema(EventSchema);
+```
+
+## Designing Analytics Schemas
+
+### Event Data
+
+Event data benefits from time-based partitioning:
+
+```typescript
+const PageViewSchema = parseSchema({
+  $type: 'PageView',
+  $partitionBy: ['date'],
+
+  id: 'uuid!',
+  sessionId: 'string!',
+  userId: 'string?',
+  url: 'string!',
+  referrer: 'string?',
+  userAgent: 'string',
+  country: 'string?',
+  city: 'string?',
+  deviceType: 'string?',
+  timestamp: 'timestamp!',
+  date: 'date!',
+  loadTimeMs: 'int?',
+});
+
+const metadata = generateIcebergMetadata(
+  PageViewSchema,
+  's3://analytics/page_views'
+);
+```
+
+### Transaction Data
+
+Financial data with multiple partition keys:
+
+```typescript
+const TransactionSchema = parseSchema({
+  $type: 'Transaction',
+  $partitionBy: ['year', 'month'],
+
+  id: 'uuid!',
+  accountId: 'string!',
+  merchantId: 'string?',
+  amount: 'decimal!',
+  currency: 'string!',
+  type: 'string!',           // 'credit' | 'debit'
+  category: 'string?',
+  status: 'string!',
+  description: 'string?',
+  metadata: 'json',
+  timestamp: 'timestamp!',
+  year: 'int!',
+  month: 'int!',
+});
+```
+
+### User Activity
+
+Aggregate user activity data:
+
+```typescript
+const UserActivitySchema = parseSchema({
+  $type: 'UserActivity',
+  $partitionBy: ['date'],
+
+  userId: 'string!',
+  date: 'date!',
+  sessionCount: 'int!',
+  pageViews: 'int!',
+  totalTimeSeconds: 'int!',
+  eventsTriggered: 'int!',
+  lastActiveAt: 'timestamp!',
+});
+```
+
+## Generating Iceberg Metadata
+
+### Basic Metadata Generation
+
+```typescript
+import { generateIcebergMetadata } from '@icetype/iceberg';
+
+const metadata = generateIcebergMetadata(
+  schema,
+  's3://bucket/table-path'
+);
+
+// Write metadata file
+import { writeFileSync } from 'fs';
+writeFileSync(
+  'metadata/v1.metadata.json',
+  JSON.stringify(metadata, null, 2)
+);
+```
+
+### With Table Properties
+
+Configure Iceberg table behavior:
+
+```typescript
+const metadata = generateIcebergMetadata(
+  schema,
+  's3://data-lake/events',
+  {
+    // Compression settings
+    'write.parquet.compression-codec': 'zstd',
+    'write.parquet.compression-level': '3',
+    'write.metadata.compression-codec': 'gzip',
+
+    // File sizing
+    'write.target-file-size-bytes': '134217728',  // 128MB
+    'write.parquet.row-group-size-bytes': '134217728',
+
+    // Snapshot retention
+    'history.expire.max-snapshot-age-ms': '432000000',  // 5 days
+    'history.expire.min-snapshots-to-keep': '5',
+
+    // Manifest handling
+    'commit.manifest.min-count-to-merge': '100',
+    'commit.manifest.target-size-bytes': '8388608',  // 8MB
+
+    // Custom properties
+    'owner': 'data-team',
+    'environment': 'production',
+  }
+);
+```
+
+### Understanding the Generated Metadata
+
+```typescript
+// Generated metadata structure
+{
+  "format-version": 2,
+  "table-uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "location": "s3://data-lake/events",
+  "last-sequence-number": 0,
+  "last-updated-ms": 1705849200000,
+  "last-column-id": 10,
+  "schema": {
+    "type": "struct",
+    "schema-id": 0,
+    "fields": [
+      { "id": 1, "name": "id", "type": "uuid", "required": true },
+      { "id": 2, "name": "userId", "type": "string", "required": true },
+      { "id": 3, "name": "eventType", "type": "string", "required": true },
+      { "id": 4, "name": "payload", "type": "string", "required": false },
+      { "id": 5, "name": "timestamp", "type": "timestamptz", "required": true },
+      { "id": 6, "name": "date", "type": "date", "required": true }
+    ]
+  },
+  "schemas": [/* schema versions */],
+  "current-schema-id": 0,
+  "partition-spec": [
+    { "source-id": 6, "field-id": 1000, "name": "date", "transform": "identity" }
+  ],
+  "partition-specs": [/* partition spec versions */],
+  "default-spec-id": 0,
+  "properties": {
+    "write.parquet.compression-codec": "zstd"
+  }
+}
+```
+
+## Parquet Schema Generation
+
+### Generate Parquet Schema
+
+```typescript
+import { generateParquetSchema, generateParquetSchemaString } from '@icetype/iceberg';
+
+// Get structured Parquet schema
+const parquetSchema = generateParquetSchema(EventSchema);
+
+console.log(parquetSchema);
+// {
+//   name: 'Event',
+//   fields: [
+//     { name: 'id', type: 'FIXED_LEN_BYTE_ARRAY', length: 16, convertedType: 'UUID', repetition: 'REQUIRED' },
+//     { name: 'userId', type: 'BYTE_ARRAY', convertedType: 'UTF8', repetition: 'REQUIRED' },
+//     { name: 'eventType', type: 'BYTE_ARRAY', convertedType: 'UTF8', repetition: 'REQUIRED' },
+//     { name: 'payload', type: 'BYTE_ARRAY', convertedType: 'JSON', repetition: 'OPTIONAL' },
+//     { name: 'timestamp', type: 'INT96', repetition: 'REQUIRED' },
+//     { name: 'date', type: 'INT32', convertedType: 'DATE', repetition: 'REQUIRED' }
+//   ]
+// }
+
+// Get human-readable schema string
+const schemaString = generateParquetSchemaString(EventSchema);
+
+console.log(schemaString);
+// message Event {
+//   REQUIRED FIXED_LEN_BYTE_ARRAY (16) id (UUID);
+//   REQUIRED BYTE_ARRAY userId (UTF8);
+//   REQUIRED BYTE_ARRAY eventType (UTF8);
+//   OPTIONAL BYTE_ARRAY payload (JSON);
+//   REQUIRED INT96 timestamp;
+//   REQUIRED INT32 date (DATE);
+// }
+```
+
+### Using with Parquet Libraries
+
+```typescript
+import { generateParquetSchema } from '@icetype/iceberg';
+import parquet from 'parquetjs';
+
+const schema = generateParquetSchema(EventSchema);
+
+// Convert to parquetjs schema format
+const parquetJsSchema = new parquet.ParquetSchema({
+  id: { type: 'UUID' },
+  userId: { type: 'UTF8' },
+  eventType: { type: 'UTF8' },
+  payload: { type: 'JSON', optional: true },
+  timestamp: { type: 'TIMESTAMP_MILLIS' },
+  date: { type: 'DATE' },
+});
+
+// Write Parquet file
+const writer = await parquet.ParquetWriter.openFile(
+  parquetJsSchema,
+  'events.parquet'
+);
+
+await writer.appendRow({
+  id: '550e8400-e29b-41d4-a716-446655440000',
+  userId: 'user-123',
+  eventType: 'page_view',
+  payload: { page: '/home' },
+  timestamp: new Date(),
+  date: new Date(),
+});
+
+await writer.close();
+```
+
+## CDC Pipeline Architecture
+
+### Overview
+
+A typical CDC (Change Data Capture) pipeline with IceType:
+
+```
+PostgreSQL (OLTP) → CDC → Transform → Iceberg (Analytics)
+       ↓                      ↑
+    IceType           IceType Schema
+    Schema
+```
+
+### Schema for CDC Events
+
+```typescript
+const CDCEventSchema = parseSchema({
+  $type: 'CDCEvent',
+  $partitionBy: ['date'],
+
+  id: 'uuid!',
+  sourceTable: 'string!',
+  operation: 'string!',        // 'INSERT' | 'UPDATE' | 'DELETE'
+  beforeData: 'json?',
+  afterData: 'json?',
+  timestamp: 'timestamp!',
+  date: 'date!',
+  transactionId: 'string?',
+  sequence: 'long!',
+});
+```
+
+### Generating Metadata for All Tables
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { generateIcebergMetadata } from '@icetype/iceberg';
+import { writeFileSync, mkdirSync } from 'fs';
+
+const schemas = [
+  UserSchema,
+  PostSchema,
+  CommentSchema,
+  EventSchema,
+];
+
+mkdirSync('./iceberg-metadata', { recursive: true });
+
+for (const schema of schemas) {
+  const tableName = schema.name.toLowerCase();
+  const metadata = generateIcebergMetadata(
+    schema,
+    `s3://data-lake/${tableName}`,
+    {
+      'write.parquet.compression-codec': 'zstd',
+      'source.database': 'production',
+      'source.table': tableName,
+    }
+  );
+
+  writeFileSync(
+    `./iceberg-metadata/${tableName}.metadata.json`,
+    JSON.stringify(metadata, null, 2)
+  );
+
+  console.log(`Generated metadata for: ${tableName}`);
+}
+```
+
+## Querying Iceberg Tables
+
+### With DuckDB
+
+```sql
+-- Install and load Iceberg extension
+INSTALL iceberg;
+LOAD iceberg;
+
+-- Query Iceberg table
+SELECT
+    date,
+    eventType,
+    COUNT(*) as event_count
+FROM iceberg_scan('s3://data-lake/events')
+WHERE date >= '2024-01-01'
+GROUP BY date, eventType
+ORDER BY date DESC, event_count DESC;
+```
+
+### With Spark
+
+```python
+# PySpark
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder \
+    .appName("IcebergAnalytics") \
+    .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") \
+    .config("spark.sql.catalog.iceberg", "org.apache.iceberg.spark.SparkCatalog") \
+    .config("spark.sql.catalog.iceberg.type", "hadoop") \
+    .config("spark.sql.catalog.iceberg.warehouse", "s3://data-lake/") \
+    .getOrCreate()
+
+# Query events
+df = spark.read.format("iceberg").load("s3://data-lake/events")
+df.filter("date >= '2024-01-01'") \
+  .groupBy("date", "eventType") \
+  .count() \
+  .orderBy("date", "count") \
+  .show()
+```
+
+### With ClickHouse
+
+```sql
+-- Create Iceberg table engine
+CREATE TABLE events
+ENGINE = Iceberg('s3://data-lake/events', 'AWS_ACCESS_KEY', 'AWS_SECRET_KEY')
+
+-- Query
+SELECT
+    date,
+    eventType,
+    count() as event_count
+FROM events
+WHERE date >= '2024-01-01'
+GROUP BY date, eventType
+ORDER BY date DESC, event_count DESC;
+```
+
+## Schema Evolution
+
+### Adding New Fields
+
+IceType supports schema evolution for Iceberg:
+
+```typescript
+// Original schema
+const EventSchemaV1 = parseSchema({
+  $type: 'Event',
+  id: 'uuid!',
+  eventType: 'string!',
+  timestamp: 'timestamp!',
+});
+
+// Evolved schema - new optional fields
+const EventSchemaV2 = parseSchema({
+  $type: 'Event',
+  id: 'uuid!',
+  eventType: 'string!',
+  timestamp: 'timestamp!',
+  userId: 'string?',        // New field
+  sessionId: 'string?',     // New field
+  metadata: 'json?',        // New field
+});
+
+// Generate metadata with schema evolution
+const metadataV2 = generateIcebergMetadata(
+  EventSchemaV2,
+  's3://data-lake/events',
+  { 'schema.version': '2' }
+);
+```
+
+### Evolution Rules
+
+| Change | Supported |
+|--------|-----------|
+| Add optional column | Yes |
+| Add required column with default | Yes |
+| Drop column | Yes |
+| Rename column | Yes |
+| Widen type (int -> long) | Yes |
+| Change required to optional | Yes |
+| Change optional to required | No |
+| Narrow type (long -> int) | No |
+
+## Best Practices
+
+### Partitioning Strategy
+
+Choose partition keys based on query patterns:
+
+```typescript
+// Good: Query by date range
+$partitionBy: ['date']
+
+// Good: Multi-tenant with date range
+$partitionBy: ['tenantId', 'date']
+
+// Avoid: Too many partitions (high cardinality)
+// $partitionBy: ['userId']  // Bad - too many unique values
+```
+
+### File Sizing
+
+Configure appropriate file sizes:
+
+```typescript
+const metadata = generateIcebergMetadata(schema, location, {
+  // Target 128-256MB files for optimal query performance
+  'write.target-file-size-bytes': '134217728',
+
+  // Match row group size to file size
+  'write.parquet.row-group-size-bytes': '134217728',
+});
+```
+
+### Snapshot Management
+
+Set retention policies:
+
+```typescript
+const metadata = generateIcebergMetadata(schema, location, {
+  // Keep snapshots for 7 days
+  'history.expire.max-snapshot-age-ms': '604800000',
+
+  // Keep at least 5 snapshots
+  'history.expire.min-snapshots-to-keep': '5',
+});
+```
+
+## Integration Example
+
+### Complete Data Pipeline
+
+```typescript
+// pipeline/schema.ts
+import { parseSchema } from '@icetype/core';
+
+export const OrderSchema = parseSchema({
+  $type: 'Order',
+  $partitionBy: ['orderDate'],
+  $index: [['customerId'], ['status']],
+
+  id: 'uuid!',
+  customerId: 'string!',
+  items: 'json!',
+  totalAmount: 'decimal!',
+  currency: 'string!',
+  status: 'string!',
+  orderDate: 'date!',
+  createdAt: 'timestamp!',
+  updatedAt: 'timestamp?',
+});
+
+// pipeline/generate.ts
+import { transformToPostgresDDL } from '@icetype/postgres';
+import { transformToDrizzle } from '@icetype/drizzle';
+import { generateIcebergMetadata } from '@icetype/iceberg';
+import { OrderSchema } from './schema';
+import { writeFileSync } from 'fs';
+
+// 1. Generate PostgreSQL DDL for OLTP
+const ddl = transformToPostgresDDL(OrderSchema, { ifNotExists: true });
+writeFileSync('./sql/orders.sql', ddl);
+
+// 2. Generate Drizzle ORM for application
+const drizzle = transformToDrizzle(OrderSchema, { dialect: 'pg' });
+writeFileSync('./src/db/orders.ts', drizzle);
+
+// 3. Generate Iceberg metadata for analytics
+const iceberg = generateIcebergMetadata(
+  OrderSchema,
+  's3://data-lake/orders',
+  {
+    'write.parquet.compression-codec': 'zstd',
+    'owner': 'analytics-team',
+  }
+);
+writeFileSync('./iceberg/orders.metadata.json', JSON.stringify(iceberg, null, 2));
+
+console.log('Generated all outputs for Order schema');
+```
+
+## Next Steps
+
+- [Migration Workflow](/tutorials/migration-workflow) - Migrate existing schemas
+- [Drizzle Integration](/tutorials/drizzle-integration) - ORM integration
+- [API Reference: Iceberg](/api/iceberg) - Complete Iceberg adapter API

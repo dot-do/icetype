@@ -583,7 +583,7 @@ describe('Playground', () => {
 
       const result = playground.createShareUrl(schema, baseUrl);
 
-      expect(result.url).toStartWith(baseUrl);
+      expect(result.url.startsWith(baseUrl)).toBe(true);
     });
 
     it('should compress long schemas', () => {

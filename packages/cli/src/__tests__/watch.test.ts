@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EventEmitter } from 'node:events';
 import type { FSWatcher } from 'node:fs';
+import type { CleanupAwareWatcher } from '../utils/watcher.js';
 
 // Mock fs.watch
 vi.mock('node:fs', async () => {
@@ -181,7 +182,7 @@ describe('Watch Mode', () => {
       expect(onGenerate).not.toHaveBeenCalled();
     });
 
-    it('should return the FSWatcher instance', async () => {
+    it('should return a CleanupAwareWatcher based on the FSWatcher', async () => {
       const fs = await import('node:fs');
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
@@ -190,7 +191,24 @@ describe('Watch Mode', () => {
       const onGenerate = vi.fn().mockResolvedValue(undefined);
       const watcher = createWatcher('./schema.ts', { onGenerate });
 
+      // The returned watcher should be the same object (enhanced in place)
       expect(watcher).toBe(mockWatcher);
+      // And should have the isClosed property
+      expect(watcher.isClosed).toBe(false);
+    });
+
+    it('should set isClosed to true after close() is called', async () => {
+      const fs = await import('node:fs');
+      vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
+
+      const { createWatcher } = await import('../utils/watcher.js');
+
+      const onGenerate = vi.fn().mockResolvedValue(undefined);
+      const watcher = createWatcher('./schema.ts', { onGenerate });
+
+      expect(watcher.isClosed).toBe(false);
+      watcher.close();
+      expect(watcher.isClosed).toBe(true);
     });
   });
 
@@ -396,6 +414,8 @@ describe('Watch Mode', () => {
     it('should close watcher on SIGINT', async () => {
       const fs = await import('node:fs');
       vi.mocked(fs.existsSync).mockReturnValue(true);
+      let closeCalled = false;
+      mockWatcher.close = vi.fn(() => { closeCalled = true; });
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
       const { watchGenerate } = await import('../utils/watcher.js');
@@ -414,12 +434,15 @@ describe('Watch Mode', () => {
       expect(sigintHandler).toBeDefined();
       sigintHandler!();
 
-      expect(mockWatcher.close).toHaveBeenCalled();
+      // Verify the underlying close was called (tracked via our flag since createWatcher wraps close)
+      expect(closeCalled).toBe(true);
     });
 
     it('should close watcher on SIGTERM', async () => {
       const fs = await import('node:fs');
       vi.mocked(fs.existsSync).mockReturnValue(true);
+      let closeCalled = false;
+      mockWatcher.close = vi.fn(() => { closeCalled = true; });
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
       const { watchGenerate } = await import('../utils/watcher.js');
@@ -438,7 +461,8 @@ describe('Watch Mode', () => {
       expect(sigtermHandler).toBeDefined();
       sigtermHandler!();
 
-      expect(mockWatcher.close).toHaveBeenCalled();
+      // Verify the underlying close was called (tracked via our flag since createWatcher wraps close)
+      expect(closeCalled).toBe(true);
     });
 
     it('should call process.exit(0) on graceful shutdown', async () => {
@@ -493,6 +517,8 @@ describe('Watch Mode', () => {
     it('should not log shutdown message in quiet mode', async () => {
       const fs = await import('node:fs');
       vi.mocked(fs.existsSync).mockReturnValue(true);
+      let closeCalled = false;
+      mockWatcher.close = vi.fn(() => { closeCalled = true; });
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
       // Clear any previous logs
@@ -522,13 +548,15 @@ describe('Watch Mode', () => {
       expect(shutdownMessageLogged).toBe(false);
 
       // But watcher should still be closed and process should still exit
-      expect(mockWatcher.close).toHaveBeenCalled();
+      expect(closeCalled).toBe(true);
       expect(process.exit).toHaveBeenCalledWith(0);
     });
 
     it('should handle multiple signals gracefully (only shutdown once)', async () => {
       const fs = await import('node:fs');
       vi.mocked(fs.existsSync).mockReturnValue(true);
+      let closeCallCount = 0;
+      mockWatcher.close = vi.fn(() => { closeCallCount++; });
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
       const { watchGenerate } = await import('../utils/watcher.js');
@@ -549,8 +577,8 @@ describe('Watch Mode', () => {
       // Trigger SIGINT first
       sigintHandler!();
 
-      // Verify watcher.close was called
-      expect(mockWatcher.close).toHaveBeenCalledTimes(1);
+      // Verify watcher.close was called once (tracked via our counter since createWatcher wraps close)
+      expect(closeCallCount).toBe(1);
       expect(process.exit).toHaveBeenCalledTimes(1);
     });
   });

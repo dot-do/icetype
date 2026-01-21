@@ -3,6 +3,25 @@
  *
  * Provides file watching capabilities for the generate command's watch mode.
  * Supports debouncing rapid changes to avoid redundant regenerations.
+ *
+ * ## Resource Management
+ *
+ * The watcher manages internal resources (timeouts) that must be cleaned up
+ * when watching is no longer needed. The `close()` method handles all cleanup:
+ *
+ * - Clears any pending debounce timeouts
+ * - Prevents callbacks from firing after close
+ * - Closes the underlying FSWatcher
+ *
+ * @example
+ * ```typescript
+ * const watcher = createWatcher('./schema.ts', {
+ *   onGenerate: async () => await runGeneration(),
+ * });
+ *
+ * // Later, clean up all resources:
+ * watcher.close();
+ * ```
  */
 
 import { watch, type FSWatcher } from 'node:fs';
@@ -25,6 +44,35 @@ export interface WatcherOptions {
 }
 
 /**
+ * A cleanup-aware file watcher that manages both the underlying FSWatcher
+ * and any internal resources like debounce timeouts.
+ *
+ * The `close()` method performs complete cleanup:
+ * 1. Clears any pending debounce timeouts to prevent callbacks after close
+ * 2. Sets an internal flag to prevent any in-flight callbacks from executing
+ * 3. Closes the underlying FSWatcher
+ *
+ * @example
+ * ```typescript
+ * const watcher = createWatcher('./schema.ts', { onGenerate });
+ *
+ * // Access underlying FSWatcher if needed
+ * watcher.ref();  // Keep process alive
+ * watcher.unref(); // Allow process to exit
+ *
+ * // Clean shutdown - clears timeouts and closes watcher
+ * watcher.close();
+ * ```
+ */
+export interface CleanupAwareWatcher extends FSWatcher {
+  /**
+   * Whether the watcher has been closed.
+   * After close() is called, no more callbacks will fire.
+   */
+  readonly isClosed: boolean;
+}
+
+/**
  * Options for the watchGenerate function.
  */
 export interface WatchGenerateOptions {
@@ -43,9 +91,18 @@ export interface WatchGenerateOptions {
 /**
  * Create a file watcher that triggers regeneration on file changes.
  *
+ * This function returns a `CleanupAwareWatcher` that extends `FSWatcher` with
+ * proper resource cleanup. The `close()` method is enhanced to:
+ *
+ * 1. Clear any pending debounce timeouts
+ * 2. Prevent callbacks from firing after close
+ * 3. Close the underlying FSWatcher
+ *
+ * This prevents resource leaks and ensures clean shutdown in watch mode.
+ *
  * @param filePath - Path to the file to watch
  * @param options - Watcher configuration options
- * @returns The FSWatcher instance
+ * @returns A CleanupAwareWatcher instance with enhanced close() behavior
  *
  * @example
  * ```typescript
@@ -55,12 +112,27 @@ export interface WatchGenerateOptions {
  *   },
  *   debounceMs: 100,
  * });
+ *
+ * // On shutdown, close() clears timeouts and closes the watcher
+ * process.on('SIGINT', () => {
+ *   watcher.close(); // Safe cleanup - no callbacks will fire after this
+ *   process.exit(0);
+ * });
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Check if watcher has been closed
+ * const watcher = createWatcher(path, options);
+ * console.log(watcher.isClosed); // false
+ * watcher.close();
+ * console.log(watcher.isClosed); // true
  * ```
  */
 export function createWatcher(
   filePath: string,
   options: WatcherOptions
-): FSWatcher {
+): CleanupAwareWatcher {
   const { debounceMs = 100, onGenerate, onError, quiet = false, verbose = false } = options;
 
   const logger = createLogger({
@@ -69,6 +141,7 @@ export function createWatcher(
   });
 
   let timeout: ReturnType<typeof setTimeout> | null = null;
+  let closed = false;
 
   const watcher = watch(filePath, (eventType) => {
     // Only trigger on 'change' events, not 'rename' or other events
@@ -79,6 +152,10 @@ export function createWatcher(
       }
 
       timeout = setTimeout(async () => {
+        // Don't execute callback if watcher has been closed
+        if (closed) {
+          return;
+        }
         logger.info('File changed, regenerating...');
         try {
           await onGenerate();
@@ -93,6 +170,31 @@ export function createWatcher(
         }
       }, debounceMs);
     }
+  }) as CleanupAwareWatcher;
+
+  // Store original close for cleanup
+  const originalClose = watcher.close.bind(watcher);
+
+  /**
+   * Enhanced close() that performs complete resource cleanup:
+   * - Clears pending debounce timeouts
+   * - Prevents callbacks from firing
+   * - Closes the underlying FSWatcher
+   */
+  watcher.close = () => {
+    closed = true;
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
+    return originalClose();
+  };
+
+  // Add isClosed getter for inspection
+  Object.defineProperty(watcher, 'isClosed', {
+    get: () => closed,
+    enumerable: true,
+    configurable: false,
   });
 
   return watcher;

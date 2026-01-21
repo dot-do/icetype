@@ -4,8 +4,13 @@
  * Defines the types and interfaces specific to PostgreSQL DDL generation.
  * Compatible with postgres.do and Drizzle ORM.
  *
+ * Type mappings are now imported from @icetype/core for consistency
+ * across all adapters.
+ *
  * @packageDocumentation
  */
+
+import { getUnifiedTypeMapping, type Dialect } from '@icetype/core';
 
 // =============================================================================
 // PostgreSQL Column Types
@@ -150,10 +155,25 @@ export interface PostgresTypeMapping {
 }
 
 /**
+ * Get the PostgreSQL type for an IceType.
+ *
+ * Uses the unified type mappings from @icetype/core for consistency.
+ *
+ * @param iceType - The IceType type string
+ * @returns The PostgreSQL type string
+ */
+export function getPostgresTypeFromCore(iceType: string): string {
+  return getUnifiedTypeMapping(iceType, 'postgres' as Dialect);
+}
+
+/**
  * IceType to PostgreSQL type mapping table.
  *
  * Maps IceType primitive types to their PostgreSQL equivalents.
  * Compatible with postgres.do Drizzle schema generation.
+ *
+ * @deprecated Use getPostgresTypeFromCore() or getUnifiedTypeMapping() from @icetype/core instead.
+ * This table is kept for backward compatibility but derives from the unified mappings.
  */
 export const ICETYPE_TO_POSTGRES: Record<string, PostgresTypeMapping> = {
   // String types

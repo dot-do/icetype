@@ -324,3 +324,39 @@ export type {
   DiscoveredAdapter,
   DiscoverOptions,
 } from './plugin-system.js';
+
+// Re-export plugin config functions
+export {
+  // Config loading
+  loadConfig,
+  loadConfigFile,
+  loadPackageJsonConfig,
+  findConfigFile,
+  defineConfig,
+
+  // Config resolution
+  resolveConfig,
+  validateConfig,
+  normalizePluginEntry,
+
+  // Error classes
+  ConfigLoadError,
+  ConfigValidationError,
+
+  // Type guards
+  isConfigLoadError,
+  isConfigValidationError,
+
+  // Constants
+  CONFIG_FILE_NAMES,
+  DEFAULT_CONFIG,
+} from './plugin-config.js';
+
+// Re-export plugin config types
+export type {
+  IceTypeConfig,
+  PluginEntry,
+  ResolvedPluginConfig,
+  ResolvedConfig,
+  LoadConfigOptions,
+} from './plugin-config.js';

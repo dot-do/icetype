@@ -1,0 +1,993 @@
+---
+title: E-Commerce Example
+description: A complete e-commerce schema walkthrough with IceType, featuring products, orders, inventory tracking, and full-text search.
+---
+
+# E-Commerce Example
+
+This guide walks you through building a complete e-commerce data model with IceType. You'll learn how to define schemas for products, orders, customers, and categories with proper relations, full-text search, and inventory tracking.
+
+<Callout type="info">
+This example demonstrates real-world patterns you can adapt for your own e-commerce application. All code examples are production-ready.
+</Callout>
+
+## Overview
+
+We'll build schemas for a typical e-commerce platform with these entities:
+
+| Entity | Description |
+|--------|-------------|
+| **Category** | Product categories with hierarchy support |
+| **Product** | Product catalog with pricing and inventory |
+| **Customer** | Customer accounts and addresses |
+| **Order** | Customer orders with status tracking |
+| **OrderItem** | Individual items within an order |
+
+## Prerequisites
+
+Install IceType and the adapters you need:
+
+```bash
+npm install icetype @icetype/core @icetype/drizzle @icetype/postgres
+```
+
+## Step 1: Define the Schema
+
+Create a file `schema/e-commerce.ts` with your schema definitions.
+
+### Category Schema
+
+Categories support hierarchical organization (parent-child relationships):
+
+```typescript
+import { parseSchema } from 'icetype';
+
+export const CategorySchema = parseSchema({
+  $type: 'Category',
+  $index: [['parentId'], ['slug']],
+
+  // Primary key
+  id: 'uuid!',
+
+  // Category details
+  name: 'string!',
+  slug: 'string#',              // Indexed for URL lookups
+  description: 'text?',
+  imageUrl: 'string?',
+
+  // Hierarchy - self-referential relation
+  parentId: 'uuid?',
+  parent: '-> Category?',       // Forward relation to parent
+  children: '<- Category.parent[]',  // Backward relation to children
+
+  // Products in this category
+  products: '<- Product.category[]',
+
+  // Metadata
+  sortOrder: 'int = 0',
+  isActive: 'bool = true',
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp?',
+});
+```
+
+### Product Schema
+
+Products include pricing with decimals, inventory tracking, and full-text search:
+
+```typescript
+export const ProductSchema = parseSchema({
+  $type: 'Product',
+  $index: [
+    ['categoryId'],
+    ['sku'],
+    ['status'],
+    ['price'],
+    ['createdAt'],
+  ],
+  $fts: ['name', 'description', 'tags'],  // Full-text search fields
+
+  // Primary key
+  id: 'uuid!',
+
+  // Product identification
+  sku: 'string#',               // Stock Keeping Unit - unique indexed
+  name: 'string!',
+  slug: 'string#',              // URL-friendly identifier
+
+  // Description and content
+  description: 'text?',
+  shortDescription: 'string?',
+
+  // Pricing (using decimal for currency precision)
+  price: 'decimal(10,2)!',           // Selling price
+  compareAtPrice: 'decimal(10,2)?',  // Original/MSRP price for discounts
+  costPrice: 'decimal(10,2)?',       // Cost for margin calculations
+
+  // Inventory tracking
+  inventory: 'int = 0',              // Current stock quantity
+  lowStockThreshold: 'int = 10',     // Alert when below this
+  trackInventory: 'bool = true',     // Whether to track stock
+  allowBackorder: 'bool = false',    // Allow orders when out of stock
+
+  // Product attributes
+  weight: 'float?',                  // Weight in kg
+  dimensions: 'json?',               // { length, width, height } in cm
+
+  // Media
+  images: 'json',                    // Array of image URLs
+  thumbnailUrl: 'string?',
+
+  // Categorization
+  categoryId: 'uuid?',
+  category: '-> Category?',
+  tags: 'string[]',
+
+  // Status management
+  status: 'string = "draft"',        // 'draft' | 'active' | 'archived'
+
+  // SEO
+  metaTitle: 'string?',
+  metaDescription: 'string?',
+
+  // Timestamps
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp?',
+  publishedAt: 'timestamp?',
+});
+```
+
+### Customer Schema
+
+Customer accounts with support for multiple addresses:
+
+```typescript
+export const CustomerSchema = parseSchema({
+  $type: 'Customer',
+  $index: [['email'], ['createdAt']],
+  $fts: ['firstName', 'lastName', 'email'],
+
+  // Primary key
+  id: 'uuid!',
+
+  // Account credentials
+  email: 'string#',              // Unique email
+  passwordHash: 'string?',       // Hashed password (nullable for OAuth users)
+
+  // Profile information
+  firstName: 'string',
+  lastName: 'string',
+  phone: 'string?',
+
+  // Addresses stored as JSON array
+  // Each address: { id, type, street, city, state, postalCode, country, isDefault }
+  addresses: 'json',
+  defaultShippingAddressId: 'string?',
+  defaultBillingAddressId: 'string?',
+
+  // Customer analytics
+  totalOrders: 'int = 0',
+  totalSpent: 'decimal(12,2) = 0.00',
+  averageOrderValue: 'decimal(10,2)?',
+
+  // Marketing preferences
+  acceptsMarketing: 'bool = false',
+  marketingOptInAt: 'timestamp?',
+
+  // Customer tags for segmentation
+  tags: 'string[]',
+  notes: 'text?',
+
+  // Account status
+  isActive: 'bool = true',
+  isVerified: 'bool = false',
+  verifiedAt: 'timestamp?',
+
+  // Relations
+  orders: '<- Order.customer[]',
+
+  // Timestamps
+  lastLoginAt: 'timestamp?',
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp?',
+});
+```
+
+### Order Schema
+
+Orders with comprehensive status tracking:
+
+```typescript
+export const OrderSchema = parseSchema({
+  $type: 'Order',
+  $partitionBy: ['orderDate'],        // Partition by date for analytics
+  $index: [
+    ['customerId'],
+    ['status'],
+    ['orderDate'],
+    ['orderNumber'],
+  ],
+
+  // Primary key
+  id: 'uuid!',
+
+  // Order identification
+  orderNumber: 'string#',             // Human-readable order number (ORD-2024-0001)
+
+  // Customer relation
+  customerId: 'uuid!',
+  customer: '-> Customer!',
+
+  // Order status workflow
+  status: 'string = "pending"',       // 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  paymentStatus: 'string = "pending"', // 'pending' | 'authorized' | 'paid' | 'refunded' | 'failed'
+  fulfillmentStatus: 'string = "unfulfilled"', // 'unfulfilled' | 'partial' | 'fulfilled'
+
+  // Pricing breakdown
+  subtotal: 'decimal(12,2)!',         // Sum of line items before tax/shipping
+  taxAmount: 'decimal(10,2) = 0.00',
+  shippingAmount: 'decimal(10,2) = 0.00',
+  discountAmount: 'decimal(10,2) = 0.00',
+  totalAmount: 'decimal(12,2)!',      // Final total
+
+  // Currency
+  currency: 'string = "USD"',
+
+  // Addresses (snapshot at time of order)
+  shippingAddress: 'json!',
+  billingAddress: 'json!',
+
+  // Shipping details
+  shippingMethod: 'string?',
+  trackingNumber: 'string?',
+  trackingUrl: 'string?',
+
+  // Payment details
+  paymentMethod: 'string?',
+  paymentIntentId: 'string?',         // Stripe payment intent ID
+
+  // Discount/promotion
+  discountCode: 'string?',
+  discountId: 'uuid?',
+
+  // Notes
+  customerNotes: 'text?',             // Notes from customer
+  internalNotes: 'text?',             // Staff notes
+
+  // Order items relation
+  items: '<- OrderItem.order[]',
+
+  // Timestamps
+  orderDate: 'date!',                 // Date of order (for partitioning)
+  paidAt: 'timestamp?',
+  shippedAt: 'timestamp?',
+  deliveredAt: 'timestamp?',
+  cancelledAt: 'timestamp?',
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp?',
+});
+```
+
+### OrderItem Schema
+
+Individual line items that preserve product information at time of order:
+
+```typescript
+export const OrderItemSchema = parseSchema({
+  $type: 'OrderItem',
+  $partitionBy: ['orderDate'],        // Same partitioning as Order
+  $index: [['orderId'], ['productId']],
+
+  // Primary key
+  id: 'uuid!',
+
+  // Order relation
+  orderId: 'uuid!',
+  order: '-> Order!',
+
+  // Product relation
+  productId: 'uuid!',
+  product: '-> Product!',
+
+  // Product snapshot (preserved at time of order)
+  productName: 'string!',
+  productSku: 'string!',
+  productImage: 'string?',
+
+  // Quantity and pricing
+  quantity: 'int!',
+  unitPrice: 'decimal(10,2)!',        // Price per unit at time of order
+  totalPrice: 'decimal(10,2)!',       // quantity * unitPrice
+
+  // Variant information (if applicable)
+  variantId: 'uuid?',
+  variantTitle: 'string?',            // e.g., "Red / Large"
+  variantOptions: 'json?',            // { color: "Red", size: "Large" }
+
+  // Fulfillment tracking
+  fulfilledQuantity: 'int = 0',
+  fulfillmentStatus: 'string = "pending"',
+
+  // Partitioning key (copied from order)
+  orderDate: 'date!',
+
+  // Timestamps
+  createdAt: 'timestamp',
+});
+```
+
+### Complete Schema Export
+
+```typescript
+// schema/e-commerce.ts
+
+import { parseSchema } from 'icetype';
+
+export const CategorySchema = parseSchema({
+  // ... (as defined above)
+});
+
+export const ProductSchema = parseSchema({
+  // ... (as defined above)
+});
+
+export const CustomerSchema = parseSchema({
+  // ... (as defined above)
+});
+
+export const OrderSchema = parseSchema({
+  // ... (as defined above)
+});
+
+export const OrderItemSchema = parseSchema({
+  // ... (as defined above)
+});
+
+// Export all schemas as an array
+export const schemas = [
+  CategorySchema,
+  ProductSchema,
+  CustomerSchema,
+  OrderSchema,
+  OrderItemSchema,
+];
+```
+
+## Step 2: Generate TypeScript Types
+
+Generate type-safe TypeScript interfaces from your schemas:
+
+```typescript
+import { generateTypeScript } from 'icetype';
+import { schemas } from './schema/e-commerce';
+import { writeFileSync } from 'fs';
+
+const types = schemas.map(s => generateTypeScript(s)).join('\n\n');
+writeFileSync('./generated/types.ts', types);
+```
+
+This generates:
+
+```typescript
+// generated/types.ts
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  imageUrl?: string;
+  parentId?: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+export interface Product {
+  id: string;
+  sku: string;
+  name: string;
+  slug: string;
+  description?: string;
+  shortDescription?: string;
+  price: number;           // Decimal represented as number
+  compareAtPrice?: number;
+  costPrice?: number;
+  inventory: number;
+  lowStockThreshold: number;
+  trackInventory: boolean;
+  allowBackorder: boolean;
+  weight?: number;
+  dimensions?: Record<string, unknown>;
+  images: unknown[];
+  thumbnailUrl?: string;
+  categoryId?: string;
+  tags: string[];
+  status: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  createdAt: Date;
+  updatedAt?: Date;
+  publishedAt?: Date;
+}
+
+export interface Customer {
+  id: string;
+  email: string;
+  passwordHash?: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  addresses: unknown[];
+  defaultShippingAddressId?: string;
+  defaultBillingAddressId?: string;
+  totalOrders: number;
+  totalSpent: number;
+  averageOrderValue?: number;
+  acceptsMarketing: boolean;
+  marketingOptInAt?: Date;
+  tags: string[];
+  notes?: string;
+  isActive: boolean;
+  isVerified: boolean;
+  verifiedAt?: Date;
+  lastLoginAt?: Date;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  customerId: string;
+  status: string;
+  paymentStatus: string;
+  fulfillmentStatus: string;
+  subtotal: number;
+  taxAmount: number;
+  shippingAmount: number;
+  discountAmount: number;
+  totalAmount: number;
+  currency: string;
+  shippingAddress: Record<string, unknown>;
+  billingAddress: Record<string, unknown>;
+  shippingMethod?: string;
+  trackingNumber?: string;
+  trackingUrl?: string;
+  paymentMethod?: string;
+  paymentIntentId?: string;
+  discountCode?: string;
+  discountId?: string;
+  customerNotes?: string;
+  internalNotes?: string;
+  orderDate: string;
+  paidAt?: Date;
+  shippedAt?: Date;
+  deliveredAt?: Date;
+  cancelledAt?: Date;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+export interface OrderItem {
+  id: string;
+  orderId: string;
+  productId: string;
+  productName: string;
+  productSku: string;
+  productImage?: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  variantId?: string;
+  variantTitle?: string;
+  variantOptions?: Record<string, unknown>;
+  fulfilledQuantity: number;
+  fulfillmentStatus: string;
+  orderDate: string;
+  createdAt: Date;
+}
+```
+
+## Step 3: Generate Database Migrations
+
+### PostgreSQL DDL
+
+Generate DDL for PostgreSQL:
+
+```typescript
+import { transformToPostgresDDL } from '@icetype/postgres';
+import { schemas } from './schema/e-commerce';
+import { writeFileSync } from 'fs';
+
+const ddl = schemas
+  .map(s => transformToPostgresDDL(s, {
+    ifNotExists: true,
+    includeSystemFields: true,
+  }))
+  .join('\n\n');
+
+writeFileSync('./migrations/001_initial.sql', ddl);
+```
+
+### Drizzle ORM Schema
+
+Generate a Drizzle schema for type-safe queries:
+
+```typescript
+import { transformSchemasToDrizzle } from '@icetype/drizzle';
+import { schemas } from './schema/e-commerce';
+import { writeFileSync } from 'fs';
+
+const drizzleSchema = transformSchemasToDrizzle(schemas, {
+  dialect: 'pg',
+  camelCase: true,
+});
+
+writeFileSync('./src/db/schema.ts', drizzleSchema);
+```
+
+## Step 4: Basic Queries
+
+Here are common e-commerce queries using Drizzle ORM.
+
+### Product Queries
+
+```typescript
+import { db } from './db';
+import { product, category } from './db/schema';
+import { eq, desc, and, gte, lte, like, sql, isNull } from 'drizzle-orm';
+
+// Get all active products
+const activeProducts = await db
+  .select()
+  .from(product)
+  .where(eq(product.status, 'active'))
+  .orderBy(desc(product.createdAt));
+
+// Get products in a category
+const categoryProducts = await db
+  .select()
+  .from(product)
+  .where(and(
+    eq(product.categoryId, categoryId),
+    eq(product.status, 'active')
+  ))
+  .orderBy(product.sortOrder);
+
+// Get products with low stock
+const lowStockProducts = await db
+  .select()
+  .from(product)
+  .where(and(
+    eq(product.trackInventory, true),
+    sql`${product.inventory} <= ${product.lowStockThreshold}`
+  ));
+
+// Search products by name or description
+const searchResults = await db
+  .select()
+  .from(product)
+  .where(and(
+    eq(product.status, 'active'),
+    sql`to_tsvector('english', ${product.name} || ' ' || coalesce(${product.description}, ''))
+        @@ plainto_tsquery('english', ${searchQuery})`
+  ));
+
+// Get products with category information
+const productsWithCategory = await db
+  .select({
+    product: product,
+    category: category,
+  })
+  .from(product)
+  .leftJoin(category, eq(product.categoryId, category.id))
+  .where(eq(product.status, 'active'));
+```
+
+### Order Queries
+
+```typescript
+import { order, orderItem, customer, product } from './db/schema';
+
+// Get customer's orders
+const customerOrders = await db
+  .select()
+  .from(order)
+  .where(eq(order.customerId, customerId))
+  .orderBy(desc(order.createdAt));
+
+// Get order with items
+const orderWithItems = await db
+  .select({
+    order: order,
+    item: orderItem,
+  })
+  .from(order)
+  .leftJoin(orderItem, eq(orderItem.orderId, order.id))
+  .where(eq(order.id, orderId));
+
+// Get orders by status
+const pendingOrders = await db
+  .select()
+  .from(order)
+  .where(eq(order.status, 'pending'))
+  .orderBy(order.createdAt);
+
+// Get orders within date range
+const ordersInRange = await db
+  .select()
+  .from(order)
+  .where(and(
+    gte(order.orderDate, startDate),
+    lte(order.orderDate, endDate)
+  ));
+
+// Get order statistics
+const orderStats = await db
+  .select({
+    totalOrders: sql<number>`count(*)`,
+    totalRevenue: sql<number>`sum(${order.totalAmount})`,
+    averageOrderValue: sql<number>`avg(${order.totalAmount})`,
+  })
+  .from(order)
+  .where(eq(order.status, 'delivered'));
+```
+
+### Category Queries
+
+```typescript
+// Get root categories (no parent)
+const rootCategories = await db
+  .select()
+  .from(category)
+  .where(and(
+    isNull(category.parentId),
+    eq(category.isActive, true)
+  ))
+  .orderBy(category.sortOrder);
+
+// Get subcategories
+const subcategories = await db
+  .select()
+  .from(category)
+  .where(and(
+    eq(category.parentId, parentCategoryId),
+    eq(category.isActive, true)
+  ))
+  .orderBy(category.sortOrder);
+
+// Get category by slug
+const [categoryBySlug] = await db
+  .select()
+  .from(category)
+  .where(eq(category.slug, slug));
+```
+
+## Step 5: Inventory Management
+
+### Update Inventory on Order
+
+```typescript
+import { db } from './db';
+import { product, orderItem } from './db/schema';
+import { eq, sql } from 'drizzle-orm';
+
+async function reserveInventory(orderId: string) {
+  const items = await db
+    .select()
+    .from(orderItem)
+    .where(eq(orderItem.orderId, orderId));
+
+  for (const item of items) {
+    await db
+      .update(product)
+      .set({
+        inventory: sql`${product.inventory} - ${item.quantity}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(product.id, item.productId));
+  }
+}
+
+async function releaseInventory(orderId: string) {
+  const items = await db
+    .select()
+    .from(orderItem)
+    .where(eq(orderItem.orderId, orderId));
+
+  for (const item of items) {
+    await db
+      .update(product)
+      .set({
+        inventory: sql`${product.inventory} + ${item.quantity}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(product.id, item.productId));
+  }
+}
+```
+
+### Check Stock Availability
+
+```typescript
+async function checkStockAvailability(
+  items: Array<{ productId: string; quantity: number }>
+): Promise<{ available: boolean; unavailable: string[] }> {
+  const unavailable: string[] = [];
+
+  for (const item of items) {
+    const [prod] = await db
+      .select({
+        id: product.id,
+        name: product.name,
+        inventory: product.inventory,
+        trackInventory: product.trackInventory,
+        allowBackorder: product.allowBackorder,
+      })
+      .from(product)
+      .where(eq(product.id, item.productId));
+
+    if (!prod) {
+      unavailable.push(item.productId);
+      continue;
+    }
+
+    if (prod.trackInventory && !prod.allowBackorder) {
+      if (prod.inventory < item.quantity) {
+        unavailable.push(prod.name);
+      }
+    }
+  }
+
+  return {
+    available: unavailable.length === 0,
+    unavailable,
+  };
+}
+```
+
+## Step 6: Order Workflow
+
+### Create Order
+
+```typescript
+import { v4 as uuidv4 } from 'uuid';
+
+async function createOrder(
+  customerId: string,
+  items: Array<{ productId: string; quantity: number }>,
+  shippingAddress: object,
+  billingAddress: object
+) {
+  // Check stock availability
+  const stockCheck = await checkStockAvailability(items);
+  if (!stockCheck.available) {
+    throw new Error(`Out of stock: ${stockCheck.unavailable.join(', ')}`);
+  }
+
+  // Get product details for pricing
+  const productDetails = await db
+    .select()
+    .from(product)
+    .where(sql`${product.id} IN ${items.map(i => i.productId)}`);
+
+  const productMap = new Map(productDetails.map(p => [p.id, p]));
+
+  // Calculate totals
+  let subtotal = 0;
+  const orderItems = items.map(item => {
+    const prod = productMap.get(item.productId)!;
+    const totalPrice = Number(prod.price) * item.quantity;
+    subtotal += totalPrice;
+
+    return {
+      id: uuidv4(),
+      productId: item.productId,
+      productName: prod.name,
+      productSku: prod.sku,
+      productImage: prod.thumbnailUrl,
+      quantity: item.quantity,
+      unitPrice: prod.price,
+      totalPrice,
+    };
+  });
+
+  const taxAmount = subtotal * 0.08;  // 8% tax
+  const shippingAmount = subtotal > 100 ? 0 : 9.99;  // Free shipping over $100
+  const totalAmount = subtotal + taxAmount + shippingAmount;
+
+  // Generate order number
+  const orderNumber = `ORD-${new Date().getFullYear()}-${uuidv4().slice(0, 8).toUpperCase()}`;
+  const orderDate = new Date().toISOString().split('T')[0];
+
+  // Create order in transaction
+  return await db.transaction(async (tx) => {
+    // Insert order
+    const [newOrder] = await tx
+      .insert(order)
+      .values({
+        id: uuidv4(),
+        orderNumber,
+        customerId,
+        status: 'pending',
+        subtotal,
+        taxAmount,
+        shippingAmount,
+        totalAmount,
+        shippingAddress,
+        billingAddress,
+        orderDate,
+      })
+      .returning();
+
+    // Insert order items
+    await tx
+      .insert(orderItem)
+      .values(orderItems.map(item => ({
+        ...item,
+        orderId: newOrder.id,
+        orderDate,
+        createdAt: new Date(),
+      })));
+
+    // Reserve inventory
+    for (const item of orderItems) {
+      await tx
+        .update(product)
+        .set({
+          inventory: sql`${product.inventory} - ${item.quantity}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(product.id, item.productId));
+    }
+
+    // Update customer stats
+    await tx
+      .update(customer)
+      .set({
+        totalOrders: sql`${customer.totalOrders} + 1`,
+        totalSpent: sql`${customer.totalSpent} + ${totalAmount}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(customer.id, customerId));
+
+    return newOrder;
+  });
+}
+```
+
+### Update Order Status
+
+```typescript
+async function updateOrderStatus(
+  orderId: string,
+  newStatus: string,
+  additionalData?: Partial<Order>
+) {
+  const updateData: any = {
+    status: newStatus,
+    updatedAt: new Date(),
+    ...additionalData,
+  };
+
+  // Set timestamp based on status
+  switch (newStatus) {
+    case 'shipped':
+      updateData.shippedAt = new Date();
+      break;
+    case 'delivered':
+      updateData.deliveredAt = new Date();
+      break;
+    case 'cancelled':
+      updateData.cancelledAt = new Date();
+      break;
+  }
+
+  const [updated] = await db
+    .update(order)
+    .set(updateData)
+    .where(eq(order.id, orderId))
+    .returning();
+
+  // Release inventory if cancelled
+  if (newStatus === 'cancelled') {
+    await releaseInventory(orderId);
+  }
+
+  return updated;
+}
+```
+
+## Best Practices
+
+### 1. Use Decimal for Currency
+
+Always use `decimal` type for monetary values to avoid floating-point precision issues:
+
+```typescript
+// Good
+price: 'decimal(10,2)!',
+
+// Bad - floating-point precision issues
+price: 'float!',
+```
+
+### 2. Snapshot Data in Orders
+
+Store product information at time of order to preserve historical accuracy:
+
+```typescript
+// OrderItem stores product name/SKU at time of order
+productName: 'string!',
+productSku: 'string!',
+unitPrice: 'decimal(10,2)!',
+```
+
+### 3. Use Partitioning for Time-Series Data
+
+Partition orders by date for better query performance on large datasets:
+
+```typescript
+$partitionBy: ['orderDate'],
+```
+
+### 4. Index Foreign Keys
+
+Always index foreign keys for efficient joins:
+
+```typescript
+$index: [['customerId'], ['orderId'], ['productId']],
+```
+
+### 5. Use Full-Text Search for Products
+
+Enable full-text search on searchable fields:
+
+```typescript
+$fts: ['name', 'description', 'tags'],
+```
+
+### 6. Status Fields as Strings
+
+Use string fields with documented enum values for flexibility:
+
+```typescript
+// Status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
+status: 'string = "pending"',
+```
+
+### 7. Soft Deletes for Audit Trail
+
+Consider adding `deletedAt` for soft deletes instead of hard deletes:
+
+```typescript
+deletedAt: 'timestamp?',
+isDeleted: 'bool = false',
+```
+
+## Next Steps
+
+<Cards>
+  <Card
+    title="Drizzle Integration"
+    description="Learn more about using IceType with Drizzle ORM."
+    href="/tutorials/drizzle-integration"
+  />
+  <Card
+    title="Iceberg Analytics"
+    description="Export order data to a data lake for analytics."
+    href="/tutorials/iceberg-analytics"
+  />
+  <Card
+    title="Schema Language"
+    description="Complete reference for IceType schema syntax."
+    href="/schema-language"
+  />
+  <Card
+    title="More Examples"
+    description="See additional schema patterns and use cases."
+    href="/examples"
+  />
+</Cards>

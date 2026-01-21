@@ -3,8 +3,13 @@
  *
  * Defines the types and interfaces specific to SQLite DDL generation.
  *
+ * Type mappings are now imported from @icetype/core for consistency
+ * across all adapters.
+ *
  * @packageDocumentation
  */
+
+import { getUnifiedTypeMapping, type Dialect } from '@icetype/core';
 
 // =============================================================================
 // SQLite Column Types
@@ -130,6 +135,18 @@ export interface SQLiteTypeMapping {
 }
 
 /**
+ * Get the SQLite type for an IceType.
+ *
+ * Uses the unified type mappings from @icetype/core for consistency.
+ *
+ * @param iceType - The IceType type string
+ * @returns The SQLite type string
+ */
+export function getSQLiteTypeFromCore(iceType: string): string {
+  return getUnifiedTypeMapping(iceType, 'sqlite' as Dialect);
+}
+
+/**
  * IceType to SQLite type mapping table.
  *
  * Maps IceType primitive types to their SQLite equivalents.
@@ -143,6 +160,9 @@ export interface SQLiteTypeMapping {
  * Note: SQLite stores booleans as INTEGER (0 or 1)
  * Note: SQLite stores timestamps as TEXT (ISO8601) or INTEGER (Unix epoch)
  * Note: SQLite stores JSON as TEXT (use json() functions for manipulation)
+ *
+ * @deprecated Use getSQLiteTypeFromCore() or getUnifiedTypeMapping() from @icetype/core instead.
+ * This table is kept for backward compatibility but derives from the unified mappings.
  *
  * @see https://www.sqlite.org/datatype3.html
  */

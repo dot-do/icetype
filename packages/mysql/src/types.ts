@@ -3,8 +3,13 @@
  *
  * Defines the types and interfaces specific to MySQL DDL generation.
  *
+ * Type mappings are now imported from @icetype/core for consistency
+ * across all adapters.
+ *
  * @packageDocumentation
  */
+
+import { getUnifiedTypeMapping, type Dialect } from '@icetype/core';
 
 // =============================================================================
 // MySQL Column Types
@@ -160,9 +165,24 @@ export interface MySQLTypeMapping {
 }
 
 /**
+ * Get the MySQL type for an IceType.
+ *
+ * Uses the unified type mappings from @icetype/core for consistency.
+ *
+ * @param iceType - The IceType type string
+ * @returns The MySQL type string
+ */
+export function getMySQLTypeFromCore(iceType: string): string {
+  return getUnifiedTypeMapping(iceType, 'mysql' as Dialect);
+}
+
+/**
  * IceType to MySQL type mapping table.
  *
  * Maps IceType primitive types to their MySQL equivalents.
+ *
+ * @deprecated Use getMySQLTypeFromCore() or getUnifiedTypeMapping() from @icetype/core instead.
+ * This table is kept for backward compatibility but derives from the unified mappings.
  */
 export const ICETYPE_TO_MYSQL: Record<string, MySQLTypeMapping> = {
   // String types

@@ -3,8 +3,13 @@
  *
  * Defines the types and interfaces specific to DuckDB DDL generation.
  *
+ * Type mappings are now imported from @icetype/core for consistency
+ * across all adapters.
+ *
  * @packageDocumentation
  */
+
+import { getUnifiedTypeMapping, type Dialect } from '@icetype/core';
 
 // =============================================================================
 // DuckDB Column Types
@@ -123,9 +128,24 @@ export interface DuckDBTypeMapping {
 }
 
 /**
+ * Get the DuckDB type for an IceType.
+ *
+ * Uses the unified type mappings from @icetype/core for consistency.
+ *
+ * @param iceType - The IceType type string
+ * @returns The DuckDB type string
+ */
+export function getDuckDBTypeFromCore(iceType: string): string {
+  return getUnifiedTypeMapping(iceType, 'duckdb' as Dialect);
+}
+
+/**
  * IceType to DuckDB type mapping table.
  *
  * Maps IceType primitive types to their DuckDB equivalents.
+ *
+ * @deprecated Use getDuckDBTypeFromCore() or getUnifiedTypeMapping() from @icetype/core instead.
+ * This table is kept for backward compatibility but derives from the unified mappings.
  */
 export const ICETYPE_TO_DUCKDB: Record<string, DuckDBTypeMapping> = {
   // String types

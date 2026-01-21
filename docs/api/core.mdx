@@ -15,6 +15,10 @@ npm install @icetype/core
 pnpm add @icetype/core
 ```
 
+<Callout type="info" title="See Also">
+New to IceType? Start with the [Getting Started](/getting-started) guide for a quick introduction, or read the [Schema Language Reference](/schema-language) for a complete syntax overview.
+</Callout>
+
 ## Parsing Functions
 
 ### `parseSchema(definition)`
@@ -1013,3 +1017,43 @@ type RelationOperator = '->' | '<-' | '~>' | '<~';
 | `<-` | Backward relation (reverse reference) |
 | `~>` | Fuzzy forward (weak reference, AI-powered matching) |
 | `<~` | Fuzzy backward (AI-powered reverse lookup) |
+
+---
+
+## Related Documentation
+
+<Cards>
+  <Card
+    title="Schema Language Reference"
+    description="Learn the complete IceType schema syntax including field modifiers, relations, and directives."
+    href="/schema-language"
+  />
+  <Card
+    title="Getting Started"
+    description="Quick introduction to IceType with installation and first schema examples."
+    href="/getting-started"
+  />
+  <Card
+    title="Migration Workflow"
+    description="Step-by-step guide to migrating existing database schemas to IceType."
+    href="/tutorials/migration-workflow"
+  />
+  <Card
+    title="Error Reference"
+    description="Complete list of error codes and troubleshooting guidance."
+    href="/errors"
+  />
+</Cards>
+
+### Adapter-Specific APIs
+
+For backend-specific schema transformations, see:
+
+- [Iceberg Adapter](/api/iceberg) - Apache Iceberg metadata and Parquet schema generation
+- [PostgreSQL Adapter](/api/postgres) - PostgreSQL DDL generation
+- [MySQL Adapter](/api/mysql) - MySQL DDL generation
+- [SQLite Adapter](/api/sqlite) - SQLite DDL generation
+- [ClickHouse Adapter](/api/clickhouse) - ClickHouse DDL generation
+- [DuckDB Adapter](/api/duckdb) - DuckDB DDL generation
+- [Drizzle Adapter](/api/drizzle) - Drizzle ORM schema generation
+- [Prisma Adapter](/api/prisma) - Prisma schema generation

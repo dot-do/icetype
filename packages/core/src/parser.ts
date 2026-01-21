@@ -932,16 +932,53 @@ export class IceTypeParser {
 
         fields.set(key, fieldDef);
       } else if (typeof value === 'object' && value !== null) {
-        const fieldDef: FieldDefinition = {
-          name: key,
-          type: 'json',
-          modifier: '',
-          isArray: false,
-          isOptional: false,
-          isUnique: false,
-          isIndexed: false,
-        };
-        fields.set(key, fieldDef);
+        // Check if this is an object-style field definition with 'type' property
+        const objValue = value as Record<string, unknown>;
+        if ('type' in objValue && typeof objValue.type === 'string') {
+          // Parse the type string to get the field definition
+          const fieldDef = this.parseField(objValue.type, { throwOnUnknownType: false, fieldName: key });
+          fieldDef.name = key;
+
+          // Apply default value if specified
+          if ('default' in objValue && objValue.default !== undefined) {
+            fieldDef.defaultValue = objValue.default;
+          }
+
+          // Apply optional modifier if specified
+          if ('optional' in objValue && objValue.optional === true) {
+            fieldDef.isOptional = true;
+            fieldDef.modifier = '?';
+          }
+
+          // Apply unique modifier if specified
+          if ('unique' in objValue && objValue.unique === true) {
+            fieldDef.isUnique = true;
+            fieldDef.modifier = '#';
+          }
+
+          // Apply required modifier if specified
+          if ('required' in objValue && objValue.required === true) {
+            fieldDef.modifier = '!';
+          }
+
+          if (fieldDef.relation) {
+            relations.set(key, fieldDef.relation);
+          }
+
+          fields.set(key, fieldDef);
+        } else {
+          // Fallback: treat as json type
+          const fieldDef: FieldDefinition = {
+            name: key,
+            type: 'json',
+            modifier: '',
+            isArray: false,
+            isOptional: false,
+            isUnique: false,
+            isIndexed: false,
+          };
+          fields.set(key, fieldDef);
+        }
       }
     }
 

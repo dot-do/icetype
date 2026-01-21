@@ -92,6 +92,49 @@ This outputs `benchmark-results.json` which can be used for:
 - Historical tracking
 - CI pipeline integration
 
+## CI Integration
+
+Benchmarks run automatically via GitHub Actions on:
+- Every push to `main`
+- Every pull request targeting `main`
+- Manual workflow dispatch
+
+### Workflow Features
+
+The CI workflow (`.github/workflows/benchmarks.yml`) provides:
+
+1. **Automatic benchmark execution** - Runs all benchmarks on every PR and push
+2. **Baseline comparison** - Compares PR benchmarks against the `main` branch baseline
+3. **Regression detection** - Fails the CI if performance regresses beyond threshold (default: 20%)
+4. **PR comments** - Posts benchmark comparison results as PR comments
+5. **Artifact storage** - Stores benchmark results for 30 days
+
+### Configuration
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `REGRESSION_THRESHOLD` | 20 | Percentage threshold for regression detection |
+| `retention-days` | 30 | How long benchmark artifacts are stored |
+
+### Manual Trigger
+
+You can manually trigger benchmarks from the GitHub Actions UI:
+
+1. Go to Actions > Benchmarks
+2. Click "Run workflow"
+3. Optionally enable/disable baseline comparison
+
+### Interpreting Results
+
+In PR comments, benchmarks are marked as:
+- **stable** - Within threshold (no significant change)
+- **improvement** - Performance improved by more than threshold
+- **regression** - Performance degraded by more than threshold (fails CI)
+
+### Disabling Regression Checks
+
+For PRs that intentionally trade performance for other benefits, add `[skip-bench-check]` to your PR description, or adjust the threshold via workflow dispatch.
+
 ## Configuration
 
 Benchmarks are configured in `vitest.config.ts`:
