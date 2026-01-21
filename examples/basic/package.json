@@ -2,10 +2,10 @@
   "name": "@icetype-examples/basic",
   "version": "0.1.0",
   "private": true,
-  "description": "Basic IceType schema definition and TypeScript generation example",
+  "description": "Basic IceType schema definition and validation example",
   "type": "module",
   "scripts": {
-    "generate": "npx tsx generate.ts",
+    "validate": "npx tsx validate.ts",
     "build": "tsc --noEmit"
   },
   "dependencies": {

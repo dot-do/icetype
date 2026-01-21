@@ -1,13 +1,15 @@
-# Basic IceType Example
+# Basic Example
 
-This example demonstrates the fundamentals of IceType schema definition and TypeScript code generation.
+This example demonstrates how to define and validate schemas using IceType's core library.
 
-## Files
+## What This Example Shows
 
-- `schema.ts` - Defines User and Post schemas using IceType syntax
-- `generate.ts` - Parses schemas and generates TypeScript interfaces
+1. **Schema Definition** (`schema.ts`) - How to define data models using IceType's concise schema language
+2. **Schema Validation** (`validate.ts`) - How to parse and validate schemas for correctness
 
-## IceType Syntax Quick Reference
+## IceType Syntax Overview
+
+IceType uses a simple, expressive syntax for defining schemas:
 
 ### Field Modifiers
 
@@ -15,19 +17,24 @@ This example demonstrates the fundamentals of IceType schema definition and Type
 |----------|---------|---------|
 | `!` | Required field | `name: 'string!'` |
 | `?` | Optional field | `bio: 'text?'` |
-| `#` | Unique/indexed | `email: 'string!#'` |
+| `#` | Indexed field | `email: 'string!#'` |
 | `[]` | Array type | `tags: 'string[]'` |
 
-### Common Types
+### Primitive Types
 
 - `string` - Short text
 - `text` - Long-form text
 - `int` - 32-bit integer
-- `float` - Floating point
-- `boolean` - True/false
+- `long` / `bigint` - 64-bit integer
+- `float` - 32-bit floating point
+- `double` - 64-bit floating point
+- `boolean` / `bool` - True/false
 - `uuid` - UUID string
 - `timestamp` - Unix timestamp
+- `date` - Date only
+- `time` - Time only
 - `json` - Arbitrary JSON
+- `binary` - Binary data
 
 ### Relations
 
@@ -35,12 +42,16 @@ This example demonstrates the fundamentals of IceType schema definition and Type
 |----------|-----------|---------|
 | `->` | Forward | `author: '-> User'` |
 | `<-` | Backward | `posts: '<- Post.author[]'` |
+| `~>` | Fuzzy forward | For AI-powered semantic relations |
+| `<~` | Fuzzy backward | Inverse of fuzzy relation |
 
 ### Directives
 
-- `$type` - Entity name
-- `$partitionBy` - Partition key fields
-- `$index` - Secondary indexes
+- `$type` - Schema/entity name
+- `$partitionBy` - Partition key fields for distributed storage
+- `$index` - Secondary indexes (array of field arrays)
+- `$fts` - Fields to enable full-text search
+- `$vector` - Vector embedding configuration
 
 ## Running the Example
 
@@ -48,46 +59,51 @@ This example demonstrates the fundamentals of IceType schema definition and Type
 # Install dependencies (from monorepo root)
 pnpm install
 
-# Run TypeScript generation
+# Run the validation example
 cd examples/basic
-npx tsx generate.ts
+pnpm validate
 ```
 
 ## Expected Output
 
-The generate script will output TypeScript interfaces like:
+```
+============================================================
+IceType Schema Validation Example
+============================================================
 
-```typescript
-export interface User {
-  $id: string;
-  $type: 'User';
-  $version: number;
-  $createdAt: number;
-  $updatedAt: number;
-  id: string;
-  email: string;
-  name: string;
-  bio?: string;
-  status: string;
-  createdAt: number;
-  updatedAt: number;
-  posts: string[];
-}
+--- Validating User Schema ---
 
-export interface UserInput {
-  id: string;
-  email: string;
-  name: string;
-  bio?: string;
-  status?: string;
-  createdAt: number;
-  updatedAt: number;
-  posts?: string[];
-}
+Schema name: User
+Version: 1
+Fields: 10
+Relations: 1
+
+Fields:
+  - id: uuid (unique)
+  - email: string (unique, indexed)
+  - name: string
+  - tenantId: string
+  - bio: text (optional)
+  - age: int (optional)
+  - avatarUrl: string (optional)
+  - status: string (default="active")
+  - lastLoginAt: timestamp (optional)
+  - posts: Post (array)
+
+Partition by: tenantId
+Indexes: email; createdAt
+Full-text search: name, bio
+
+Validation: PASSED
+
+...
+
+============================================================
+All schemas validated successfully!
+============================================================
 ```
 
 ## Next Steps
 
-- See [iceberg](../iceberg/) for Apache Iceberg metadata generation
-- See [clickhouse](../clickhouse/) for ClickHouse DDL generation
-- See [duckdb](../duckdb/) for DuckDB DDL generation
+- Check out the [iceberg](../iceberg) example to see how to export schemas to Apache Iceberg format
+- Check out the [typescript-codegen](../typescript-codegen) example to generate TypeScript interfaces from schemas

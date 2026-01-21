@@ -1,0 +1,2991 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Snapshot Tests: ClickHouse DDL Generation > should generate ClickHouse DDL for AllTypes schema 1`] = `
+"CREATE TABLE IF NOT EXISTS analytics.test_entity
+(
+    id UUID,
+    tenant_id String,
+    email String,
+    name String,
+    description Nullable(String),
+    content String,
+    count Int32,
+    quantity Int32 DEFAULT 0,
+    score Nullable(Int64),
+    big_number Nullable(Int64),
+    rate Float32,
+    percentage Nullable(Float32),
+    amount Float64,
+    large_amount Nullable(Float64),
+    price Decimal(10, 2),
+    tax Nullable(Decimal(10, 4)),
+    balance Decimal(18, 6),
+    is_active Bool DEFAULT 1,
+    is_verified Nullable(Bool),
+    enabled Bool,
+    reference_id Nullable(UUID),
+    external_id UUID,
+    created_at DateTime64(3),
+    updated_at Nullable(DateTime64(3)),
+    published_at Nullable(DateTime64(3)),
+    birth_date Nullable(Date),
+    event_time Nullable(String),
+    metadata Nullable(JSON),
+    settings JSON DEFAULT '{}',
+    raw_data Nullable(String),
+    tags Array(String),
+    scores Array(Int32),
+    weights Array(Float32),
+    categories Array(String),
+    embedding Array(Float32),
+    thumbnail Array(Float32),
+    status String DEFAULT 'active',
+    category String
+)
+ENGINE = ReplacingMergeTree()
+PARTITION BY toYYYYMM(created_at)
+ORDER BY (id)"
+`;
+
+exports[`Snapshot Tests: ClickHouse DDL Generation > should generate ClickHouse DDL for Post schema 1`] = `
+"CREATE TABLE IF NOT EXISTS blog.post
+(
+    id UUID,
+    title String,
+    content String,
+    author_id UUID,
+    status String DEFAULT 'draft',
+    published_at Nullable(DateTime64(3)),
+    tags Array(String),
+    view_count Int32 DEFAULT 0
+)
+ENGINE = ReplacingMergeTree()
+PARTITION BY toYYYYMM(published_at)
+ORDER BY (id)"
+`;
+
+exports[`Snapshot Tests: ClickHouse DDL Generation > should generate ClickHouse DDL for SimpleEntity schema 1`] = `
+"CREATE TABLE IF NOT EXISTS simple_entity
+(
+    id UUID,
+    name String,
+    value Nullable(Int32),
+    created_at DateTime64(3) DEFAULT now()
+)
+ENGINE = MergeTree()
+ORDER BY (id)"
+`;
+
+exports[`Snapshot Tests: ClickHouse DDL Generation > should generate ClickHouse DDL with SummingMergeTree engine 1`] = `
+"CREATE TABLE IF NOT EXISTS metrics_entity
+(
+    id UUID,
+    tenant_id String,
+    email String,
+    name String,
+    description Nullable(String),
+    content String,
+    count Int32,
+    quantity Int32 DEFAULT 0,
+    score Nullable(Int64),
+    big_number Nullable(Int64),
+    rate Float32,
+    percentage Nullable(Float32),
+    amount Float64,
+    large_amount Nullable(Float64),
+    price Decimal(10, 2),
+    tax Nullable(Decimal(10, 4)),
+    balance Decimal(18, 6),
+    is_active Bool DEFAULT 1,
+    is_verified Nullable(Bool),
+    enabled Bool,
+    reference_id Nullable(UUID),
+    external_id UUID,
+    created_at DateTime64(3),
+    updated_at Nullable(DateTime64(3)),
+    published_at Nullable(DateTime64(3)),
+    birth_date Nullable(Date),
+    event_time Nullable(String),
+    metadata Nullable(JSON),
+    settings JSON DEFAULT '{}',
+    raw_data Nullable(String),
+    tags Array(String),
+    scores Array(Int32),
+    weights Array(Float32),
+    categories Array(String),
+    embedding Array(Float32),
+    thumbnail Array(Float32),
+    status String DEFAULT 'active',
+    category String
+)
+ENGINE = SummingMergeTree()
+PARTITION BY toYYYYMMDD(created_at)
+ORDER BY (id, tenantId)"
+`;
+
+exports[`Snapshot Tests: Cross-Backend Consistency > should generate consistent ClickHouse DDL output 1`] = `
+"CREATE TABLE IF NOT EXISTS consistent_entity
+(
+    id UUID,
+    tenant_id String,
+    email String,
+    name String,
+    description Nullable(String),
+    content String,
+    count Int32,
+    quantity Int32 DEFAULT 0,
+    score Nullable(Int64),
+    big_number Nullable(Int64),
+    rate Float32,
+    percentage Nullable(Float32),
+    amount Float64,
+    large_amount Nullable(Float64),
+    price Decimal(10, 2),
+    tax Nullable(Decimal(10, 4)),
+    balance Decimal(18, 6),
+    is_active Bool DEFAULT 1,
+    is_verified Nullable(Bool),
+    enabled Bool,
+    reference_id Nullable(UUID),
+    external_id UUID,
+    created_at DateTime64(3),
+    updated_at Nullable(DateTime64(3)),
+    published_at Nullable(DateTime64(3)),
+    birth_date Nullable(Date),
+    event_time Nullable(String),
+    metadata Nullable(JSON),
+    settings JSON DEFAULT '{}',
+    raw_data Nullable(String),
+    tags Array(String),
+    scores Array(Int32),
+    weights Array(Float32),
+    categories Array(String),
+    embedding Array(Float32),
+    thumbnail Array(Float32),
+    status String DEFAULT 'active',
+    category String
+)
+ENGINE = MergeTree()
+PARTITION BY tenant_id
+ORDER BY (id)"
+`;
+
+exports[`Snapshot Tests: Cross-Backend Consistency > should generate consistent DuckDB DDL output 1`] = `
+"CREATE TABLE IF NOT EXISTS ConsistentEntity (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  tenantId VARCHAR NOT NULL UNIQUE,
+  email VARCHAR NOT NULL UNIQUE,
+  name VARCHAR NOT NULL UNIQUE,
+  description VARCHAR,
+  content VARCHAR NOT NULL,
+  count INTEGER NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 0,
+  score BIGINT,
+  bigNumber BIGINT,
+  rate REAL NOT NULL,
+  percentage REAL,
+  amount DOUBLE NOT NULL,
+  largeAmount DOUBLE,
+  price DECIMAL(10, 2) NOT NULL UNIQUE,
+  tax DECIMAL(10, 4),
+  balance DECIMAL(18, 6) NOT NULL,
+  isActive BOOLEAN NOT NULL DEFAULT TRUE,
+  isVerified BOOLEAN,
+  enabled BOOLEAN NOT NULL,
+  referenceId UUID,
+  externalId UUID NOT NULL,
+  createdAt TIMESTAMP NOT NULL UNIQUE,
+  updatedAt TIMESTAMP,
+  publishedAt TIMESTAMPTZ,
+  birthDate DATE,
+  eventTime TIME,
+  metadata JSON,
+  settings JSON NOT NULL DEFAULT '{}',
+  rawData BLOB,
+  tags VARCHAR[] NOT NULL,
+  scores INTEGER[] NOT NULL,
+  weights REAL[] NOT NULL,
+  categories VARCHAR[],
+  embedding REAL[] NOT NULL,
+  thumbnail REAL[] NOT NULL,
+  status VARCHAR NOT NULL DEFAULT 'active',
+  category VARCHAR NOT NULL,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (tenantId),
+  UNIQUE (email),
+  UNIQUE (name),
+  UNIQUE (price),
+  UNIQUE (createdAt)
+);"
+`;
+
+exports[`Snapshot Tests: Cross-Backend Consistency > should generate consistent MySQL DDL output 1`] = `
+"CREATE TABLE IF NOT EXISTS ConsistentEntity (
+  \`$id\` VARCHAR(255) NOT NULL,
+  \`$type\` VARCHAR(255) NOT NULL,
+  \`$version\` INT NOT NULL DEFAULT 1,
+  \`$createdAt\` BIGINT NOT NULL,
+  \`$updatedAt\` BIGINT NOT NULL,
+  id CHAR(36) NOT NULL UNIQUE,
+  tenantId VARCHAR(255) NOT NULL UNIQUE,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  name VARCHAR(255) NOT NULL UNIQUE,
+  description TEXT,
+  content TEXT NOT NULL,
+  count INT NOT NULL,
+  quantity INT NOT NULL DEFAULT 0,
+  score BIGINT,
+  bigNumber BIGINT,
+  rate FLOAT NOT NULL,
+  percentage FLOAT,
+  amount DOUBLE NOT NULL,
+  largeAmount DOUBLE,
+  price DECIMAL(10, 2) NOT NULL UNIQUE,
+  tax DECIMAL(10, 4),
+  balance DECIMAL(18, 6) NOT NULL,
+  isActive TINYINT(1) NOT NULL DEFAULT TRUE,
+  isVerified TINYINT(1),
+  enabled TINYINT(1) NOT NULL,
+  referenceId CHAR(36),
+  externalId CHAR(36) NOT NULL,
+  createdAt DATETIME NOT NULL UNIQUE,
+  updatedAt DATETIME,
+  publishedAt DATETIME,
+  birthDate DATE,
+  eventTime TIME,
+  metadata JSON,
+  settings JSON NOT NULL DEFAULT '{}',
+  rawData BLOB,
+  tags VARCHAR(255) NOT NULL,
+  scores INT NOT NULL,
+  weights FLOAT NOT NULL,
+  categories VARCHAR(255),
+  embedding FLOAT NOT NULL,
+  thumbnail FLOAT NOT NULL,
+  status VARCHAR(255) NOT NULL DEFAULT 'active',
+  category VARCHAR(255) NOT NULL,
+  PRIMARY KEY (\`$id\`),
+  UNIQUE (id),
+  UNIQUE (tenantId),
+  UNIQUE (email),
+  UNIQUE (name),
+  UNIQUE (price),
+  UNIQUE (createdAt)
+) ENGINE=InnoDB;"
+`;
+
+exports[`Snapshot Tests: Cross-Backend Consistency > should generate consistent Parquet schema output 1`] = `
+"message ConsistentEntity {
+  REQUIRED BYTE_ARRAY $id (UTF8);
+  REQUIRED BYTE_ARRAY $type (UTF8);
+  REQUIRED INT32 $version (INT_32);
+  REQUIRED INT64 $createdAt (TIMESTAMP_MILLIS);
+  REQUIRED INT64 $updatedAt (TIMESTAMP_MILLIS);
+  REQUIRED FIXED_LEN_BYTE_ARRAY(16) id (UUID);
+  REQUIRED BYTE_ARRAY tenantId (UTF8);
+  REQUIRED BYTE_ARRAY email (UTF8);
+  REQUIRED BYTE_ARRAY name (UTF8);
+  OPTIONAL BYTE_ARRAY description (UTF8);
+  REQUIRED BYTE_ARRAY content (UTF8);
+  REQUIRED INT32 count (INT_32);
+  REQUIRED INT32 quantity (INT_32);
+  OPTIONAL INT64 score (INT_64);
+  OPTIONAL INT64 bigNumber (INT_64);
+  REQUIRED FLOAT rate;
+  OPTIONAL FLOAT percentage;
+  REQUIRED DOUBLE amount;
+  OPTIONAL DOUBLE largeAmount;
+  REQUIRED BYTE_ARRAY price (DECIMAL);
+  OPTIONAL BYTE_ARRAY tax (DECIMAL);
+  REQUIRED BYTE_ARRAY balance (DECIMAL);
+  REQUIRED BOOLEAN isActive;
+  OPTIONAL BOOLEAN isVerified;
+  REQUIRED BOOLEAN enabled;
+  OPTIONAL FIXED_LEN_BYTE_ARRAY(16) referenceId (UUID);
+  REQUIRED FIXED_LEN_BYTE_ARRAY(16) externalId (UUID);
+  REQUIRED INT64 createdAt (TIMESTAMP_MILLIS);
+  OPTIONAL INT64 updatedAt (TIMESTAMP_MILLIS);
+  OPTIONAL INT64 publishedAt (TIMESTAMP_MILLIS);
+  OPTIONAL INT32 birthDate (DATE);
+  OPTIONAL INT32 eventTime (TIME_MILLIS);
+  OPTIONAL BYTE_ARRAY metadata (JSON);
+  REQUIRED BYTE_ARRAY settings (JSON);
+  OPTIONAL BYTE_ARRAY rawData;
+  REQUIRED group tags (LIST) {
+    REPEATED group list {
+      OPTIONAL BYTE_ARRAY element (UTF8);
+    }
+  }
+  REQUIRED group scores (LIST) {
+    REPEATED group list {
+      OPTIONAL INT32 element (INT_32);
+    }
+  }
+  REQUIRED group weights (LIST) {
+    REPEATED group list {
+      OPTIONAL FLOAT element;
+    }
+  }
+  OPTIONAL group categories (LIST) {
+    REPEATED group list {
+      OPTIONAL BYTE_ARRAY element (UTF8);
+    }
+  }
+  REQUIRED group embedding (LIST) {
+    REPEATED group list {
+      OPTIONAL FLOAT element;
+    }
+  }
+  REQUIRED group thumbnail (LIST) {
+    REPEATED group list {
+      OPTIONAL FLOAT element;
+    }
+  }
+  REQUIRED BYTE_ARRAY status (UTF8);
+  REQUIRED BYTE_ARRAY category (UTF8);
+}"
+`;
+
+exports[`Snapshot Tests: Cross-Backend Consistency > should generate consistent PostgreSQL DDL output 1`] = `
+"CREATE TABLE IF NOT EXISTS ConsistentEntity (
+  "$id" TEXT NOT NULL,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  tenantId TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  content TEXT NOT NULL,
+  count INTEGER NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 0,
+  score BIGINT,
+  bigNumber BIGINT,
+  rate REAL NOT NULL,
+  percentage REAL,
+  amount DOUBLE PRECISION NOT NULL,
+  largeAmount DOUBLE PRECISION,
+  price DECIMAL(10, 2) NOT NULL UNIQUE,
+  tax DECIMAL(10, 4),
+  balance DECIMAL(18, 6) NOT NULL,
+  isActive BOOLEAN NOT NULL DEFAULT TRUE,
+  isVerified BOOLEAN,
+  enabled BOOLEAN NOT NULL,
+  referenceId UUID,
+  externalId UUID NOT NULL,
+  createdAt TIMESTAMP NOT NULL UNIQUE,
+  updatedAt TIMESTAMP,
+  publishedAt TIMESTAMPTZ,
+  birthDate DATE,
+  eventTime TIME,
+  metadata JSONB,
+  settings JSONB NOT NULL DEFAULT '{}',
+  rawData BYTEA,
+  tags TEXT[] NOT NULL,
+  scores INTEGER[] NOT NULL,
+  weights REAL[] NOT NULL,
+  categories TEXT[],
+  embedding REAL[] NOT NULL,
+  thumbnail REAL[] NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  category TEXT NOT NULL,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (tenantId),
+  UNIQUE (email),
+  UNIQUE (name),
+  UNIQUE (price),
+  UNIQUE (createdAt)
+);"
+`;
+
+exports[`Snapshot Tests: Cross-Backend Consistency > should generate consistent TypeScript output 1`] = `
+"/**
+ * Generated from IceType schema: ConsistentEntity
+ * @generated
+ */
+
+export interface ConsistentEntity {
+  /** Unique document identifier */
+  $id: string;
+  /** Document type */
+  $type: 'ConsistentEntity';
+  /** Document version */
+  $version: number;
+  /** Creation timestamp (epoch ms) */
+  $createdAt: number;
+  /** Last update timestamp (epoch ms) */
+  $updatedAt: number;
+  id: string;
+  tenantId: string;
+  email: string;
+  name: string;
+  description?: string;
+  content: string;
+  count: number;
+  quantity: number;
+  score?: number;
+  bigNumber?: number;
+  rate: number;
+  percentage?: number;
+  amount: number;
+  largeAmount?: number;
+  price: number;
+  tax?: number;
+  balance: number;
+  isActive: boolean;
+  isVerified?: boolean;
+  enabled: boolean;
+  referenceId?: string;
+  externalId: string;
+  createdAt: number;
+  updatedAt?: number;
+  publishedAt?: number;
+  birthDate?: number;
+  eventTime?: number;
+  metadata?: unknown;
+  settings: unknown;
+  rawData?: Uint8Array;
+  tags: string[];
+  scores: number[];
+  weights: number[];
+  categories?: string[];
+  embedding: number[];
+  thumbnail: number[];
+  status: string;
+  category: string;
+}
+
+/** Input type for creating ConsistentEntity */
+export interface ConsistentEntityInput {
+  id: string;
+  tenantId: string;
+  email: string;
+  name: string;
+  description?: string;
+  content: string;
+  count: number;
+  quantity?: number;
+  score?: number;
+  bigNumber?: number;
+  rate: number;
+  percentage?: number;
+  amount: number;
+  largeAmount?: number;
+  price: number;
+  tax?: number;
+  balance: number;
+  isActive?: boolean;
+  isVerified?: boolean;
+  enabled: boolean;
+  referenceId?: string;
+  externalId: string;
+  createdAt: number;
+  updatedAt?: number;
+  publishedAt?: number;
+  birthDate?: number;
+  eventTime?: number;
+  metadata?: unknown;
+  settings?: unknown;
+  rawData?: Uint8Array;
+  tags: string[];
+  scores: number[];
+  weights: number[];
+  categories?: string[];
+  embedding: number[];
+  thumbnail: number[];
+  status?: string;
+  category: string;
+}"
+`;
+
+exports[`Snapshot Tests: DuckDB DDL Generation > should generate DuckDB DDL for AllTypes schema 1`] = `
+"CREATE TABLE IF NOT EXISTS public.TestEntity (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  tenantId VARCHAR NOT NULL UNIQUE,
+  email VARCHAR NOT NULL UNIQUE,
+  name VARCHAR NOT NULL UNIQUE,
+  description VARCHAR,
+  content VARCHAR NOT NULL,
+  count INTEGER NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 0,
+  score BIGINT,
+  bigNumber BIGINT,
+  rate REAL NOT NULL,
+  percentage REAL,
+  amount DOUBLE NOT NULL,
+  largeAmount DOUBLE,
+  price DECIMAL(10, 2) NOT NULL UNIQUE,
+  tax DECIMAL(10, 4),
+  balance DECIMAL(18, 6) NOT NULL,
+  isActive BOOLEAN NOT NULL DEFAULT TRUE,
+  isVerified BOOLEAN,
+  enabled BOOLEAN NOT NULL,
+  referenceId UUID,
+  externalId UUID NOT NULL,
+  createdAt TIMESTAMP NOT NULL UNIQUE,
+  updatedAt TIMESTAMP,
+  publishedAt TIMESTAMPTZ,
+  birthDate DATE,
+  eventTime TIME,
+  metadata JSON,
+  settings JSON NOT NULL DEFAULT '{}',
+  rawData BLOB,
+  tags VARCHAR[] NOT NULL,
+  scores INTEGER[] NOT NULL,
+  weights REAL[] NOT NULL,
+  categories VARCHAR[],
+  embedding REAL[] NOT NULL,
+  thumbnail REAL[] NOT NULL,
+  status VARCHAR NOT NULL DEFAULT 'active',
+  category VARCHAR NOT NULL,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (tenantId),
+  UNIQUE (email),
+  UNIQUE (name),
+  UNIQUE (price),
+  UNIQUE (createdAt)
+);"
+`;
+
+exports[`Snapshot Tests: DuckDB DDL Generation > should generate DuckDB DDL for Post schema 1`] = `
+"CREATE TABLE IF NOT EXISTS blog.Post (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  title VARCHAR NOT NULL UNIQUE,
+  content VARCHAR NOT NULL,
+  authorId UUID NOT NULL UNIQUE,
+  status VARCHAR NOT NULL DEFAULT 'draft',
+  publishedAt TIMESTAMP,
+  tags VARCHAR[] NOT NULL,
+  viewCount INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (title),
+  UNIQUE (authorId)
+);"
+`;
+
+exports[`Snapshot Tests: DuckDB DDL Generation > should generate DuckDB DDL for SimpleEntity schema 1`] = `
+"CREATE TABLE IF NOT EXISTS SimpleEntity (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  name VARCHAR NOT NULL UNIQUE,
+  value INTEGER,
+  createdAt TIMESTAMP NOT NULL DEFAULT '{"function":"now"}',
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (name)
+);"
+`;
+
+exports[`Snapshot Tests: DuckDB DDL Generation > should generate DuckDB DDL with adapter directly 1`] = `
+"CREATE TABLE IF NOT EXISTS analytics.TestEntity (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  tenantId VARCHAR NOT NULL UNIQUE,
+  email VARCHAR NOT NULL UNIQUE,
+  name VARCHAR NOT NULL UNIQUE,
+  description VARCHAR,
+  content VARCHAR NOT NULL,
+  count INTEGER NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 0,
+  score BIGINT,
+  bigNumber BIGINT,
+  rate REAL NOT NULL,
+  percentage REAL,
+  amount DOUBLE NOT NULL,
+  largeAmount DOUBLE,
+  price DECIMAL(10, 2) NOT NULL UNIQUE,
+  tax DECIMAL(10, 4),
+  balance DECIMAL(18, 6) NOT NULL,
+  isActive BOOLEAN NOT NULL DEFAULT TRUE,
+  isVerified BOOLEAN,
+  enabled BOOLEAN NOT NULL,
+  referenceId UUID,
+  externalId UUID NOT NULL,
+  createdAt TIMESTAMP NOT NULL UNIQUE,
+  updatedAt TIMESTAMP,
+  publishedAt TIMESTAMPTZ,
+  birthDate DATE,
+  eventTime TIME,
+  metadata JSON,
+  settings JSON NOT NULL DEFAULT '{}',
+  rawData BLOB,
+  tags VARCHAR[] NOT NULL,
+  scores INTEGER[] NOT NULL,
+  weights REAL[] NOT NULL,
+  categories VARCHAR[],
+  embedding REAL[] NOT NULL,
+  thumbnail REAL[] NOT NULL,
+  status VARCHAR NOT NULL DEFAULT 'active',
+  category VARCHAR NOT NULL,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (tenantId),
+  UNIQUE (email),
+  UNIQUE (name),
+  UNIQUE (price),
+  UNIQUE (createdAt)
+);"
+`;
+
+exports[`Snapshot Tests: Iceberg Metadata Generation > should generate Iceberg metadata for AllTypes schema 1`] = `
+{
+  "currentSchemaId": 1,
+  "defaultSortOrderId": 0,
+  "defaultSpecId": 0,
+  "formatVersion": 2,
+  "lastColumnId": 43,
+  "lastPartitionId": 1000,
+  "lastSequenceNumber": 0,
+  "lastUpdatedMs": 0,
+  "location": "s3://test-bucket/tables/test_entity",
+  "partitionSpecs": [
+    {
+      "fields": [
+        {
+          "fieldId": 1000,
+          "name": "tenantId",
+          "sourceId": 7,
+          "transform": "identity",
+        },
+      ],
+      "specId": 0,
+    },
+  ],
+  "properties": {
+    "icetype.source.schema": "TestEntity",
+    "icetype.source.version": "1",
+    "write.format.default": "parquet",
+    "write.parquet.compression-codec": "snappy",
+  },
+  "schemas": [
+    {
+      "fields": [
+        {
+          "doc": "Document unique identifier",
+          "id": 1,
+          "name": "$id",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "Document type/collection",
+          "id": 2,
+          "name": "$type",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "Document version for optimistic concurrency",
+          "id": 3,
+          "name": "$version",
+          "required": true,
+          "type": {
+            "type": "int",
+          },
+        },
+        {
+          "doc": "Document creation timestamp (epoch ms)",
+          "id": 4,
+          "name": "$createdAt",
+          "required": true,
+          "type": {
+            "type": "long",
+          },
+        },
+        {
+          "doc": "Document last update timestamp (epoch ms)",
+          "id": 5,
+          "name": "$updatedAt",
+          "required": true,
+          "type": {
+            "type": "long",
+          },
+        },
+        {
+          "doc": "id",
+          "id": 6,
+          "initialDefault": undefined,
+          "name": "id",
+          "required": true,
+          "type": {
+            "type": "uuid",
+          },
+        },
+        {
+          "doc": "tenantId",
+          "id": 7,
+          "initialDefault": undefined,
+          "name": "tenantId",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "email",
+          "id": 8,
+          "initialDefault": undefined,
+          "name": "email",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "name",
+          "id": 9,
+          "initialDefault": undefined,
+          "name": "name",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "description",
+          "id": 10,
+          "initialDefault": undefined,
+          "name": "description",
+          "required": false,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "content",
+          "id": 11,
+          "initialDefault": undefined,
+          "name": "content",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "count",
+          "id": 12,
+          "initialDefault": undefined,
+          "name": "count",
+          "required": true,
+          "type": {
+            "type": "int",
+          },
+        },
+        {
+          "doc": "quantity",
+          "id": 13,
+          "initialDefault": 0,
+          "name": "quantity",
+          "required": true,
+          "type": {
+            "type": "int",
+          },
+        },
+        {
+          "doc": "score",
+          "id": 14,
+          "initialDefault": undefined,
+          "name": "score",
+          "required": false,
+          "type": {
+            "type": "long",
+          },
+        },
+        {
+          "doc": "bigNumber",
+          "id": 15,
+          "initialDefault": undefined,
+          "name": "bigNumber",
+          "required": false,
+          "type": {
+            "type": "long",
+          },
+        },
+        {
+          "doc": "rate",
+          "id": 16,
+          "initialDefault": undefined,
+          "name": "rate",
+          "required": true,
+          "type": {
+            "type": "float",
+          },
+        },
+        {
+          "doc": "percentage",
+          "id": 17,
+          "initialDefault": undefined,
+          "name": "percentage",
+          "required": false,
+          "type": {
+            "type": "float",
+          },
+        },
+        {
+          "doc": "amount",
+          "id": 18,
+          "initialDefault": undefined,
+          "name": "amount",
+          "required": true,
+          "type": {
+            "type": "double",
+          },
+        },
+        {
+          "doc": "largeAmount",
+          "id": 19,
+          "initialDefault": undefined,
+          "name": "largeAmount",
+          "required": false,
+          "type": {
+            "type": "double",
+          },
+        },
+        {
+          "doc": "price",
+          "id": 20,
+          "initialDefault": undefined,
+          "name": "price",
+          "required": true,
+          "type": {
+            "precision": 38,
+            "scale": 9,
+            "type": "decimal",
+          },
+        },
+        {
+          "doc": "tax",
+          "id": 21,
+          "initialDefault": undefined,
+          "name": "tax",
+          "required": false,
+          "type": {
+            "precision": 38,
+            "scale": 9,
+            "type": "decimal",
+          },
+        },
+        {
+          "doc": "balance",
+          "id": 22,
+          "initialDefault": undefined,
+          "name": "balance",
+          "required": true,
+          "type": {
+            "precision": 38,
+            "scale": 9,
+            "type": "decimal",
+          },
+        },
+        {
+          "doc": "isActive",
+          "id": 23,
+          "initialDefault": true,
+          "name": "isActive",
+          "required": true,
+          "type": {
+            "type": "boolean",
+          },
+        },
+        {
+          "doc": "isVerified",
+          "id": 24,
+          "initialDefault": undefined,
+          "name": "isVerified",
+          "required": false,
+          "type": {
+            "type": "boolean",
+          },
+        },
+        {
+          "doc": "enabled",
+          "id": 25,
+          "initialDefault": undefined,
+          "name": "enabled",
+          "required": true,
+          "type": {
+            "type": "boolean",
+          },
+        },
+        {
+          "doc": "referenceId",
+          "id": 26,
+          "initialDefault": undefined,
+          "name": "referenceId",
+          "required": false,
+          "type": {
+            "type": "uuid",
+          },
+        },
+        {
+          "doc": "externalId",
+          "id": 27,
+          "initialDefault": undefined,
+          "name": "externalId",
+          "required": true,
+          "type": {
+            "type": "uuid",
+          },
+        },
+        {
+          "doc": "createdAt",
+          "id": 28,
+          "initialDefault": undefined,
+          "name": "createdAt",
+          "required": true,
+          "type": {
+            "type": "timestamp",
+          },
+        },
+        {
+          "doc": "updatedAt",
+          "id": 29,
+          "initialDefault": undefined,
+          "name": "updatedAt",
+          "required": false,
+          "type": {
+            "type": "timestamp",
+          },
+        },
+        {
+          "doc": "publishedAt",
+          "id": 30,
+          "initialDefault": undefined,
+          "name": "publishedAt",
+          "required": false,
+          "type": {
+            "type": "timestamptz",
+          },
+        },
+        {
+          "doc": "birthDate",
+          "id": 31,
+          "initialDefault": undefined,
+          "name": "birthDate",
+          "required": false,
+          "type": {
+            "type": "date",
+          },
+        },
+        {
+          "doc": "eventTime",
+          "id": 32,
+          "initialDefault": undefined,
+          "name": "eventTime",
+          "required": false,
+          "type": {
+            "type": "time",
+          },
+        },
+        {
+          "doc": "metadata",
+          "id": 33,
+          "initialDefault": undefined,
+          "name": "metadata",
+          "required": false,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "settings",
+          "id": 34,
+          "initialDefault": {},
+          "name": "settings",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "rawData",
+          "id": 35,
+          "initialDefault": undefined,
+          "name": "rawData",
+          "required": false,
+          "type": {
+            "type": "binary",
+          },
+        },
+        {
+          "doc": "tags",
+          "id": 36,
+          "initialDefault": undefined,
+          "name": "tags",
+          "required": true,
+          "type": {
+            "elementType": {
+              "type": "string",
+            },
+            "type": "list",
+          },
+        },
+        {
+          "doc": "scores",
+          "id": 37,
+          "initialDefault": undefined,
+          "name": "scores",
+          "required": true,
+          "type": {
+            "elementType": {
+              "type": "int",
+            },
+            "type": "list",
+          },
+        },
+        {
+          "doc": "weights",
+          "id": 38,
+          "initialDefault": undefined,
+          "name": "weights",
+          "required": true,
+          "type": {
+            "elementType": {
+              "type": "float",
+            },
+            "type": "list",
+          },
+        },
+        {
+          "doc": "categories",
+          "id": 39,
+          "initialDefault": undefined,
+          "name": "categories",
+          "required": false,
+          "type": {
+            "elementType": {
+              "type": "string",
+            },
+            "type": "list",
+          },
+        },
+        {
+          "doc": "embedding",
+          "id": 40,
+          "initialDefault": undefined,
+          "name": "embedding",
+          "required": true,
+          "type": {
+            "elementType": {
+              "type": "float",
+            },
+            "type": "list",
+          },
+        },
+        {
+          "doc": "thumbnail",
+          "id": 41,
+          "initialDefault": undefined,
+          "name": "thumbnail",
+          "required": true,
+          "type": {
+            "elementType": {
+              "type": "float",
+            },
+            "type": "list",
+          },
+        },
+        {
+          "doc": "status",
+          "id": 42,
+          "initialDefault": "active",
+          "name": "status",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "category",
+          "id": 43,
+          "initialDefault": undefined,
+          "name": "category",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+      ],
+      "identifierFieldIds": [
+        1,
+      ],
+      "schemaId": 1,
+      "type": "struct",
+    },
+  ],
+  "sortOrders": [
+    {
+      "fields": [
+        {
+          "direction": "desc",
+          "nullOrder": "nulls-last",
+          "sourceId": 4,
+          "transform": "identity",
+        },
+      ],
+      "orderId": 0,
+    },
+  ],
+  "tableUuid": "<dynamic-uuid>",
+}
+`;
+
+exports[`Snapshot Tests: Iceberg Metadata Generation > should generate Iceberg metadata for Post schema 1`] = `
+{
+  "currentSchemaId": 1,
+  "defaultSortOrderId": 0,
+  "defaultSpecId": 0,
+  "formatVersion": 2,
+  "lastColumnId": 13,
+  "lastPartitionId": 1000,
+  "lastSequenceNumber": 0,
+  "lastUpdatedMs": 0,
+  "location": "s3://test-bucket/tables/posts",
+  "partitionSpecs": [
+    {
+      "fields": [
+        {
+          "fieldId": 1000,
+          "name": "$type",
+          "sourceId": 2,
+          "transform": "identity",
+        },
+      ],
+      "specId": 0,
+    },
+  ],
+  "properties": {
+    "icetype.source.schema": "Post",
+    "icetype.source.version": "1",
+    "write.format.default": "parquet",
+    "write.parquet.compression-codec": "snappy",
+  },
+  "schemas": [
+    {
+      "fields": [
+        {
+          "doc": "Document unique identifier",
+          "id": 1,
+          "name": "$id",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "Document type/collection",
+          "id": 2,
+          "name": "$type",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "Document version for optimistic concurrency",
+          "id": 3,
+          "name": "$version",
+          "required": true,
+          "type": {
+            "type": "int",
+          },
+        },
+        {
+          "doc": "Document creation timestamp (epoch ms)",
+          "id": 4,
+          "name": "$createdAt",
+          "required": true,
+          "type": {
+            "type": "long",
+          },
+        },
+        {
+          "doc": "Document last update timestamp (epoch ms)",
+          "id": 5,
+          "name": "$updatedAt",
+          "required": true,
+          "type": {
+            "type": "long",
+          },
+        },
+        {
+          "doc": "id",
+          "id": 6,
+          "initialDefault": undefined,
+          "name": "id",
+          "required": true,
+          "type": {
+            "type": "uuid",
+          },
+        },
+        {
+          "doc": "title",
+          "id": 7,
+          "initialDefault": undefined,
+          "name": "title",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "content",
+          "id": 8,
+          "initialDefault": undefined,
+          "name": "content",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "authorId",
+          "id": 9,
+          "initialDefault": undefined,
+          "name": "authorId",
+          "required": true,
+          "type": {
+            "type": "uuid",
+          },
+        },
+        {
+          "doc": "status",
+          "id": 10,
+          "initialDefault": "draft",
+          "name": "status",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "publishedAt",
+          "id": 11,
+          "initialDefault": undefined,
+          "name": "publishedAt",
+          "required": false,
+          "type": {
+            "type": "timestamp",
+          },
+        },
+        {
+          "doc": "tags",
+          "id": 12,
+          "initialDefault": undefined,
+          "name": "tags",
+          "required": true,
+          "type": {
+            "elementType": {
+              "type": "string",
+            },
+            "type": "list",
+          },
+        },
+        {
+          "doc": "viewCount",
+          "id": 13,
+          "initialDefault": 0,
+          "name": "viewCount",
+          "required": true,
+          "type": {
+            "type": "int",
+          },
+        },
+      ],
+      "identifierFieldIds": [
+        1,
+      ],
+      "schemaId": 1,
+      "type": "struct",
+    },
+  ],
+  "sortOrders": [
+    {
+      "fields": [
+        {
+          "direction": "desc",
+          "nullOrder": "nulls-last",
+          "sourceId": 4,
+          "transform": "identity",
+        },
+      ],
+      "orderId": 0,
+    },
+  ],
+  "tableUuid": "<dynamic-uuid>",
+}
+`;
+
+exports[`Snapshot Tests: Iceberg Metadata Generation > should generate Iceberg metadata for SimpleEntity schema 1`] = `
+{
+  "currentSchemaId": 1,
+  "defaultSortOrderId": 0,
+  "defaultSpecId": 0,
+  "formatVersion": 2,
+  "lastColumnId": 9,
+  "lastPartitionId": 1000,
+  "lastSequenceNumber": 0,
+  "lastUpdatedMs": 0,
+  "location": "s3://test-bucket/tables/simple_entity",
+  "partitionSpecs": [
+    {
+      "fields": [
+        {
+          "fieldId": 1000,
+          "name": "$type",
+          "sourceId": 2,
+          "transform": "identity",
+        },
+      ],
+      "specId": 0,
+    },
+  ],
+  "properties": {
+    "icetype.source.schema": "SimpleEntity",
+    "icetype.source.version": "1",
+    "write.format.default": "parquet",
+    "write.parquet.compression-codec": "snappy",
+  },
+  "schemas": [
+    {
+      "fields": [
+        {
+          "doc": "Document unique identifier",
+          "id": 1,
+          "name": "$id",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "Document type/collection",
+          "id": 2,
+          "name": "$type",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "Document version for optimistic concurrency",
+          "id": 3,
+          "name": "$version",
+          "required": true,
+          "type": {
+            "type": "int",
+          },
+        },
+        {
+          "doc": "Document creation timestamp (epoch ms)",
+          "id": 4,
+          "name": "$createdAt",
+          "required": true,
+          "type": {
+            "type": "long",
+          },
+        },
+        {
+          "doc": "Document last update timestamp (epoch ms)",
+          "id": 5,
+          "name": "$updatedAt",
+          "required": true,
+          "type": {
+            "type": "long",
+          },
+        },
+        {
+          "doc": "id",
+          "id": 6,
+          "initialDefault": undefined,
+          "name": "id",
+          "required": true,
+          "type": {
+            "type": "uuid",
+          },
+        },
+        {
+          "doc": "name",
+          "id": 7,
+          "initialDefault": undefined,
+          "name": "name",
+          "required": true,
+          "type": {
+            "type": "string",
+          },
+        },
+        {
+          "doc": "value",
+          "id": 8,
+          "initialDefault": undefined,
+          "name": "value",
+          "required": false,
+          "type": {
+            "type": "int",
+          },
+        },
+        {
+          "doc": "createdAt",
+          "id": 9,
+          "initialDefault": {
+            "function": "now",
+          },
+          "name": "createdAt",
+          "required": true,
+          "type": {
+            "type": "timestamp",
+          },
+        },
+      ],
+      "identifierFieldIds": [
+        1,
+      ],
+      "schemaId": 1,
+      "type": "struct",
+    },
+  ],
+  "sortOrders": [
+    {
+      "fields": [
+        {
+          "direction": "desc",
+          "nullOrder": "nulls-last",
+          "sourceId": 4,
+          "transform": "identity",
+        },
+      ],
+      "orderId": 0,
+    },
+  ],
+  "tableUuid": "<dynamic-uuid>",
+}
+`;
+
+exports[`Snapshot Tests: MySQL DDL Generation > should generate MySQL DDL for AllTypes schema 1`] = `
+"CREATE TABLE IF NOT EXISTS TestEntity (
+  \`$id\` VARCHAR(255) NOT NULL,
+  \`$type\` VARCHAR(255) NOT NULL,
+  \`$version\` INT NOT NULL DEFAULT 1,
+  \`$createdAt\` BIGINT NOT NULL,
+  \`$updatedAt\` BIGINT NOT NULL,
+  id CHAR(36) NOT NULL UNIQUE,
+  tenantId VARCHAR(255) NOT NULL UNIQUE,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  name VARCHAR(255) NOT NULL UNIQUE,
+  description TEXT,
+  content TEXT NOT NULL,
+  count INT NOT NULL,
+  quantity INT NOT NULL DEFAULT 0,
+  score BIGINT,
+  bigNumber BIGINT,
+  rate FLOAT NOT NULL,
+  percentage FLOAT,
+  amount DOUBLE NOT NULL,
+  largeAmount DOUBLE,
+  price DECIMAL(10, 2) NOT NULL UNIQUE,
+  tax DECIMAL(10, 4),
+  balance DECIMAL(18, 6) NOT NULL,
+  isActive TINYINT(1) NOT NULL DEFAULT TRUE,
+  isVerified TINYINT(1),
+  enabled TINYINT(1) NOT NULL,
+  referenceId CHAR(36),
+  externalId CHAR(36) NOT NULL,
+  createdAt DATETIME NOT NULL UNIQUE,
+  updatedAt DATETIME,
+  publishedAt DATETIME,
+  birthDate DATE,
+  eventTime TIME,
+  metadata JSON,
+  settings JSON NOT NULL DEFAULT '{}',
+  rawData BLOB,
+  tags VARCHAR(255) NOT NULL,
+  scores INT NOT NULL,
+  weights FLOAT NOT NULL,
+  categories VARCHAR(255),
+  embedding FLOAT NOT NULL,
+  thumbnail FLOAT NOT NULL,
+  status VARCHAR(255) NOT NULL DEFAULT 'active',
+  category VARCHAR(255) NOT NULL,
+  PRIMARY KEY (\`$id\`),
+  UNIQUE (id),
+  UNIQUE (tenantId),
+  UNIQUE (email),
+  UNIQUE (name),
+  UNIQUE (price),
+  UNIQUE (createdAt)
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+`;
+
+exports[`Snapshot Tests: MySQL DDL Generation > should generate MySQL DDL for Post schema 1`] = `
+"CREATE TABLE IF NOT EXISTS Post (
+  \`$id\` VARCHAR(255) NOT NULL,
+  \`$type\` VARCHAR(255) NOT NULL,
+  \`$version\` INT NOT NULL DEFAULT 1,
+  \`$createdAt\` BIGINT NOT NULL,
+  \`$updatedAt\` BIGINT NOT NULL,
+  id CHAR(36) NOT NULL UNIQUE,
+  title VARCHAR(255) NOT NULL UNIQUE,
+  content TEXT NOT NULL,
+  authorId CHAR(36) NOT NULL UNIQUE,
+  status VARCHAR(255) NOT NULL DEFAULT 'draft',
+  publishedAt DATETIME,
+  tags VARCHAR(255) NOT NULL,
+  viewCount INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (\`$id\`),
+  UNIQUE (id),
+  UNIQUE (title),
+  UNIQUE (authorId)
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+`;
+
+exports[`Snapshot Tests: MySQL DDL Generation > should generate MySQL DDL for SimpleEntity schema 1`] = `
+"CREATE TABLE IF NOT EXISTS SimpleEntity (
+  \`$id\` VARCHAR(255) NOT NULL,
+  \`$type\` VARCHAR(255) NOT NULL,
+  \`$version\` INT NOT NULL DEFAULT 1,
+  \`$createdAt\` BIGINT NOT NULL,
+  \`$updatedAt\` BIGINT NOT NULL,
+  id CHAR(36) NOT NULL UNIQUE,
+  name VARCHAR(255) NOT NULL UNIQUE,
+  value INT,
+  createdAt DATETIME NOT NULL DEFAULT '{"function":"now"}',
+  PRIMARY KEY (\`$id\`),
+  UNIQUE (id),
+  UNIQUE (name)
+) ENGINE=InnoDB;"
+`;
+
+exports[`Snapshot Tests: MySQL DDL Generation > should generate MySQL DDL with adapter directly 1`] = `
+"CREATE TABLE IF NOT EXISTS TestEntity (
+  \`$id\` VARCHAR(255) NOT NULL,
+  \`$type\` VARCHAR(255) NOT NULL,
+  \`$version\` INT NOT NULL DEFAULT 1,
+  \`$createdAt\` BIGINT NOT NULL,
+  \`$updatedAt\` BIGINT NOT NULL,
+  id CHAR(36) NOT NULL UNIQUE,
+  tenantId VARCHAR(255) NOT NULL UNIQUE,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  name VARCHAR(255) NOT NULL UNIQUE,
+  description TEXT,
+  content TEXT NOT NULL,
+  count INT NOT NULL,
+  quantity INT NOT NULL DEFAULT 0,
+  score BIGINT,
+  bigNumber BIGINT,
+  rate FLOAT NOT NULL,
+  percentage FLOAT,
+  amount DOUBLE NOT NULL,
+  largeAmount DOUBLE,
+  price DECIMAL(10, 2) NOT NULL UNIQUE,
+  tax DECIMAL(10, 4),
+  balance DECIMAL(18, 6) NOT NULL,
+  isActive TINYINT(1) NOT NULL DEFAULT TRUE,
+  isVerified TINYINT(1),
+  enabled TINYINT(1) NOT NULL,
+  referenceId CHAR(36),
+  externalId CHAR(36) NOT NULL,
+  createdAt DATETIME NOT NULL UNIQUE,
+  updatedAt DATETIME,
+  publishedAt DATETIME,
+  birthDate DATE,
+  eventTime TIME,
+  metadata JSON,
+  settings JSON NOT NULL DEFAULT '{}',
+  rawData BLOB,
+  tags VARCHAR(255) NOT NULL,
+  scores INT NOT NULL,
+  weights FLOAT NOT NULL,
+  categories VARCHAR(255),
+  embedding FLOAT NOT NULL,
+  thumbnail FLOAT NOT NULL,
+  status VARCHAR(255) NOT NULL DEFAULT 'active',
+  category VARCHAR(255) NOT NULL,
+  PRIMARY KEY (\`$id\`),
+  UNIQUE (id),
+  UNIQUE (tenantId),
+  UNIQUE (email),
+  UNIQUE (name),
+  UNIQUE (price),
+  UNIQUE (createdAt)
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+`;
+
+exports[`Snapshot Tests: Parquet Schema Generation > should generate Parquet schema for Post schema 1`] = `
+{
+  "fields": [
+    {
+      "convertedType": "UTF8",
+      "fieldId": 1,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "$id",
+      "repetition": "REQUIRED",
+      "type": "BYTE_ARRAY",
+    },
+    {
+      "convertedType": "UTF8",
+      "fieldId": 2,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "$type",
+      "repetition": "REQUIRED",
+      "type": "BYTE_ARRAY",
+    },
+    {
+      "convertedType": "INT_32",
+      "fieldId": 3,
+      "logicalType": {
+        "precision": 32,
+        "type": "INTEGER",
+      },
+      "name": "$version",
+      "repetition": "REQUIRED",
+      "type": "INT32",
+    },
+    {
+      "convertedType": "TIMESTAMP_MILLIS",
+      "fieldId": 4,
+      "logicalType": {
+        "isAdjustedToUTC": false,
+        "type": "TIMESTAMP",
+        "unit": "MILLIS",
+      },
+      "name": "$createdAt",
+      "repetition": "REQUIRED",
+      "type": "INT64",
+    },
+    {
+      "convertedType": "TIMESTAMP_MILLIS",
+      "fieldId": 5,
+      "logicalType": {
+        "isAdjustedToUTC": false,
+        "type": "TIMESTAMP",
+        "unit": "MILLIS",
+      },
+      "name": "$updatedAt",
+      "repetition": "REQUIRED",
+      "type": "INT64",
+    },
+    {
+      "convertedType": "UUID",
+      "fieldId": 6,
+      "logicalType": {
+        "type": "UUID",
+      },
+      "name": "id",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "FIXED_LEN_BYTE_ARRAY",
+      "typeLength": 16,
+    },
+    {
+      "convertedType": "UTF8",
+      "fieldId": 7,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "title",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "UTF8",
+      "fieldId": 8,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "content",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "UUID",
+      "fieldId": 9,
+      "logicalType": {
+        "type": "UUID",
+      },
+      "name": "authorId",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "FIXED_LEN_BYTE_ARRAY",
+      "typeLength": 16,
+    },
+    {
+      "convertedType": "UTF8",
+      "fieldId": 10,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "status",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "TIMESTAMP_MILLIS",
+      "fieldId": 11,
+      "logicalType": {
+        "isAdjustedToUTC": false,
+        "type": "TIMESTAMP",
+        "unit": "MILLIS",
+      },
+      "name": "publishedAt",
+      "precision": undefined,
+      "repetition": "OPTIONAL",
+      "scale": undefined,
+      "type": "INT64",
+      "typeLength": undefined,
+    },
+    {
+      "children": [
+        {
+          "children": [
+            {
+              "convertedType": "UTF8",
+              "logicalType": {
+                "type": "STRING",
+              },
+              "name": "element",
+              "repetition": "OPTIONAL",
+              "type": "BYTE_ARRAY",
+              "typeLength": undefined,
+            },
+          ],
+          "name": "list",
+          "repetition": "REPEATED",
+        },
+      ],
+      "convertedType": "LIST",
+      "fieldId": 12,
+      "logicalType": {
+        "type": "LIST",
+      },
+      "name": "tags",
+      "repetition": "REQUIRED",
+    },
+    {
+      "convertedType": "INT_32",
+      "fieldId": 13,
+      "logicalType": {
+        "precision": 32,
+        "type": "INTEGER",
+      },
+      "name": "viewCount",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "INT32",
+      "typeLength": undefined,
+    },
+  ],
+  "name": "Post",
+}
+`;
+
+exports[`Snapshot Tests: Parquet Schema Generation > should generate Parquet schema for SimpleEntity schema 1`] = `
+{
+  "fields": [
+    {
+      "convertedType": "UTF8",
+      "fieldId": 1,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "$id",
+      "repetition": "REQUIRED",
+      "type": "BYTE_ARRAY",
+    },
+    {
+      "convertedType": "UTF8",
+      "fieldId": 2,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "$type",
+      "repetition": "REQUIRED",
+      "type": "BYTE_ARRAY",
+    },
+    {
+      "convertedType": "INT_32",
+      "fieldId": 3,
+      "logicalType": {
+        "precision": 32,
+        "type": "INTEGER",
+      },
+      "name": "$version",
+      "repetition": "REQUIRED",
+      "type": "INT32",
+    },
+    {
+      "convertedType": "TIMESTAMP_MILLIS",
+      "fieldId": 4,
+      "logicalType": {
+        "isAdjustedToUTC": false,
+        "type": "TIMESTAMP",
+        "unit": "MILLIS",
+      },
+      "name": "$createdAt",
+      "repetition": "REQUIRED",
+      "type": "INT64",
+    },
+    {
+      "convertedType": "TIMESTAMP_MILLIS",
+      "fieldId": 5,
+      "logicalType": {
+        "isAdjustedToUTC": false,
+        "type": "TIMESTAMP",
+        "unit": "MILLIS",
+      },
+      "name": "$updatedAt",
+      "repetition": "REQUIRED",
+      "type": "INT64",
+    },
+    {
+      "convertedType": "UUID",
+      "fieldId": 6,
+      "logicalType": {
+        "type": "UUID",
+      },
+      "name": "id",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "FIXED_LEN_BYTE_ARRAY",
+      "typeLength": 16,
+    },
+    {
+      "convertedType": "UTF8",
+      "fieldId": 7,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "name",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "INT_32",
+      "fieldId": 8,
+      "logicalType": {
+        "precision": 32,
+        "type": "INTEGER",
+      },
+      "name": "value",
+      "precision": undefined,
+      "repetition": "OPTIONAL",
+      "scale": undefined,
+      "type": "INT32",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "TIMESTAMP_MILLIS",
+      "fieldId": 9,
+      "logicalType": {
+        "isAdjustedToUTC": false,
+        "type": "TIMESTAMP",
+        "unit": "MILLIS",
+      },
+      "name": "createdAt",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "INT64",
+      "typeLength": undefined,
+    },
+  ],
+  "name": "SimpleEntity",
+}
+`;
+
+exports[`Snapshot Tests: Parquet Schema Generation > should generate Parquet schema object for AllTypes schema 1`] = `
+{
+  "fields": [
+    {
+      "convertedType": "UTF8",
+      "fieldId": 1,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "$id",
+      "repetition": "REQUIRED",
+      "type": "BYTE_ARRAY",
+    },
+    {
+      "convertedType": "UTF8",
+      "fieldId": 2,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "$type",
+      "repetition": "REQUIRED",
+      "type": "BYTE_ARRAY",
+    },
+    {
+      "convertedType": "INT_32",
+      "fieldId": 3,
+      "logicalType": {
+        "precision": 32,
+        "type": "INTEGER",
+      },
+      "name": "$version",
+      "repetition": "REQUIRED",
+      "type": "INT32",
+    },
+    {
+      "convertedType": "TIMESTAMP_MILLIS",
+      "fieldId": 4,
+      "logicalType": {
+        "isAdjustedToUTC": false,
+        "type": "TIMESTAMP",
+        "unit": "MILLIS",
+      },
+      "name": "$createdAt",
+      "repetition": "REQUIRED",
+      "type": "INT64",
+    },
+    {
+      "convertedType": "TIMESTAMP_MILLIS",
+      "fieldId": 5,
+      "logicalType": {
+        "isAdjustedToUTC": false,
+        "type": "TIMESTAMP",
+        "unit": "MILLIS",
+      },
+      "name": "$updatedAt",
+      "repetition": "REQUIRED",
+      "type": "INT64",
+    },
+    {
+      "convertedType": "UUID",
+      "fieldId": 6,
+      "logicalType": {
+        "type": "UUID",
+      },
+      "name": "id",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "FIXED_LEN_BYTE_ARRAY",
+      "typeLength": 16,
+    },
+    {
+      "convertedType": "UTF8",
+      "fieldId": 7,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "tenantId",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "UTF8",
+      "fieldId": 8,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "email",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "UTF8",
+      "fieldId": 9,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "name",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "UTF8",
+      "fieldId": 10,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "description",
+      "precision": undefined,
+      "repetition": "OPTIONAL",
+      "scale": undefined,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "UTF8",
+      "fieldId": 11,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "content",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "INT_32",
+      "fieldId": 12,
+      "logicalType": {
+        "precision": 32,
+        "type": "INTEGER",
+      },
+      "name": "count",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "INT32",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "INT_32",
+      "fieldId": 13,
+      "logicalType": {
+        "precision": 32,
+        "type": "INTEGER",
+      },
+      "name": "quantity",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "INT32",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "INT_64",
+      "fieldId": 14,
+      "logicalType": {
+        "precision": 64,
+        "type": "INTEGER",
+      },
+      "name": "score",
+      "precision": undefined,
+      "repetition": "OPTIONAL",
+      "scale": undefined,
+      "type": "INT64",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "INT_64",
+      "fieldId": 15,
+      "logicalType": {
+        "precision": 64,
+        "type": "INTEGER",
+      },
+      "name": "bigNumber",
+      "precision": undefined,
+      "repetition": "OPTIONAL",
+      "scale": undefined,
+      "type": "INT64",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": undefined,
+      "fieldId": 16,
+      "logicalType": undefined,
+      "name": "rate",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "FLOAT",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": undefined,
+      "fieldId": 17,
+      "logicalType": undefined,
+      "name": "percentage",
+      "precision": undefined,
+      "repetition": "OPTIONAL",
+      "scale": undefined,
+      "type": "FLOAT",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": undefined,
+      "fieldId": 18,
+      "logicalType": undefined,
+      "name": "amount",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "DOUBLE",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": undefined,
+      "fieldId": 19,
+      "logicalType": undefined,
+      "name": "largeAmount",
+      "precision": undefined,
+      "repetition": "OPTIONAL",
+      "scale": undefined,
+      "type": "DOUBLE",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "DECIMAL",
+      "fieldId": 20,
+      "logicalType": {
+        "precision": 38,
+        "scale": 9,
+        "type": "DECIMAL",
+      },
+      "name": "price",
+      "precision": 38,
+      "repetition": "REQUIRED",
+      "scale": 9,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "DECIMAL",
+      "fieldId": 21,
+      "logicalType": {
+        "precision": 38,
+        "scale": 9,
+        "type": "DECIMAL",
+      },
+      "name": "tax",
+      "precision": 38,
+      "repetition": "OPTIONAL",
+      "scale": 9,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "DECIMAL",
+      "fieldId": 22,
+      "logicalType": {
+        "precision": 38,
+        "scale": 9,
+        "type": "DECIMAL",
+      },
+      "name": "balance",
+      "precision": 38,
+      "repetition": "REQUIRED",
+      "scale": 9,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": undefined,
+      "fieldId": 23,
+      "logicalType": undefined,
+      "name": "isActive",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "BOOLEAN",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": undefined,
+      "fieldId": 24,
+      "logicalType": undefined,
+      "name": "isVerified",
+      "precision": undefined,
+      "repetition": "OPTIONAL",
+      "scale": undefined,
+      "type": "BOOLEAN",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": undefined,
+      "fieldId": 25,
+      "logicalType": undefined,
+      "name": "enabled",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "BOOLEAN",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "UUID",
+      "fieldId": 26,
+      "logicalType": {
+        "type": "UUID",
+      },
+      "name": "referenceId",
+      "precision": undefined,
+      "repetition": "OPTIONAL",
+      "scale": undefined,
+      "type": "FIXED_LEN_BYTE_ARRAY",
+      "typeLength": 16,
+    },
+    {
+      "convertedType": "UUID",
+      "fieldId": 27,
+      "logicalType": {
+        "type": "UUID",
+      },
+      "name": "externalId",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "FIXED_LEN_BYTE_ARRAY",
+      "typeLength": 16,
+    },
+    {
+      "convertedType": "TIMESTAMP_MILLIS",
+      "fieldId": 28,
+      "logicalType": {
+        "isAdjustedToUTC": false,
+        "type": "TIMESTAMP",
+        "unit": "MILLIS",
+      },
+      "name": "createdAt",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "INT64",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "TIMESTAMP_MILLIS",
+      "fieldId": 29,
+      "logicalType": {
+        "isAdjustedToUTC": false,
+        "type": "TIMESTAMP",
+        "unit": "MILLIS",
+      },
+      "name": "updatedAt",
+      "precision": undefined,
+      "repetition": "OPTIONAL",
+      "scale": undefined,
+      "type": "INT64",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "TIMESTAMP_MILLIS",
+      "fieldId": 30,
+      "logicalType": {
+        "isAdjustedToUTC": true,
+        "type": "TIMESTAMP",
+        "unit": "MILLIS",
+      },
+      "name": "publishedAt",
+      "precision": undefined,
+      "repetition": "OPTIONAL",
+      "scale": undefined,
+      "type": "INT64",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "DATE",
+      "fieldId": 31,
+      "logicalType": {
+        "type": "DATE",
+      },
+      "name": "birthDate",
+      "precision": undefined,
+      "repetition": "OPTIONAL",
+      "scale": undefined,
+      "type": "INT32",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "TIME_MILLIS",
+      "fieldId": 32,
+      "logicalType": {
+        "isAdjustedToUTC": false,
+        "type": "TIME",
+        "unit": "MILLIS",
+      },
+      "name": "eventTime",
+      "precision": undefined,
+      "repetition": "OPTIONAL",
+      "scale": undefined,
+      "type": "INT32",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "JSON",
+      "fieldId": 33,
+      "logicalType": {
+        "type": "JSON",
+      },
+      "name": "metadata",
+      "precision": undefined,
+      "repetition": "OPTIONAL",
+      "scale": undefined,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "JSON",
+      "fieldId": 34,
+      "logicalType": {
+        "type": "JSON",
+      },
+      "name": "settings",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": undefined,
+      "fieldId": 35,
+      "logicalType": undefined,
+      "name": "rawData",
+      "precision": undefined,
+      "repetition": "OPTIONAL",
+      "scale": undefined,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "children": [
+        {
+          "children": [
+            {
+              "convertedType": "UTF8",
+              "logicalType": {
+                "type": "STRING",
+              },
+              "name": "element",
+              "repetition": "OPTIONAL",
+              "type": "BYTE_ARRAY",
+              "typeLength": undefined,
+            },
+          ],
+          "name": "list",
+          "repetition": "REPEATED",
+        },
+      ],
+      "convertedType": "LIST",
+      "fieldId": 36,
+      "logicalType": {
+        "type": "LIST",
+      },
+      "name": "tags",
+      "repetition": "REQUIRED",
+    },
+    {
+      "children": [
+        {
+          "children": [
+            {
+              "convertedType": "INT_32",
+              "logicalType": {
+                "precision": 32,
+                "type": "INTEGER",
+              },
+              "name": "element",
+              "repetition": "OPTIONAL",
+              "type": "INT32",
+              "typeLength": undefined,
+            },
+          ],
+          "name": "list",
+          "repetition": "REPEATED",
+        },
+      ],
+      "convertedType": "LIST",
+      "fieldId": 37,
+      "logicalType": {
+        "type": "LIST",
+      },
+      "name": "scores",
+      "repetition": "REQUIRED",
+    },
+    {
+      "children": [
+        {
+          "children": [
+            {
+              "convertedType": undefined,
+              "logicalType": undefined,
+              "name": "element",
+              "repetition": "OPTIONAL",
+              "type": "FLOAT",
+              "typeLength": undefined,
+            },
+          ],
+          "name": "list",
+          "repetition": "REPEATED",
+        },
+      ],
+      "convertedType": "LIST",
+      "fieldId": 38,
+      "logicalType": {
+        "type": "LIST",
+      },
+      "name": "weights",
+      "repetition": "REQUIRED",
+    },
+    {
+      "children": [
+        {
+          "children": [
+            {
+              "convertedType": "UTF8",
+              "logicalType": {
+                "type": "STRING",
+              },
+              "name": "element",
+              "repetition": "OPTIONAL",
+              "type": "BYTE_ARRAY",
+              "typeLength": undefined,
+            },
+          ],
+          "name": "list",
+          "repetition": "REPEATED",
+        },
+      ],
+      "convertedType": "LIST",
+      "fieldId": 39,
+      "logicalType": {
+        "type": "LIST",
+      },
+      "name": "categories",
+      "repetition": "OPTIONAL",
+    },
+    {
+      "children": [
+        {
+          "children": [
+            {
+              "convertedType": undefined,
+              "logicalType": undefined,
+              "name": "element",
+              "repetition": "OPTIONAL",
+              "type": "FLOAT",
+              "typeLength": undefined,
+            },
+          ],
+          "name": "list",
+          "repetition": "REPEATED",
+        },
+      ],
+      "convertedType": "LIST",
+      "fieldId": 40,
+      "logicalType": {
+        "type": "LIST",
+      },
+      "name": "embedding",
+      "repetition": "REQUIRED",
+    },
+    {
+      "children": [
+        {
+          "children": [
+            {
+              "convertedType": undefined,
+              "logicalType": undefined,
+              "name": "element",
+              "repetition": "OPTIONAL",
+              "type": "FLOAT",
+              "typeLength": undefined,
+            },
+          ],
+          "name": "list",
+          "repetition": "REPEATED",
+        },
+      ],
+      "convertedType": "LIST",
+      "fieldId": 41,
+      "logicalType": {
+        "type": "LIST",
+      },
+      "name": "thumbnail",
+      "repetition": "REQUIRED",
+    },
+    {
+      "convertedType": "UTF8",
+      "fieldId": 42,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "status",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+    {
+      "convertedType": "UTF8",
+      "fieldId": 43,
+      "logicalType": {
+        "type": "STRING",
+      },
+      "name": "category",
+      "precision": undefined,
+      "repetition": "REQUIRED",
+      "scale": undefined,
+      "type": "BYTE_ARRAY",
+      "typeLength": undefined,
+    },
+  ],
+  "name": "TestEntity",
+}
+`;
+
+exports[`Snapshot Tests: Parquet Schema Generation > should generate Parquet schema string for AllTypes schema 1`] = `
+"message TestEntity {
+  REQUIRED BYTE_ARRAY $id (UTF8);
+  REQUIRED BYTE_ARRAY $type (UTF8);
+  REQUIRED INT32 $version (INT_32);
+  REQUIRED INT64 $createdAt (TIMESTAMP_MILLIS);
+  REQUIRED INT64 $updatedAt (TIMESTAMP_MILLIS);
+  REQUIRED FIXED_LEN_BYTE_ARRAY(16) id (UUID);
+  REQUIRED BYTE_ARRAY tenantId (UTF8);
+  REQUIRED BYTE_ARRAY email (UTF8);
+  REQUIRED BYTE_ARRAY name (UTF8);
+  OPTIONAL BYTE_ARRAY description (UTF8);
+  REQUIRED BYTE_ARRAY content (UTF8);
+  REQUIRED INT32 count (INT_32);
+  REQUIRED INT32 quantity (INT_32);
+  OPTIONAL INT64 score (INT_64);
+  OPTIONAL INT64 bigNumber (INT_64);
+  REQUIRED FLOAT rate;
+  OPTIONAL FLOAT percentage;
+  REQUIRED DOUBLE amount;
+  OPTIONAL DOUBLE largeAmount;
+  REQUIRED BYTE_ARRAY price (DECIMAL);
+  OPTIONAL BYTE_ARRAY tax (DECIMAL);
+  REQUIRED BYTE_ARRAY balance (DECIMAL);
+  REQUIRED BOOLEAN isActive;
+  OPTIONAL BOOLEAN isVerified;
+  REQUIRED BOOLEAN enabled;
+  OPTIONAL FIXED_LEN_BYTE_ARRAY(16) referenceId (UUID);
+  REQUIRED FIXED_LEN_BYTE_ARRAY(16) externalId (UUID);
+  REQUIRED INT64 createdAt (TIMESTAMP_MILLIS);
+  OPTIONAL INT64 updatedAt (TIMESTAMP_MILLIS);
+  OPTIONAL INT64 publishedAt (TIMESTAMP_MILLIS);
+  OPTIONAL INT32 birthDate (DATE);
+  OPTIONAL INT32 eventTime (TIME_MILLIS);
+  OPTIONAL BYTE_ARRAY metadata (JSON);
+  REQUIRED BYTE_ARRAY settings (JSON);
+  OPTIONAL BYTE_ARRAY rawData;
+  REQUIRED group tags (LIST) {
+    REPEATED group list {
+      OPTIONAL BYTE_ARRAY element (UTF8);
+    }
+  }
+  REQUIRED group scores (LIST) {
+    REPEATED group list {
+      OPTIONAL INT32 element (INT_32);
+    }
+  }
+  REQUIRED group weights (LIST) {
+    REPEATED group list {
+      OPTIONAL FLOAT element;
+    }
+  }
+  OPTIONAL group categories (LIST) {
+    REPEATED group list {
+      OPTIONAL BYTE_ARRAY element (UTF8);
+    }
+  }
+  REQUIRED group embedding (LIST) {
+    REPEATED group list {
+      OPTIONAL FLOAT element;
+    }
+  }
+  REQUIRED group thumbnail (LIST) {
+    REPEATED group list {
+      OPTIONAL FLOAT element;
+    }
+  }
+  REQUIRED BYTE_ARRAY status (UTF8);
+  REQUIRED BYTE_ARRAY category (UTF8);
+}"
+`;
+
+exports[`Snapshot Tests: Parquet Schema Generation > should generate Parquet schema string for SimpleEntity schema 1`] = `
+"message SimpleEntity {
+  REQUIRED BYTE_ARRAY $id (UTF8);
+  REQUIRED BYTE_ARRAY $type (UTF8);
+  REQUIRED INT32 $version (INT_32);
+  REQUIRED INT64 $createdAt (TIMESTAMP_MILLIS);
+  REQUIRED INT64 $updatedAt (TIMESTAMP_MILLIS);
+  REQUIRED FIXED_LEN_BYTE_ARRAY(16) id (UUID);
+  REQUIRED BYTE_ARRAY name (UTF8);
+  OPTIONAL INT32 value (INT_32);
+  REQUIRED INT64 createdAt (TIMESTAMP_MILLIS);
+}"
+`;
+
+exports[`Snapshot Tests: PostgreSQL DDL Generation > should generate PostgreSQL DDL for AllTypes schema 1`] = `
+"CREATE TABLE IF NOT EXISTS "public".TestEntity (
+  "$id" TEXT NOT NULL,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  tenantId TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  content TEXT NOT NULL,
+  count INTEGER NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 0,
+  score BIGINT,
+  bigNumber BIGINT,
+  rate REAL NOT NULL,
+  percentage REAL,
+  amount DOUBLE PRECISION NOT NULL,
+  largeAmount DOUBLE PRECISION,
+  price DECIMAL(10, 2) NOT NULL UNIQUE,
+  tax DECIMAL(10, 4),
+  balance DECIMAL(18, 6) NOT NULL,
+  isActive BOOLEAN NOT NULL DEFAULT TRUE,
+  isVerified BOOLEAN,
+  enabled BOOLEAN NOT NULL,
+  referenceId UUID,
+  externalId UUID NOT NULL,
+  createdAt TIMESTAMP NOT NULL UNIQUE,
+  updatedAt TIMESTAMP,
+  publishedAt TIMESTAMPTZ,
+  birthDate DATE,
+  eventTime TIME,
+  metadata JSONB,
+  settings JSONB NOT NULL DEFAULT '{}',
+  rawData BYTEA,
+  tags TEXT[] NOT NULL,
+  scores INTEGER[] NOT NULL,
+  weights REAL[] NOT NULL,
+  categories TEXT[],
+  embedding REAL[] NOT NULL,
+  thumbnail REAL[] NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  category TEXT NOT NULL,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (tenantId),
+  UNIQUE (email),
+  UNIQUE (name),
+  UNIQUE (price),
+  UNIQUE (createdAt)
+);"
+`;
+
+exports[`Snapshot Tests: PostgreSQL DDL Generation > should generate PostgreSQL DDL for Post schema 1`] = `
+"CREATE TABLE IF NOT EXISTS blog.Post (
+  "$id" TEXT NOT NULL,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  title TEXT NOT NULL UNIQUE,
+  content TEXT NOT NULL,
+  authorId UUID NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'draft',
+  publishedAt TIMESTAMP,
+  tags TEXT[] NOT NULL,
+  viewCount INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (title),
+  UNIQUE (authorId)
+);"
+`;
+
+exports[`Snapshot Tests: PostgreSQL DDL Generation > should generate PostgreSQL DDL for SimpleEntity schema 1`] = `
+"CREATE TABLE IF NOT EXISTS SimpleEntity (
+  "$id" TEXT NOT NULL,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  name TEXT NOT NULL UNIQUE,
+  value INTEGER,
+  createdAt TIMESTAMP NOT NULL DEFAULT '{"function":"now"}',
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (name)
+);"
+`;
+
+exports[`Snapshot Tests: PostgreSQL DDL Generation > should generate PostgreSQL DDL with adapter directly 1`] = `
+"CREATE TABLE IF NOT EXISTS analytics.TestEntity (
+  "$id" TEXT NOT NULL,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  tenantId TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  content TEXT NOT NULL,
+  count INTEGER NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 0,
+  score BIGINT,
+  bigNumber BIGINT,
+  rate REAL NOT NULL,
+  percentage REAL,
+  amount DOUBLE PRECISION NOT NULL,
+  largeAmount DOUBLE PRECISION,
+  price DECIMAL(10, 2) NOT NULL UNIQUE,
+  tax DECIMAL(10, 4),
+  balance DECIMAL(18, 6) NOT NULL,
+  isActive BOOLEAN NOT NULL DEFAULT TRUE,
+  isVerified BOOLEAN,
+  enabled BOOLEAN NOT NULL,
+  referenceId UUID,
+  externalId UUID NOT NULL,
+  createdAt TIMESTAMP NOT NULL UNIQUE,
+  updatedAt TIMESTAMP,
+  publishedAt TIMESTAMPTZ,
+  birthDate DATE,
+  eventTime TIME,
+  metadata JSONB,
+  settings JSONB NOT NULL DEFAULT '{}',
+  rawData BYTEA,
+  tags TEXT[] NOT NULL,
+  scores INTEGER[] NOT NULL,
+  weights REAL[] NOT NULL,
+  categories TEXT[],
+  embedding REAL[] NOT NULL,
+  thumbnail REAL[] NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  category TEXT NOT NULL,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (tenantId),
+  UNIQUE (email),
+  UNIQUE (name),
+  UNIQUE (price),
+  UNIQUE (createdAt)
+);"
+`;
+
+exports[`Snapshot Tests: TypeScript Interface Generation > should generate TypeScript interface for AllTypes schema 1`] = `
+"/**
+ * Generated from IceType schema: TestEntity
+ * @generated
+ */
+
+export interface TestEntity {
+  /** Unique document identifier */
+  $id: string;
+  /** Document type */
+  $type: 'TestEntity';
+  /** Document version */
+  $version: number;
+  /** Creation timestamp (epoch ms) */
+  $createdAt: number;
+  /** Last update timestamp (epoch ms) */
+  $updatedAt: number;
+  id: string;
+  tenantId: string;
+  email: string;
+  name: string;
+  description?: string;
+  content: string;
+  count: number;
+  quantity: number;
+  score?: number;
+  bigNumber?: number;
+  rate: number;
+  percentage?: number;
+  amount: number;
+  largeAmount?: number;
+  price: number;
+  tax?: number;
+  balance: number;
+  isActive: boolean;
+  isVerified?: boolean;
+  enabled: boolean;
+  referenceId?: string;
+  externalId: string;
+  createdAt: number;
+  updatedAt?: number;
+  publishedAt?: number;
+  birthDate?: number;
+  eventTime?: number;
+  metadata?: unknown;
+  settings: unknown;
+  rawData?: Uint8Array;
+  tags: string[];
+  scores: number[];
+  weights: number[];
+  categories?: string[];
+  embedding: number[];
+  thumbnail: number[];
+  status: string;
+  category: string;
+}
+
+/** Input type for creating TestEntity */
+export interface TestEntityInput {
+  id: string;
+  tenantId: string;
+  email: string;
+  name: string;
+  description?: string;
+  content: string;
+  count: number;
+  quantity?: number;
+  score?: number;
+  bigNumber?: number;
+  rate: number;
+  percentage?: number;
+  amount: number;
+  largeAmount?: number;
+  price: number;
+  tax?: number;
+  balance: number;
+  isActive?: boolean;
+  isVerified?: boolean;
+  enabled: boolean;
+  referenceId?: string;
+  externalId: string;
+  createdAt: number;
+  updatedAt?: number;
+  publishedAt?: number;
+  birthDate?: number;
+  eventTime?: number;
+  metadata?: unknown;
+  settings?: unknown;
+  rawData?: Uint8Array;
+  tags: string[];
+  scores: number[];
+  weights: number[];
+  categories?: string[];
+  embedding: number[];
+  thumbnail: number[];
+  status?: string;
+  category: string;
+}"
+`;
+
+exports[`Snapshot Tests: TypeScript Interface Generation > should generate TypeScript interface for Post schema 1`] = `
+"/**
+ * Generated from IceType schema: Post
+ * @generated
+ */
+
+export interface Post {
+  /** Unique document identifier */
+  $id: string;
+  /** Document type */
+  $type: 'Post';
+  /** Document version */
+  $version: number;
+  /** Creation timestamp (epoch ms) */
+  $createdAt: number;
+  /** Last update timestamp (epoch ms) */
+  $updatedAt: number;
+  id: string;
+  title: string;
+  content: string;
+  authorId: string;
+  status: string;
+  publishedAt?: number;
+  tags: string[];
+  viewCount: number;
+}
+
+/** Input type for creating Post */
+export interface PostInput {
+  id: string;
+  title: string;
+  content: string;
+  authorId: string;
+  status?: string;
+  publishedAt?: number;
+  tags: string[];
+  viewCount?: number;
+}"
+`;
+
+exports[`Snapshot Tests: TypeScript Interface Generation > should generate TypeScript interface for SimpleEntity schema 1`] = `
+"/**
+ * Generated from IceType schema: SimpleEntity
+ * @generated
+ */
+
+export interface SimpleEntity {
+  /** Unique document identifier */
+  $id: string;
+  /** Document type */
+  $type: 'SimpleEntity';
+  /** Document version */
+  $version: number;
+  /** Creation timestamp (epoch ms) */
+  $createdAt: number;
+  /** Last update timestamp (epoch ms) */
+  $updatedAt: number;
+  id: string;
+  name: string;
+  value?: number;
+  createdAt: number;
+}
+
+/** Input type for creating SimpleEntity */
+export interface SimpleEntityInput {
+  id: string;
+  name: string;
+  value?: number;
+  createdAt?: number;
+}"
+`;

@@ -1,58 +1,67 @@
-# Apache Iceberg Export Example
+# Iceberg Example
 
-This example demonstrates how to export IceType schemas to Apache Iceberg table metadata and Parquet schema formats.
+This example demonstrates how to export IceType schemas to Apache Iceberg table metadata format for use with data lake and data warehouse systems.
 
-## What is Apache Iceberg?
+## What This Example Shows
 
-Apache Iceberg is a high-performance table format for huge analytic datasets. It provides:
+1. **Schema Definition** (`schema.ts`) - Schemas optimized for Iceberg table design with proper partitioning
+2. **Iceberg Export** (`export.ts`) - Generate Iceberg metadata JSON and Parquet schemas
 
-- **Schema evolution** - Add, drop, rename columns without rewriting data
-- **Partition evolution** - Change partitioning scheme without rewriting data
-- **Time travel** - Query data as of any snapshot
-- **ACID transactions** - Concurrent reads and writes
+## Apache Iceberg Overview
 
-## Files
+[Apache Iceberg](https://iceberg.apache.org/) is an open table format for large analytic datasets. IceType can export schemas to Iceberg format, enabling:
 
-- `schema.ts` - Event and Order schemas with partition directives
-- `export.ts` - Generates Iceberg metadata and Parquet schemas
+- **Schema Evolution** - Add, rename, or drop columns without rewriting data
+- **Partition Evolution** - Change partitioning schemes without data migration
+- **Time Travel** - Query historical snapshots of your data
+- **ACID Transactions** - Serializable isolation for concurrent writes
 
-## Schema Design for Iceberg
+## Partitioning Strategies
 
-### Partitioning
+The example schemas demonstrate different partitioning approaches:
 
-Use `$partitionBy` to define partition keys:
+### Time-based Partitioning (Events)
 
 ```typescript
-const EventSchema: SchemaDefinition = {
-  $type: 'Event',
-  $partitionBy: ['tenantId', 'eventDate'],
-  // ...
-};
+$partitionBy: ['tenantId', 'eventDate']
 ```
 
-This creates a partition structure like:
+Creates partition directories like:
 ```
-s3://bucket/events/
-  tenantId=acme/
-    eventDate=2024-01-15/
-      data-001.parquet
+/tenantId=acme/eventDate=2024-01-15/
 ```
 
-### Type Mapping
+Best for:
+- Time-series data
+- Analytics queries with date filters
+- Data retention policies
 
-| IceType | Iceberg | Parquet |
-|---------|---------|---------|
-| `string` | `string` | `BYTE_ARRAY` (UTF8) |
-| `int` | `int` | `INT32` |
-| `long` | `long` | `INT64` |
-| `float` | `float` | `FLOAT` |
-| `double` | `double` | `DOUBLE` |
-| `boolean` | `boolean` | `BOOLEAN` |
-| `timestamp` | `timestamp` | `INT64` (TIMESTAMP_MICROS) |
-| `date` | `date` | `INT32` (DATE) |
-| `uuid` | `uuid` | `FIXED_LEN_BYTE_ARRAY[16]` |
-| `decimal(p,s)` | `decimal(p,s)` | `FIXED_LEN_BYTE_ARRAY` |
-| `json` | `string` | `BYTE_ARRAY` (UTF8) |
+### Entity-based Partitioning (Orders)
+
+```typescript
+$partitionBy: ['customerId']
+```
+
+Creates partition directories like:
+```
+/customerId=cust_123/
+```
+
+Best for:
+- Customer-specific queries
+- Data isolation requirements
+- Localized updates
+
+### Location-based Partitioning (Inventory)
+
+```typescript
+$partitionBy: ['warehouseId']
+```
+
+Best for:
+- Geographic data isolation
+- Regional query patterns
+- Distributed systems
 
 ## Running the Example
 
@@ -62,69 +71,103 @@ pnpm install
 
 # Run the export
 cd examples/iceberg
-npx tsx export.ts
+pnpm export
 ```
 
-## Expected Output
+## Output Files
 
+The export generates the following files in `./output/`:
+
+| File | Description |
+|------|-------------|
+| `events-metadata.json` | Iceberg table metadata for events |
+| `events-parquet-schema.json` | Parquet schema for events |
+| `orders-metadata.json` | Iceberg table metadata for orders |
+| `orders-parquet-schema.json` | Parquet schema for orders |
+| `inventory-metadata.json` | Iceberg table metadata for inventory |
+| `inventory-parquet-schema.json` | Parquet schema for inventory |
+| `catalog.json` | Combined catalog of all tables |
+
+## Iceberg Metadata Structure
+
+The generated metadata follows Iceberg's v2 format:
+
+```json
+{
+  "formatVersion": 2,
+  "tableUuid": "...",
+  "location": "s3://bucket/table",
+  "schemas": [...],
+  "partitionSpecs": [...],
+  "sortOrders": [...],
+  "properties": {...}
+}
 ```
-============================================================
-IceType to Apache Iceberg Export
-============================================================
 
---- Exporting Event Schema ---
+### Key Components
 
-Table: Event
-Location: s3://my-data-lake/warehouse/event
-Format Version: 2
-Schema ID: 0
+1. **Schema** - Field definitions with types and nullability
+2. **Partition Spec** - How data is partitioned (identity, day, month, etc.)
+3. **Sort Order** - Default row ordering within files
+4. **Properties** - Table configuration (compression, file sizes, etc.)
 
-Iceberg Schema (12 fields):
-  - id: uuid
-  - eventType: string
-  - eventName: string
-  - tenantId: string
-  - userId?: string
-  ...
+## Type Mapping
 
-Partition Spec:
-  - tenantId (identity)
-  - eventDate (identity)
+| IceType | Iceberg | Parquet |
+|---------|---------|---------|
+| `string` | `string` | `BYTE_ARRAY` (UTF8) |
+| `text` | `string` | `BYTE_ARRAY` (UTF8) |
+| `int` | `int` | `INT32` |
+| `long` | `long` | `INT64` |
+| `float` | `float` | `FLOAT` |
+| `double` | `double` | `DOUBLE` |
+| `boolean` | `boolean` | `BOOLEAN` |
+| `uuid` | `uuid` | `FIXED_LEN_BYTE_ARRAY[16]` |
+| `timestamp` | `timestamp` | `INT64` (TIMESTAMP_MILLIS) |
+| `timestamptz` | `timestamptz` | `INT64` (TIMESTAMP_MILLIS) |
+| `date` | `date` | `INT32` (DATE) |
+| `decimal(p,s)` | `decimal(p,s)` | `FIXED_LEN_BYTE_ARRAY` |
+| `json` | `string` | `BYTE_ARRAY` (JSON) |
+| `binary` | `binary` | `BYTE_ARRAY` |
 
-Parquet Schema: 12 columns
-```
-
-## Using the Generated Metadata
+## Integration Examples
 
 ### Apache Spark
 
-```sql
--- Create table from metadata
-CREATE TABLE my_catalog.events
-USING iceberg
-LOCATION 's3://my-data-lake/warehouse/event'
+```scala
+// Read the metadata and register the table
+spark.sql("""
+  CALL system.register_table(
+    'my_catalog.my_database.events',
+    's3://data-lake/warehouse/events/metadata/v1.metadata.json'
+  )
+""")
+
+// Query the table
+spark.sql("SELECT * FROM events WHERE eventDate = '2024-01-15'")
 ```
 
 ### Trino/Presto
 
 ```sql
-SELECT eventType, COUNT(*) as count
-FROM iceberg.my_schema.events
-WHERE eventDate >= DATE '2024-01-01'
-GROUP BY eventType
+-- Query with partition pruning
+SELECT eventType, COUNT(*) as event_count
+FROM events
+WHERE tenantId = 'acme'
+  AND eventDate BETWEEN DATE '2024-01-01' AND DATE '2024-01-31'
+GROUP BY eventType;
 ```
 
-### DuckDB
+### AWS Athena
 
 ```sql
-INSTALL iceberg;
-LOAD iceberg;
-
-SELECT * FROM iceberg_scan('s3://my-data-lake/warehouse/event');
+-- Create table from Iceberg metadata
+CREATE TABLE events
+LOCATION 's3://data-lake/warehouse/events'
+TBLPROPERTIES ('table_type' = 'ICEBERG');
 ```
 
 ## Next Steps
 
-- See [clickhouse](../clickhouse/) for ClickHouse DDL generation
-- See [duckdb](../duckdb/) for DuckDB DDL generation
-- See [basic](../basic/) for basic schema definitions
+- Check out the [basic](../basic) example for schema fundamentals
+- Check out the [typescript-codegen](../typescript-codegen) example for generating TypeScript interfaces

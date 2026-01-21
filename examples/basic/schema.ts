@@ -7,10 +7,11 @@
  * Key syntax features:
  * - `!` - Required field (must be present)
  * - `?` - Optional field (can be null/undefined)
- * - `#` - Indexed/unique field (for faster queries)
+ * - `#` - Indexed field (for faster queries)
  * - `[]` - Array type
  * - `->` - Forward relation
  * - `<-` - Backward relation
+ * - `~>` - Fuzzy/semantic relation (AI-powered)
  */
 
 import type { SchemaDefinition } from '@icetype/core';
@@ -18,65 +19,107 @@ import type { SchemaDefinition } from '@icetype/core';
 /**
  * User schema definition
  *
- * Represents a user in the system with basic profile data.
+ * Represents a user in the system with authentication and profile data.
  */
 export const UserSchema: SchemaDefinition = {
-  // Schema metadata - identifies this entity type
+  // Schema metadata
   $type: 'User',
 
   // Partitioning strategy for distributed storage
-  $partitionBy: ['id'],
+  $partitionBy: ['tenantId'],
 
   // Secondary indexes for query optimization
   $index: [['email'], ['createdAt']],
 
-  // Primary key - required UUID
-  id: 'uuid!',
+  // Full-text search enabled fields
+  $fts: ['name', 'bio'],
 
-  // User profile fields
-  email: 'string!#',     // Required, unique, and indexed
-  name: 'string!',       // Required display name
-  bio: 'text?',          // Optional long-form text
+  // Required fields (marked with !)
+  id: 'uuid!',           // Primary identifier
+  email: 'string!#',     // Required and indexed
+  name: 'string!',       // Display name
+  tenantId: 'string!',   // Multi-tenant partition key
 
-  // Status with default value
+  // Optional fields (marked with ?)
+  bio: 'text?',          // Long-form text, optional
+  age: 'int?',           // Optional integer
+  avatarUrl: 'string?',  // Optional profile image URL
+
+  // Field with default value
   status: 'string = "active"',
 
   // Timestamps
   createdAt: 'timestamp!',
   updatedAt: 'timestamp!',
+  lastLoginAt: 'timestamp?',
 
   // Backward relation - User has many Posts
+  // This creates the inverse of Post.author
   posts: '<- Post.author[]',
 };
 
 /**
  * Post schema definition
  *
- * Represents a blog post written by a user.
+ * Represents a blog post or article written by a user.
  */
 export const PostSchema: SchemaDefinition = {
   $type: 'Post',
   $partitionBy: ['authorId'],
-  $index: [['authorId', 'createdAt'], ['slug']],
+  $index: [['authorId', 'createdAt'], ['status']],
+  $fts: ['title', 'content'],
 
-  // Primary key
+  // Required fields
   id: 'uuid!',
-
-  // Post content
   title: 'string!',
-  slug: 'string!#',      // URL-friendly identifier, unique
   content: 'text!',
-
-  // Author relation
   authorId: 'string!',   // Foreign key to User
-  author: '-> User',     // Forward relation to User
+
+  // Forward relation - Post belongs to User
+  author: '-> User',
 
   // Optional fields
   excerpt: 'string?',
   publishedAt: 'timestamp?',
+  status: 'string = "draft"',
 
   // Array of tags
   tags: 'string[]',
+
+  // Metadata
+  viewCount: 'int = 0',
+  likeCount: 'int = 0',
+
+  // Timestamps
+  createdAt: 'timestamp!',
+  updatedAt: 'timestamp!',
+};
+
+/**
+ * Comment schema definition
+ *
+ * Represents a comment on a post.
+ */
+export const CommentSchema: SchemaDefinition = {
+  $type: 'Comment',
+  $partitionBy: ['postId'],
+  $index: [['postId', 'createdAt'], ['authorId']],
+
+  id: 'uuid!',
+  content: 'text!',
+  postId: 'string!',
+  authorId: 'string!',
+
+  // Relations
+  post: '-> Post',
+  author: '-> User',
+
+  // Optional parent for nested comments
+  parentId: 'string?',
+  parent: '-> Comment?',
+
+  // Backward relation for replies
+  replies: '<- Comment.parent[]',
 
   // Timestamps
   createdAt: 'timestamp!',
@@ -87,4 +130,5 @@ export const PostSchema: SchemaDefinition = {
 export const schemas = {
   User: UserSchema,
   Post: PostSchema,
+  Comment: CommentSchema,
 };

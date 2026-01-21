@@ -54,6 +54,7 @@
     "@icetype/adapters": "workspace:*",
     "@icetype/clickhouse": "workspace:*",
     "@icetype/duckdb": "workspace:*",
+    "@icetype/mysql": "workspace:*",
     "@icetype/postgres": "workspace:*"
   },
   "devDependencies": {

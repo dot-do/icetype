@@ -213,5 +213,5 @@ npx ice generate --schema ./schema.ts --output ./types.generated.ts
 
 ## Next Steps
 
-- Check out the [basic-usage](../basic-usage) example for schema fundamentals
-- Check out the [iceberg-export](../iceberg-export) example for data lake integration
+- Check out the [basic](../basic) example for schema fundamentals
+- Check out the [iceberg](../iceberg) example for data lake integration
