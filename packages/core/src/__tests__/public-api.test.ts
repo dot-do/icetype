@@ -329,6 +329,24 @@ describe('No runtime errors on import', () => {
     expect(module.createFieldId).toBeDefined();
     expect(module.createRelationId).toBeDefined();
   });
+
+  it('should export Brand type utility for creating custom branded types', () => {
+    // The Brand<T, B> type utility should be exported for users to create
+    // their own branded types following the same pattern as SchemaId, FieldId, etc.
+    type Brand<T, B extends string> = import('../index.js').Brand<T, B>;
+
+    // Users can create custom branded types
+    type CustomId = Brand<string, 'CustomId'>;
+    type Timestamp = Brand<number, 'Timestamp'>;
+
+    // The branded values work like their base types at runtime
+    const customId = 'test-123' as CustomId;
+    const timestamp = Date.now() as Timestamp;
+
+    expect(typeof customId).toBe('string');
+    expect(typeof timestamp).toBe('number');
+    expect(customId).toBe('test-123');
+  });
 });
 
 // =============================================================================

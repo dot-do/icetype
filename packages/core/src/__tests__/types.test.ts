@@ -10,6 +10,7 @@ import {
   createSchemaId,
   createFieldId,
   createRelationId,
+  type Brand,
   type SchemaId,
   type FieldId,
   type RelationId,
@@ -316,5 +317,57 @@ describe('Type Discrimination', () => {
 
     expect(typeof fieldId).toBe('number');
     expect(typeof schemaId).toBe('string');
+  });
+});
+
+// =============================================================================
+// Brand Type Utility Tests
+// =============================================================================
+
+describe('Brand Type Utility', () => {
+  it('should allow creating custom branded types', () => {
+    // This test verifies that Brand<T, B> is exported and usable
+    // The type assertions happen at compile time
+    type CustomId = Brand<string, 'CustomId'>;
+
+    // Create a branded value using type assertion
+    const customId = 'custom-123' as CustomId;
+
+    // The branded value is still a string at runtime
+    expect(typeof customId).toBe('string');
+    expect(customId).toBe('custom-123');
+  });
+
+  it('should allow branded number types', () => {
+    type Timestamp = Brand<number, 'Timestamp'>;
+
+    const timestamp = Date.now() as Timestamp;
+
+    // The branded value is still a number at runtime
+    expect(typeof timestamp).toBe('number');
+    expect(timestamp).toBeGreaterThan(0);
+  });
+
+  it('should preserve base type operations', () => {
+    type Version = Brand<number, 'Version'>;
+
+    const v1 = 1 as Version;
+    const v2 = 2 as Version;
+
+    // Number operations still work
+    expect(v1 < v2).toBe(true);
+    expect(v1 + v2).toBe(3);
+    expect(Math.max(v1, v2)).toBe(2);
+  });
+
+  it('should allow branded string operations', () => {
+    type UserId = Brand<string, 'UserId'>;
+
+    const userId = 'user-abc-123' as UserId;
+
+    // String operations still work
+    expect(userId.startsWith('user-')).toBe(true);
+    expect(userId.split('-').length).toBe(3);
+    expect(userId.toUpperCase()).toBe('USER-ABC-123');
   });
 });

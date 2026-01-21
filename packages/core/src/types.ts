@@ -14,14 +14,40 @@
 // Branded Types for Type-Safe IDs
 // =============================================================================
 
+/**
+ * Brand symbol for nominal typing.
+ * This creates a unique brand that cannot be accidentally satisfied.
+ * Using a unique symbol ensures brands are truly unique across packages.
+ */
+declare const __brand: unique symbol;
+
+/**
+ * Brand type utility for creating nominal types.
+ * Branded types prevent accidental interchange of structurally identical types.
+ *
+ * @example
+ * ```typescript
+ * // Define a branded string type
+ * type UserId = Brand<string, 'UserId'>;
+ *
+ * // These are not interchangeable even though both are strings
+ * type OrderId = Brand<string, 'OrderId'>;
+ *
+ * function getUser(id: UserId): User { ... }
+ * const orderId: OrderId = '123' as OrderId;
+ * getUser(orderId); // TypeScript error!
+ * ```
+ */
+export type Brand<T, B extends string> = T & { readonly [__brand]: B };
+
 /** Branded type for schema identifiers */
-export type SchemaId = string & { readonly __brand: 'SchemaId' };
+export type SchemaId = Brand<string, 'SchemaId'>;
 
 /** Branded type for field identifiers (index position) */
-export type FieldId = number & { readonly __brand: 'FieldId' };
+export type FieldId = Brand<number, 'FieldId'>;
 
 /** Branded type for relation identifiers */
-export type RelationId = string & { readonly __brand: 'RelationId' };
+export type RelationId = Brand<string, 'RelationId'>;
 
 /** Create a SchemaId from a string */
 export function createSchemaId(id: string): SchemaId {

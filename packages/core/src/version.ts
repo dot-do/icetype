@@ -10,6 +10,8 @@
  * @packageDocumentation
  */
 
+import type { Brand } from './types.js';
+
 // =============================================================================
 // SchemaVersion Branded Type
 // =============================================================================
@@ -17,12 +19,13 @@
 /**
  * Branded type for schema versions.
  * Ensures type safety when working with version objects.
+ * Uses the reusable Brand<T, B> pattern for consistent nominal typing.
  */
-export type SchemaVersion = {
+export type SchemaVersion = Brand<{
   readonly major: number;
   readonly minor: number;
   readonly patch: number;
-} & { readonly __brand: 'SchemaVersion' };
+}, 'SchemaVersion'>;
 
 // =============================================================================
 // Validation Helpers

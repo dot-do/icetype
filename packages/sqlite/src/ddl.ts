@@ -7,7 +7,7 @@
  * @packageDocumentation
  */
 
-import type { FieldDefinition } from '@icetype/core';
+import type { Brand, FieldDefinition } from '@icetype/core';
 import {
   escapeIdentifier as sqlCommonEscapeIdentifier,
   formatDefaultValue as sqlCommonFormatDefaultValue,
@@ -30,8 +30,9 @@ import { ICETYPE_TO_SQLITE } from './types.js';
 /**
  * Branded type for array type strings (strings ending with `[]`).
  * Use isArrayType() to narrow a string to this type.
+ * Uses the reusable Brand<T, B> pattern for consistent nominal typing.
  */
-export type ArrayTypeString = string & { readonly __brand: 'ArrayTypeString' };
+export type ArrayTypeString = Brand<string, 'ArrayTypeString'>;
 
 /**
  * Check if a field type string represents an array type.

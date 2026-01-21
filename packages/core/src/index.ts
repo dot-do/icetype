@@ -44,6 +44,9 @@
 
 // Re-export all types
 export type {
+  // Brand utility type
+  Brand,
+
   // Branded types
   SchemaId,
   FieldId,
@@ -385,3 +388,11 @@ export type {
   ResolvedConfig,
   LoadConfigOptions,
 } from './plugin-config.js';
+
+// Re-export adapter types (defined here to avoid cyclic dependencies)
+export type {
+  SchemaAdapter,
+  AdapterRegistry,
+  IcebergAdapterOptions,
+  ParquetAdapterOptions,
+} from './adapter-types.js';
