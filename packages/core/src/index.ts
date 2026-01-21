@@ -253,3 +253,34 @@ export {
 
 // Re-export History types
 export type { SchemaHistory, SchemaHistoryEntry } from './history.js';
+
+// Re-export unified type mappings
+export {
+  getUnifiedTypeMapping,
+  getAllDialects,
+  getDialectMappings,
+  getUnifiedMapping,
+  isKnownUnifiedType,
+  getSupportedUnifiedTypes,
+  UnknownTypeError,
+  InvalidDialectError,
+} from './unified-type-mappings.js';
+
+// Re-export unified type mapping types
+export type { Dialect, UnifiedTypeMapping } from './unified-type-mappings.js';
+
+// Re-export system column functions and constants
+export {
+  SYSTEM_COLUMNS,
+  SYSTEM_COLUMN_NAMES,
+  getSystemColumn,
+  isSystemColumn,
+} from './system-columns.js';
+
+// Re-export system column types
+export type {
+  SystemColumnDefinition,
+  SystemColumnName,
+  SystemColumnType,
+  SystemColumnsMap,
+} from './system-columns.js';
