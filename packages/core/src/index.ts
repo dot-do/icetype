@@ -110,7 +110,12 @@ export type {
   SchemaValidationErrorOptions,
   AdapterErrorOptions,
   SchemaLoadErrorOptions,
+  SchemaLoadErrorContext,
+  SchemaLoadSuggestion,
 } from './errors.js';
+
+// Re-export documentation links for schema load errors
+export { SchemaLoadErrorDocs } from './errors.js';
 
 // Re-export parser functions
 export {
@@ -284,3 +289,38 @@ export type {
   SystemColumnType,
   SystemColumnsMap,
 } from './system-columns.js';
+
+// Re-export plugin system functions
+export {
+  // Factory
+  createPluginManager,
+
+  // Discovery
+  discoverAdapters,
+  discoverAdaptersFromPath,
+
+  // Error classes
+  PluginDiscoveryError,
+  PluginLoadError,
+  PluginDependencyError,
+  PluginLifecycleError,
+
+  // Type guards
+  isPluginDiscoveryError,
+  isPluginLoadError,
+  isPluginDependencyError,
+  isPluginLifecycleError,
+} from './plugin-system.js';
+
+// Re-export plugin system types
+export type {
+  Plugin,
+  PluginManager,
+  PluginManifest,
+  PluginConfig,
+  PluginHooks,
+  PluginDependency,
+  PluginManagerConfig,
+  DiscoveredAdapter,
+  DiscoverOptions,
+} from './plugin-system.js';
