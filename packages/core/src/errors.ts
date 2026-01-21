@@ -4,6 +4,12 @@
  * Standardized error handling for the IceType ecosystem.
  * All errors extend from IceTypeError for consistent error handling.
  *
+ * Type Guard Pattern Notes:
+ * - Error type guards use `instanceof` checks (appropriate for class hierarchies)
+ * - For structural type guards with WeakMap caching (document validation, etc.),
+ *   see @db4/core's type-guards.ts which provides shared, optimized guards
+ *   that can be used by both db4 and icetype codebases.
+ *
  * @packageDocumentation
  */
 
