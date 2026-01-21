@@ -8,14 +8,16 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:postgres": "vitest run postgres",
-    "test:mysql": "vitest run mysql"
+    "test:mysql": "vitest run mysql",
+    "test:sqlite": "vitest run sqlite"
   },
   "keywords": [
     "icetype",
     "integration-tests",
     "testcontainers",
     "postgresql",
-    "mysql"
+    "mysql",
+    "sqlite"
   ],
   "author": "Nathan Clevenger",
   "license": "MIT",
@@ -31,12 +33,15 @@
     "@icetype/core": "workspace:*",
     "@icetype/postgres": "workspace:*",
     "@icetype/mysql": "workspace:*",
+    "@icetype/sqlite": "workspace:*",
     "@icetype/test-utils": "workspace:*"
   },
   "devDependencies": {
     "@testcontainers/postgresql": "^10.18.0",
     "@testcontainers/mysql": "^10.18.0",
+    "@types/better-sqlite3": "^7.6.0",
     "@types/pg": "^8.11.0",
+    "better-sqlite3": "^11.0.0",
     "pg": "^8.13.0",
     "mysql2": "^3.11.0",
     "typescript": "^5.7.0",
