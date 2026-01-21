@@ -26,6 +26,7 @@ import { drizzleImport } from './commands/drizzle-import.js';
 import { diff } from './commands/diff.js';
 import { migrate } from './commands/migrate.js';
 import { project } from './commands/project.js';
+import { doctor } from './commands/doctor.js';
 import { generateHelpText, hasHelpFlag, type HelpCommand } from './utils/help.js';
 import { formatCliError } from './utils/cli-error.js';
 
@@ -49,6 +50,7 @@ Commands:
   init               Initialize an IceType project
   generate           Generate TypeScript types from schema
   validate           Validate schema syntax
+  doctor             Check environment compatibility
   diff               Compare schemas and generate migration SQL
   migrate            Generate and manage database migrations
   project generate   Generate OLAP schemas from projection definitions
@@ -246,6 +248,10 @@ async function main() {
 
       case 'diff':
         await diff(commandArgs);
+        break;
+
+      case 'doctor':
+        await doctor(commandArgs);
         break;
 
       case 'clickhouse':
