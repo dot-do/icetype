@@ -4,8 +4,20 @@
  * Provides utilities for generating ClickHouse DDL statements
  * from ClickHouseDDL structures.
  *
+ * Uses @icetype/sql-common for shared SQL utilities like identifier
+ * escaping, default value formatting, system column generation, and
+ * column serialization.
+ *
  * @packageDocumentation
  */
+
+import {
+  escapeIdentifier as escapeIdentifierBase,
+  formatDefaultValue as formatDefaultValueBase,
+  generateSystemColumns as generateSystemColumnsBase,
+  serializeColumn as serializeColumnBase,
+  type SqlColumn,
+} from '@icetype/sql-common';
 
 import type {
   ClickHouseDDL,
@@ -14,24 +26,61 @@ import type {
 } from './types.js';
 
 // =============================================================================
-// Identifier Escaping
+// Re-exports from sql-common (bound to ClickHouse dialect)
 // =============================================================================
 
 /**
  * Escape a ClickHouse identifier (table/column name).
  *
- * Uses backticks for identifiers that contain special characters
- * or are reserved words.
+ * Uses backticks for identifiers that contain special characters,
+ * start with $ (system fields), or start with a number.
  *
  * @param identifier - The identifier to escape
  * @returns The escaped identifier
  */
 export function escapeIdentifier(identifier: string): string {
-  // If it contains special characters or starts with a number, escape it
-  if (/[^a-zA-Z0-9_]/.test(identifier) || /^[0-9]/.test(identifier)) {
-    return `\`${identifier.replace(/`/g, '``')}\``;
-  }
-  return identifier;
+  return escapeIdentifierBase(identifier, 'clickhouse');
+}
+
+/**
+ * Format a default value as a SQL expression for ClickHouse.
+ *
+ * @param value - The default value
+ * @param type - The ClickHouse type
+ * @returns The SQL expression string
+ */
+export function formatDefaultValue(value: unknown, type: string): string {
+  return formatDefaultValueBase(value, type);
+}
+
+/**
+ * Generate system field columns for ClickHouse tables.
+ *
+ * These are the standard IceType system fields that should be included
+ * in every table:
+ * - $id: Primary key identifier (String)
+ * - $type: Entity type name (String)
+ * - $version: Row version for optimistic locking (Int32)
+ * - $createdAt: Creation timestamp as BIGINT epoch ms (Int64)
+ * - $updatedAt: Last update timestamp as BIGINT epoch ms (Int64)
+ *
+ * @returns Array of system column definitions
+ */
+export function generateSystemColumns(): ClickHouseColumn[] {
+  return generateSystemColumnsBase('clickhouse') as ClickHouseColumn[];
+}
+
+/**
+ * Serialize a column definition to a DDL fragment for ClickHouse.
+ *
+ * Generates a column definition string like:
+ * "column_name TYPE NOT NULL UNIQUE DEFAULT value"
+ *
+ * @param column - The column definition
+ * @returns The DDL column fragment
+ */
+export function serializeColumn(column: SqlColumn): string {
+  return serializeColumnBase(column, 'clickhouse');
 }
 
 /**

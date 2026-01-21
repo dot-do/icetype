@@ -255,6 +255,9 @@ importers:
       '@icetype/core':
         specifier: workspace:*
         version: link:../core
+      '@icetype/sql-common':
+        specifier: workspace:*
+        version: link:../sql-common
     devDependencies:
       typescript:
         specifier: ^5.7.0
