@@ -40,6 +40,9 @@ IceType CLI v${VERSION}
 
 Usage: ice <command> [options]
 
+Schema files can be TypeScript (.ts), JavaScript (.js, .mjs), or JSON (.json).
+TypeScript files are transpiled on-the-fly - no tsx or pre-compilation required.
+
 Commands:
   init               Initialize an IceType project
   generate           Generate TypeScript types from schema

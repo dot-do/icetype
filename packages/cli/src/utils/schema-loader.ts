@@ -1,8 +1,20 @@
 /**
  * Schema Loader
  *
- * Utility for loading IceType schema files (.ts, .js, .json).
- * Uses jiti for TypeScript loading without requiring pre-compilation.
+ * Utility for loading IceType schema files (.ts, .js, .mjs, .json).
+ * Uses jiti for TypeScript loading without requiring tsx or pre-compilation.
+ *
+ * TypeScript files are transpiled on-the-fly using jiti, which provides:
+ * - Native ESM support
+ * - TypeScript syntax support (including generics, type annotations, etc.)
+ * - Automatic interop between ESM and CommonJS
+ * - No type checking (faster, but type errors won't be caught)
+ *
+ * Supported file types:
+ * - .ts  - TypeScript (transpiled via jiti)
+ * - .js  - JavaScript ESM (native import)
+ * - .mjs - JavaScript ESM (native import)
+ * - .json - JSON (parsed directly)
  */
 
 import { existsSync, readFileSync } from 'node:fs';
