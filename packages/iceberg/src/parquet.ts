@@ -355,6 +355,7 @@ function convertValue(value: unknown, field: ParquetField): unknown {
     case 'INT32':
       return typeof value === 'number' ? Math.floor(value) : parseInt(String(value), 10);
     case 'INT64':
+    case 'INT96':
       if (value instanceof Date) {
         return value.getTime();
       }
@@ -372,8 +373,13 @@ function convertValue(value: unknown, field: ParquetField): unknown {
         return value.replace(/-/g, '');
       }
       return value;
-    default:
+    case undefined:
+      // Group fields (with children) don't have a primitive type
       return value;
+    default: {
+      const _exhaustive: never = field.type;
+      throw new Error(`Unhandled Parquet type: ${_exhaustive}`);
+    }
   }
 }
 

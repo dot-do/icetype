@@ -10,15 +10,20 @@
 import { parseSchema, type IceTypeSchema } from '@icetype/core';
 
 /**
- * Field type definition for schema factories
+ * Simple field specification type for schema factories.
+ * This is a string that represents an IceType field definition (e.g., 'string!', 'uuid#', 'int?').
+ *
+ * Note: This type is intentionally named FieldSpec to avoid collision with
+ * the FieldDefinition interface from @icetype/core, which represents a parsed
+ * field definition object with properties like name, type, modifier, etc.
  */
-export type FieldDefinition = string;
+export type FieldSpec = string;
 
 /**
  * Schema definition object (excluding $type)
  */
 export interface SchemaFields {
-  [key: string]: FieldDefinition;
+  [key: string]: FieldSpec;
 }
 
 /**

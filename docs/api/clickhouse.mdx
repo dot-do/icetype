@@ -1,0 +1,723 @@
+---
+title: "@icetype/clickhouse API"
+description: API reference for the @icetype/clickhouse package - ClickHouse DDL generation from IceType schemas.
+---
+
+# @icetype/clickhouse API
+
+The `@icetype/clickhouse` package transforms IceType schemas to ClickHouse DDL (Data Definition Language) statements with support for various MergeTree engine types.
+
+## Installation
+
+```bash
+npm install @icetype/clickhouse
+# or
+pnpm add @icetype/clickhouse
+```
+
+## Quick Start
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { ClickHouseAdapter } from '@icetype/clickhouse';
+
+// Parse an IceType schema
+const schema = parseSchema({
+  $type: 'User',
+  $partitionBy: ['created_at'],
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+  age: 'int?',
+  created_at: 'timestamp!',
+  tags: 'string[]',
+});
+
+// Create the adapter
+const adapter = new ClickHouseAdapter();
+
+// Transform to ClickHouse DDL structure
+const ddl = adapter.transform(schema, {
+  engine: 'ReplacingMergeTree',
+  orderBy: ['id'],
+  partitionBy: 'toYYYYMM(created_at)',
+  database: 'analytics',
+});
+
+// Generate CREATE TABLE SQL
+const sql = adapter.serialize(ddl);
+console.log(sql);
+// CREATE TABLE IF NOT EXISTS analytics.user
+// (
+//     id UUID,
+//     email String,
+//     name String,
+//     age Nullable(Int32),
+//     created_at DateTime64(3),
+//     tags Array(String)
+// )
+// ENGINE = ReplacingMergeTree()
+// PARTITION BY toYYYYMM(created_at)
+// ORDER BY (id)
+```
+
+## ClickHouseAdapter Class
+
+The main adapter class that implements the `SchemaAdapter` interface.
+
+### Constructor
+
+```typescript
+import { ClickHouseAdapter } from '@icetype/clickhouse';
+
+const adapter = new ClickHouseAdapter();
+```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `name` | `string` | `'clickhouse'` - Adapter identifier |
+| `version` | `string` | `'0.1.0'` - Adapter version |
+
+### Methods
+
+#### `transform(schema, options?)`
+
+Transforms an IceType schema to a ClickHouse DDL structure.
+
+```typescript
+const ddl = adapter.transform(schema, {
+  engine: 'ReplacingMergeTree',
+  orderBy: ['id'],
+  partitionBy: 'toYYYYMM(created_at)',
+  database: 'analytics',
+  settings: {
+    index_granularity: '8192',
+  },
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `schema` | `IceTypeSchema` | Parsed IceType schema |
+| `options` | `ClickHouseTableOptions` | Optional configuration |
+
+**Returns:** `ClickHouseDDL`
+
+---
+
+#### `serialize(output)`
+
+Serializes a ClickHouse DDL structure to a CREATE TABLE SQL statement.
+
+```typescript
+const sql = adapter.serialize(ddl);
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `output` | `ClickHouseDDL` | DDL structure to serialize |
+
+**Returns:** `string` - SQL CREATE TABLE statement
+
+## Convenience Functions
+
+### `createClickHouseAdapter()`
+
+Factory function to create a new ClickHouse adapter instance.
+
+```typescript
+import { createClickHouseAdapter } from '@icetype/clickhouse';
+
+const adapter = createClickHouseAdapter();
+```
+
+**Returns:** `ClickHouseAdapter`
+
+---
+
+### `transformToClickHouseDDL(schema, options?)`
+
+Transforms an IceType schema directly to a ClickHouse CREATE TABLE statement.
+
+```typescript
+import { parseSchema } from '@icetype/core';
+import { transformToClickHouseDDL } from '@icetype/clickhouse';
+
+const schema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  email: 'string#',
+});
+
+const sql = transformToClickHouseDDL(schema, {
+  engine: 'ReplacingMergeTree',
+  orderBy: ['id'],
+  partitionBy: 'toYYYYMM(created_at)',
+});
+console.log(sql);
+// CREATE TABLE IF NOT EXISTS user
+// (
+//     id UUID,
+//     email String
+// )
+// ENGINE = ReplacingMergeTree()
+// PARTITION BY toYYYYMM(created_at)
+// ORDER BY (id)
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `schema` | `IceTypeSchema` | Parsed IceType schema |
+| `options` | `ClickHouseTableOptions` | Optional configuration |
+
+**Returns:** `string` - SQL CREATE TABLE statement
+
+---
+
+### `generateClickHouseDDL(schema, options?)`
+
+Transforms an IceType schema to a ClickHouse DDL structure (without serializing to SQL).
+
+```typescript
+import { generateClickHouseDDL } from '@icetype/clickhouse';
+
+const ddl = generateClickHouseDDL(schema, {
+  engine: 'MergeTree',
+  orderBy: ['id'],
+});
+```
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `schema` | `IceTypeSchema` | Parsed IceType schema |
+| `options` | `ClickHouseTableOptions` | Optional configuration |
+
+**Returns:** `ClickHouseDDL`
+
+## DDL Helper Functions
+
+### `getClickHouseType(iceType, precision?, scale?)`
+
+Gets the ClickHouse type for an IceType type.
+
+```typescript
+import { getClickHouseType } from '@icetype/clickhouse';
+
+getClickHouseType('string')           // 'String'
+getClickHouseType('int')              // 'Int32'
+getClickHouseType('timestamp')        // 'DateTime64(3)'
+getClickHouseType('decimal', 18, 4)   // 'Decimal(18, 4)'
+```
+
+---
+
+### `wrapNullable(type, nullable)`
+
+Wraps a type in `Nullable()` if needed.
+
+```typescript
+import { wrapNullable } from '@icetype/clickhouse';
+
+wrapNullable('Int32', true)   // 'Nullable(Int32)'
+wrapNullable('Int32', false)  // 'Int32'
+```
+
+---
+
+### `getArrayType(elementType)`
+
+Gets the Array type for a given element type.
+
+```typescript
+import { getArrayType } from '@icetype/clickhouse';
+
+getArrayType('String')   // 'Array(String)'
+getArrayType('Int32')    // 'Array(Int32)'
+```
+
+---
+
+### `escapeIdentifier(identifier)`
+
+Escapes a ClickHouse identifier.
+
+```typescript
+import { escapeIdentifier } from '@icetype/clickhouse';
+
+escapeIdentifier('user')  // '`user`'
+```
+
+---
+
+### `escapeString(value)`
+
+Escapes a string value for ClickHouse.
+
+```typescript
+import { escapeString } from '@icetype/clickhouse';
+
+escapeString("hello")     // "'hello'"
+escapeString("it's")      // "'it''s'"
+```
+
+---
+
+### `escapeSettingKey(key)`
+
+Validates and returns a ClickHouse setting key.
+
+```typescript
+import { escapeSettingKey, InvalidSettingKeyError } from '@icetype/clickhouse';
+
+escapeSettingKey('index_granularity')  // 'index_granularity'
+escapeSettingKey('invalid;key')        // throws InvalidSettingKeyError
+```
+
+---
+
+### `escapeSettingValue(value)`
+
+Validates and returns a ClickHouse setting value.
+
+```typescript
+import { escapeSettingValue, InvalidSettingValueError } from '@icetype/clickhouse';
+
+escapeSettingValue('8192')        // '8192'
+escapeSettingValue("'; DROP")     // throws InvalidSettingValueError
+```
+
+---
+
+### `generateCreateTableDDL(ddl)`
+
+Generates a CREATE TABLE statement from a DDL structure.
+
+```typescript
+import { generateCreateTableDDL } from '@icetype/clickhouse';
+
+const sql = generateCreateTableDDL(ddl);
+```
+
+---
+
+### `generateDropTableDDL(tableName, database?, ifExists?)`
+
+Generates a DROP TABLE statement.
+
+```typescript
+import { generateDropTableDDL } from '@icetype/clickhouse';
+
+generateDropTableDDL('users', 'analytics', true)
+// 'DROP TABLE IF EXISTS analytics.users'
+```
+
+---
+
+### `generateAddColumnDDL(tableName, column, database?)`
+
+Generates an ALTER TABLE ADD COLUMN statement.
+
+```typescript
+import { generateAddColumnDDL } from '@icetype/clickhouse';
+
+generateAddColumnDDL('users', {
+  name: 'status',
+  type: 'String',
+  nullable: false,
+}, 'analytics')
+// 'ALTER TABLE analytics.users ADD COLUMN status String'
+```
+
+---
+
+### `generateDropColumnDDL(tableName, columnName, database?)`
+
+Generates an ALTER TABLE DROP COLUMN statement.
+
+```typescript
+import { generateDropColumnDDL } from '@icetype/clickhouse';
+
+generateDropColumnDDL('users', 'status', 'analytics')
+// 'ALTER TABLE analytics.users DROP COLUMN status'
+```
+
+---
+
+### `isValidEngine(engine)`
+
+Checks if a string is a valid ClickHouse MergeTree engine.
+
+```typescript
+import { isValidEngine } from '@icetype/clickhouse';
+
+isValidEngine('MergeTree')           // true
+isValidEngine('ReplacingMergeTree')  // true
+isValidEngine('InvalidEngine')       // false
+```
+
+---
+
+### `inferOrderBy(ddl)`
+
+Infers ORDER BY columns from a DDL structure.
+
+```typescript
+import { inferOrderBy } from '@icetype/clickhouse';
+
+const orderBy = inferOrderBy(ddl);
+// ['id'] or other inferred columns
+```
+
+## Options Reference
+
+### `ClickHouseTableOptions`
+
+Options for ClickHouse table creation.
+
+```typescript
+interface ClickHouseTableOptions {
+  // The table engine to use (defaults to MergeTree)
+  engine?: ClickHouseEngine;
+
+  // Columns for ORDER BY clause (required for MergeTree family)
+  orderBy?: string[];
+
+  // Expression for PARTITION BY clause
+  partitionBy?: string;
+
+  // Additional table settings
+  settings?: Record<string, string>;
+
+  // Version column for ReplacingMergeTree
+  versionColumn?: string;
+
+  // Sign column for CollapsingMergeTree
+  signColumn?: string;
+
+  // Columns to sum for SummingMergeTree
+  sumColumns?: string[];
+
+  // Database name
+  database?: string;
+
+  // Create table if not exists (default: true)
+  ifNotExists?: boolean;
+
+  // TTL expression for data expiration
+  ttl?: string;
+
+  // Primary key columns (defaults to orderBy if not specified)
+  primaryKey?: string[];
+}
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `engine` | `ClickHouseEngine` | `'MergeTree'` | Table engine type |
+| `orderBy` | `string[]` | `[]` | ORDER BY columns |
+| `partitionBy` | `string` | `undefined` | PARTITION BY expression |
+| `settings` | `Record<string, string>` | `undefined` | Table settings |
+| `versionColumn` | `string` | `undefined` | Version column for ReplacingMergeTree |
+| `signColumn` | `string` | `undefined` | Sign column for CollapsingMergeTree |
+| `sumColumns` | `string[]` | `undefined` | Sum columns for SummingMergeTree |
+| `database` | `string` | `undefined` | Database name |
+| `ifNotExists` | `boolean` | `true` | Add IF NOT EXISTS clause |
+| `ttl` | `string` | `undefined` | TTL expression |
+| `primaryKey` | `string[]` | `undefined` | Primary key columns |
+
+## MergeTree Engine Types
+
+ClickHouse supports several MergeTree engine variants, each with different characteristics:
+
+### `MergeTree`
+
+The basic MergeTree engine with sorting and partitioning.
+
+```typescript
+const ddl = adapter.transform(schema, {
+  engine: 'MergeTree',
+  orderBy: ['tenant_id', 'created_at'],
+  partitionBy: 'toYYYYMM(created_at)',
+});
+```
+
+### `ReplacingMergeTree`
+
+Deduplicates rows with the same sorting key, keeping the row with the highest version.
+
+```typescript
+const ddl = adapter.transform(schema, {
+  engine: 'ReplacingMergeTree',
+  orderBy: ['id'],
+  versionColumn: 'updated_at',  // Optional version column
+});
+```
+
+### `SummingMergeTree`
+
+Sums numeric columns for rows with the same sorting key.
+
+```typescript
+const ddl = adapter.transform(schema, {
+  engine: 'SummingMergeTree',
+  orderBy: ['user_id', 'date'],
+  sumColumns: ['views', 'clicks', 'revenue'],
+});
+```
+
+### `AggregatingMergeTree`
+
+Stores intermediate aggregation states.
+
+```typescript
+const ddl = adapter.transform(schema, {
+  engine: 'AggregatingMergeTree',
+  orderBy: ['user_id'],
+});
+```
+
+### `CollapsingMergeTree`
+
+Collapses (deletes) rows using a sign column.
+
+```typescript
+const ddl = adapter.transform(schema, {
+  engine: 'CollapsingMergeTree',
+  orderBy: ['user_id', 'created_at'],
+  signColumn: 'sign',  // Column containing 1 or -1
+});
+```
+
+## Partitioning
+
+Use `partitionBy` to partition data for better query performance and data management:
+
+```typescript
+// Partition by month
+const ddl = adapter.transform(schema, {
+  engine: 'MergeTree',
+  orderBy: ['id'],
+  partitionBy: 'toYYYYMM(created_at)',
+});
+
+// Partition by tenant
+const ddl2 = adapter.transform(schema, {
+  engine: 'MergeTree',
+  orderBy: ['id'],
+  partitionBy: 'tenant_id',
+});
+```
+
+The adapter can also infer partitioning from schema directives:
+
+```typescript
+const schema = parseSchema({
+  $type: 'Event',
+  $partitionBy: ['created_at'],
+  id: 'uuid!',
+  created_at: 'timestamp!',
+});
+
+// Automatically uses toYYYYMM(created_at) for DateTime columns
+const ddl = adapter.transform(schema);
+```
+
+## TTL (Time-To-Live)
+
+Set data expiration using TTL expressions:
+
+```typescript
+const ddl = adapter.transform(schema, {
+  engine: 'MergeTree',
+  orderBy: ['id'],
+  ttl: 'created_at + INTERVAL 90 DAY',
+});
+```
+
+Generated SQL:
+```sql
+CREATE TABLE IF NOT EXISTS events
+(
+    id UUID,
+    created_at DateTime64(3)
+)
+ENGINE = MergeTree()
+ORDER BY (id)
+TTL created_at + INTERVAL 90 DAY
+```
+
+## Table Settings
+
+Pass additional ClickHouse settings:
+
+```typescript
+const ddl = adapter.transform(schema, {
+  engine: 'MergeTree',
+  orderBy: ['id'],
+  settings: {
+    index_granularity: '8192',
+    storage_policy: 'moving_from_ssd_to_hdd',
+  },
+});
+```
+
+Generated SQL:
+```sql
+...
+SETTINGS index_granularity = 8192, storage_policy = 'moving_from_ssd_to_hdd'
+```
+
+Note: Setting keys and values are validated to prevent SQL injection.
+
+## Type Mappings
+
+The following table shows how IceType types map to ClickHouse types:
+
+| IceType | ClickHouse | Notes |
+|---------|------------|-------|
+| `string` | `String` | Variable-length string |
+| `text` | `String` | Alias for string |
+| `varchar` | `String` | Maps to String |
+| `char` | `String` | Maps to String |
+| `int` | `Int32` | 32-bit signed integer |
+| `long` | `Int64` | 64-bit signed integer |
+| `bigint` | `Int64` | Alias for long |
+| `float` | `Float32` | 32-bit floating point |
+| `double` | `Float64` | 64-bit floating point |
+| `bool` | `Bool` | Boolean type |
+| `boolean` | `Bool` | Alias for bool |
+| `uuid` | `UUID` | UUID type |
+| `timestamp` | `DateTime64(3)` | Millisecond precision |
+| `timestamptz` | `DateTime64(3)` | Millisecond precision |
+| `date` | `Date` | Date only |
+| `time` | `String` | No native Time type |
+| `json` | `JSON` | JSON type |
+| `binary` | `String` | Base64 encoded |
+| `decimal` | `Decimal(38, 9)` | High-precision decimal |
+
+### Nullable Types
+
+Optional fields (`?` modifier) are wrapped in `Nullable()`:
+
+```typescript
+// IceType 'int?' -> ClickHouse 'Nullable(Int32)'
+```
+
+### Array Types
+
+IceType arrays are mapped to ClickHouse Array types:
+
+```typescript
+// IceType -> ClickHouse
+'string[]'  -> 'Array(String)'
+'int[]'     -> 'Array(Int32)'
+'uuid[]'    -> 'Array(UUID)'
+```
+
+Note: Arrays in ClickHouse are not nullable, but can contain nullable elements.
+
+## Types
+
+### `ClickHouseDDL`
+
+The DDL structure containing all information for table creation.
+
+```typescript
+interface ClickHouseDDL {
+  tableName: string;
+  database?: string;
+  columns: ClickHouseColumn[];
+  engine: ClickHouseEngine;
+  orderBy: string[];
+  partitionBy?: string;
+  primaryKey?: string[];
+  settings?: Record<string, string>;
+  ttl?: string;
+  versionColumn?: string;
+  signColumn?: string;
+  sumColumns?: string[];
+  ifNotExists?: boolean;
+}
+```
+
+### `ClickHouseColumn`
+
+Column definition for DDL generation.
+
+```typescript
+interface ClickHouseColumn {
+  name: string;
+  type: string;
+  nullable: boolean;
+  default?: string;
+  comment?: string;
+  codec?: string;
+  ttl?: string;
+}
+```
+
+### `ClickHouseEngine`
+
+Union of supported MergeTree engine types.
+
+```typescript
+type ClickHouseEngine =
+  | 'MergeTree'
+  | 'ReplacingMergeTree'
+  | 'SummingMergeTree'
+  | 'AggregatingMergeTree'
+  | 'CollapsingMergeTree';
+```
+
+## Error Classes
+
+### `InvalidSettingKeyError`
+
+Thrown when a setting key contains invalid characters.
+
+```typescript
+import { escapeSettingKey, InvalidSettingKeyError } from '@icetype/clickhouse';
+
+try {
+  escapeSettingKey('invalid;key');
+} catch (error) {
+  if (error instanceof InvalidSettingKeyError) {
+    console.error('Invalid setting key:', error.message);
+  }
+}
+```
+
+### `InvalidSettingValueError`
+
+Thrown when a setting value contains invalid characters.
+
+```typescript
+import { escapeSettingValue, InvalidSettingValueError } from '@icetype/clickhouse';
+
+try {
+  escapeSettingValue("'; DROP TABLE users;");
+} catch (error) {
+  if (error instanceof InvalidSettingValueError) {
+    console.error('Invalid setting value:', error.message);
+  }
+}
+```
+
+## Naming Convention
+
+The ClickHouse adapter automatically converts PascalCase and camelCase names to snake_case:
+
+```typescript
+// Schema name: 'UserActivity' -> Table name: 'user_activity'
+// Field name: 'createdAt' -> Column name: 'created_at'
+```

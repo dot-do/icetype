@@ -329,4 +329,229 @@ describe('Watch Mode', () => {
       expect(onGenerate).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('Signal Handling for Graceful Shutdown', () => {
+    let originalProcessOn: typeof process.on;
+    let originalProcessExit: typeof process.exit;
+    let signalHandlers: Map<string, (...args: unknown[]) => void>;
+
+    beforeEach(() => {
+      signalHandlers = new Map();
+      originalProcessOn = process.on;
+      originalProcessExit = process.exit;
+
+      // Mock process.on to capture signal handlers
+      process.on = vi.fn().mockImplementation((event: string, handler: (...args: unknown[]) => void) => {
+        signalHandlers.set(event, handler);
+        return process;
+      }) as unknown as typeof process.on;
+
+      // Mock process.exit to prevent actual exit
+      process.exit = vi.fn() as unknown as typeof process.exit;
+    });
+
+    afterEach(() => {
+      process.on = originalProcessOn;
+      process.exit = originalProcessExit;
+    });
+
+    it('should register SIGINT handler', async () => {
+      const fs = await import('node:fs');
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
+
+      const { watchGenerate } = await import('../utils/watcher.js');
+
+      const runGeneration = vi.fn().mockResolvedValue(undefined);
+
+      watchGenerate({
+        schemaPath: './schema.ts',
+        runGeneration,
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(process.on).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+    });
+
+    it('should register SIGTERM handler', async () => {
+      const fs = await import('node:fs');
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
+
+      const { watchGenerate } = await import('../utils/watcher.js');
+
+      const runGeneration = vi.fn().mockResolvedValue(undefined);
+
+      watchGenerate({
+        schemaPath: './schema.ts',
+        runGeneration,
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(process.on).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
+    });
+
+    it('should close watcher on SIGINT', async () => {
+      const fs = await import('node:fs');
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
+
+      const { watchGenerate } = await import('../utils/watcher.js');
+
+      const runGeneration = vi.fn().mockResolvedValue(undefined);
+
+      watchGenerate({
+        schemaPath: './schema.ts',
+        runGeneration,
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Trigger SIGINT handler
+      const sigintHandler = signalHandlers.get('SIGINT');
+      expect(sigintHandler).toBeDefined();
+      sigintHandler!();
+
+      expect(mockWatcher.close).toHaveBeenCalled();
+    });
+
+    it('should close watcher on SIGTERM', async () => {
+      const fs = await import('node:fs');
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
+
+      const { watchGenerate } = await import('../utils/watcher.js');
+
+      const runGeneration = vi.fn().mockResolvedValue(undefined);
+
+      watchGenerate({
+        schemaPath: './schema.ts',
+        runGeneration,
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Trigger SIGTERM handler
+      const sigtermHandler = signalHandlers.get('SIGTERM');
+      expect(sigtermHandler).toBeDefined();
+      sigtermHandler!();
+
+      expect(mockWatcher.close).toHaveBeenCalled();
+    });
+
+    it('should call process.exit(0) on graceful shutdown', async () => {
+      const fs = await import('node:fs');
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
+
+      const { watchGenerate } = await import('../utils/watcher.js');
+
+      const runGeneration = vi.fn().mockResolvedValue(undefined);
+
+      watchGenerate({
+        schemaPath: './schema.ts',
+        runGeneration,
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Trigger SIGINT handler
+      const sigintHandler = signalHandlers.get('SIGINT');
+      sigintHandler!();
+
+      expect(process.exit).toHaveBeenCalledWith(0);
+    });
+
+    it('should log shutdown message on signal', async () => {
+      const fs = await import('node:fs');
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
+
+      const { watchGenerate } = await import('../utils/watcher.js');
+
+      const runGeneration = vi.fn().mockResolvedValue(undefined);
+
+      watchGenerate({
+        schemaPath: './schema.ts',
+        runGeneration,
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Trigger SIGINT handler
+      const sigintHandler = signalHandlers.get('SIGINT');
+      sigintHandler!();
+
+      // Verify a shutdown message was logged
+      expect(mockConsoleLog).toHaveBeenCalledWith(
+        expect.stringContaining('Shutting down')
+      );
+    });
+
+    it('should not log shutdown message in quiet mode', async () => {
+      const fs = await import('node:fs');
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
+
+      // Clear any previous logs
+      mockConsoleLog.mockClear();
+
+      const { watchGenerate } = await import('../utils/watcher.js');
+
+      const runGeneration = vi.fn().mockResolvedValue(undefined);
+
+      watchGenerate({
+        schemaPath: './schema.ts',
+        runGeneration,
+        quiet: true,
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Trigger SIGINT handler
+      const sigintHandler = signalHandlers.get('SIGINT');
+      sigintHandler!();
+
+      // In quiet mode, info messages should not be logged
+      // The shutdown message should not contain 'Shutting down' in quiet mode
+      const shutdownMessageLogged = mockConsoleLog.mock.calls.some(
+        (call) => typeof call[0] === 'string' && call[0].includes('Shutting down')
+      );
+      expect(shutdownMessageLogged).toBe(false);
+
+      // But watcher should still be closed and process should still exit
+      expect(mockWatcher.close).toHaveBeenCalled();
+      expect(process.exit).toHaveBeenCalledWith(0);
+    });
+
+    it('should handle multiple signals gracefully (only shutdown once)', async () => {
+      const fs = await import('node:fs');
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
+
+      const { watchGenerate } = await import('../utils/watcher.js');
+
+      const runGeneration = vi.fn().mockResolvedValue(undefined);
+
+      watchGenerate({
+        schemaPath: './schema.ts',
+        runGeneration,
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Get both handlers
+      const sigintHandler = signalHandlers.get('SIGINT');
+      const sigtermHandler = signalHandlers.get('SIGTERM');
+
+      // Trigger SIGINT first
+      sigintHandler!();
+
+      // Verify watcher.close was called
+      expect(mockWatcher.close).toHaveBeenCalledTimes(1);
+      expect(process.exit).toHaveBeenCalledTimes(1);
+    });
+  });
 });

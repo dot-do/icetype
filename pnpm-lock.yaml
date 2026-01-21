@@ -372,6 +372,22 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@24.10.9)(lightningcss@1.30.2)
 
+  packages/sqlite:
+    dependencies:
+      '@icetype/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@icetype/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@24.10.9)(lightningcss@1.30.2)
+
   packages/test-utils:
     dependencies:
       '@icetype/core':

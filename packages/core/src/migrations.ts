@@ -275,7 +275,9 @@ function getTypeForDialect(iceType: string, dialect: SqlDialect): string {
       return getClickHouseType(iceType);
     case 'duckdb':
       return getDuckDBType(iceType);
-    default:
-      return getPostgresType(iceType);
+    default: {
+      const _exhaustive: never = dialect;
+      throw new Error(`Unhandled dialect: ${_exhaustive}`);
+    }
   }
 }

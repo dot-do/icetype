@@ -147,7 +147,7 @@ export async function watchGenerate(
   // Start watching
   logger.info('Watching for changes...', { file: schemaPath });
 
-  createWatcher(schemaPath, {
+  const watcher = createWatcher(schemaPath, {
     debounceMs,
     quiet,
     verbose,
@@ -156,6 +156,16 @@ export async function watchGenerate(
       logger.error('Generation failed', { error: error.message });
     },
   });
+
+  // Setup graceful shutdown handlers
+  const shutdown = () => {
+    logger.info('Shutting down...');
+    watcher.close();
+    process.exit(0);
+  };
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 
   // Keep the process alive
   // This promise never resolves - the watcher runs until the process is killed

@@ -365,6 +365,49 @@ describe('Pre-built Mock Schemas', () => {
 // Integration Tests
 // =============================================================================
 
+describe('Type Exports', () => {
+  it('should export FieldSpec type that is distinct from core FieldDefinition', () => {
+    // Import both types - they should not collide
+    // FieldSpec from test-utils is a simple string type alias for field definitions
+    // FieldDefinition from core is a complex interface with name, type, modifier, etc.
+
+    // Test that FieldSpec (formerly FieldDefinition) is usable as a string
+    // We use type assertion to verify this compiles correctly
+    const fieldSpec = 'string!' as import('../factories.js').FieldSpec;
+    expect(typeof fieldSpec).toBe('string');
+
+    // Test that core FieldDefinition is a different type (object with properties)
+    const schema = createSimpleSchema('TestType', {
+      testField: 'string!',
+    });
+    const coreFieldDef = schema.fields.get('testField');
+    expect(coreFieldDef).toBeDefined();
+    expect(typeof coreFieldDef?.name).toBe('string');
+    expect(typeof coreFieldDef?.type).toBe('string');
+    expect(typeof coreFieldDef?.modifier).toBe('string');
+    expect(typeof coreFieldDef?.isArray).toBe('boolean');
+  });
+
+  it('should allow importing both types in the same file without collision', () => {
+    // This test ensures the type renaming prevents confusion
+    // At compile time, TypeScript will verify that both types can be imported
+    // without name collisions. The actual test just verifies the module structure.
+
+    // FieldSpec is a type alias (string), so it won't exist at runtime
+    // FieldDefinition is an interface, so it also won't exist at runtime
+    // The key verification is that TypeScript compilation succeeds
+
+    // Verify that the test-utils exports work correctly
+    const schema = createSimpleSchema('TestSchema', { id: 'uuid!' });
+    expect(schema.name).toBe('TestSchema');
+
+    // Verify we can access the core FieldDefinition structure
+    const field = schema.fields.get('id');
+    expect(field).toBeDefined();
+    expect(field?.name).toBe('id');
+  });
+});
+
 describe('Integration Tests', () => {
   it('should allow creating schemas similar to mock schemas using factories', () => {
     const customUser = createSimpleSchema('CustomUser', {

@@ -236,6 +236,10 @@ export function generateEngineDDL(ddl: ClickHouseDDL): string {
   const parts: string[] = ['ENGINE ='];
 
   switch (engine) {
+    case 'MergeTree':
+      parts.push('MergeTree()');
+      break;
+
     case 'ReplacingMergeTree':
       if (ddl.versionColumn) {
         parts.push(`ReplacingMergeTree(${escapeIdentifier(ddl.versionColumn)})`);
@@ -265,10 +269,10 @@ export function generateEngineDDL(ddl: ClickHouseDDL): string {
       }
       break;
 
-    case 'MergeTree':
-    default:
-      parts.push('MergeTree()');
-      break;
+    default: {
+      const _exhaustive: never = engine;
+      throw new Error(`Unhandled engine: ${_exhaustive}`);
+    }
   }
 
   return parts.join(' ');

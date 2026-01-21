@@ -3,6 +3,10 @@
   "pages": [
     "core",
     "iceberg",
-    "adapters"
+    "adapters",
+    "---SQL Adapters---",
+    "postgres",
+    "clickhouse",
+    "duckdb"
   ]
 }

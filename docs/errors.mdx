@@ -1,0 +1,871 @@
+---
+title: Error Codes
+description: Complete reference for IceType error codes and troubleshooting.
+---
+
+# Error Codes
+
+IceType uses structured error codes to help you quickly identify and resolve issues. All errors include a code that indicates the error category and specific problem.
+
+## Error Code Format
+
+Error codes follow the pattern `ICETYPE_XXXX` where:
+
+- **1xxx**: Parse errors - Problems parsing schema syntax
+- **2xxx**: Validation errors - Schema validation failures
+- **3xxx**: Adapter errors - Output adapter issues
+- **4xxx**: Schema loading errors - File loading problems
+- **CLI_xxx**: CLI-specific errors - Command-line tool issues
+
+## Error Classes
+
+IceType provides typed error classes for programmatic error handling:
+
+```typescript
+import {
+  IceTypeError,
+  ParseError,
+  SchemaValidationError,
+  AdapterError,
+  SchemaLoadError,
+  isIceTypeError,
+  isParseError,
+  getErrorMessage
+} from '@icetype/core';
+
+try {
+  // Schema operations...
+} catch (error) {
+  if (isParseError(error)) {
+    console.log(`Parse error at line ${error.line}, column ${error.column}`);
+  } else if (isIceTypeError(error)) {
+    console.log(`[${error.code}] ${error.message}`);
+  }
+}
+```
+
+---
+
+## Parse Errors (1xxx)
+
+Parse errors occur when IceType cannot parse the schema syntax.
+
+| Code | Name | Description |
+|------|------|-------------|
+| `ICETYPE_1000` | `PARSE_ERROR` | General parse error |
+| `ICETYPE_1001` | `EMPTY_TYPE` | Type definition is empty |
+| `ICETYPE_1002` | `INVALID_MODIFIER_POSITION` | Modifier (!, ?, #) in wrong position |
+| `ICETYPE_1003` | `UNKNOWN_TYPE` | Unrecognized type name |
+| `ICETYPE_1004` | `UNKNOWN_GENERIC_TYPE` | Unrecognized generic type |
+| `ICETYPE_1005` | `UNKNOWN_PARAMETRIC_TYPE` | Unrecognized parametric type |
+| `ICETYPE_1006` | `INVALID_MAP_PARAMS` | Invalid map type parameters |
+| `ICETYPE_1007` | `INVALID_PARAM_VALUE` | Invalid parameter value |
+| `ICETYPE_1008` | `EMPTY_RELATION` | Relation definition is empty |
+| `ICETYPE_1009` | `MISSING_RELATION_OPERATOR` | Missing relation operator |
+| `ICETYPE_1010` | `MISSING_TARGET_TYPE` | Relation missing target type |
+
+### ICETYPE_1000: PARSE_ERROR
+
+**Description:** General parse error when the schema syntax cannot be parsed.
+
+**Common Causes:**
+- Malformed type string
+- Invalid characters in type definition
+- Syntax errors in field definitions
+
+**How to Fix:**
+
+```typescript
+// Wrong - invalid syntax
+const schema = parseSchema({
+  email: 'string!!',  // Double modifier
+});
+
+// Correct
+const schema = parseSchema({
+  email: 'string!',
+});
+```
+
+### ICETYPE_1001: EMPTY_TYPE
+
+**Description:** The type definition string is empty.
+
+**Common Causes:**
+- Empty string for field type
+- Whitespace-only type string
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  name: '',  // Empty type
+});
+
+// Correct
+const schema = parseSchema({
+  name: 'string',
+});
+```
+
+### ICETYPE_1002: INVALID_MODIFIER_POSITION
+
+**Description:** A modifier (!, ?, #) is in an invalid position.
+
+**Common Causes:**
+- Modifier before type name
+- Multiple conflicting modifiers
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  email: '!string',  // Modifier before type
+});
+
+// Correct
+const schema = parseSchema({
+  email: 'string!',  // Modifier after type
+});
+```
+
+### ICETYPE_1003: UNKNOWN_TYPE
+
+**Description:** The specified type name is not recognized.
+
+**Common Causes:**
+- Typo in type name
+- Using a type that does not exist
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  name: 'strin',  // Typo
+});
+
+// Correct
+const schema = parseSchema({
+  name: 'string',
+});
+```
+
+Valid types include: `string`, `int`, `float`, `bool`, `uuid`, `timestamp`, `date`, `time`, `json`, `bytes`, `text`, `decimal`, `bigint`.
+
+### ICETYPE_1004: UNKNOWN_GENERIC_TYPE
+
+**Description:** Unknown generic type (array or set notation).
+
+**Common Causes:**
+- Invalid array syntax
+- Misspelled container type
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  tags: '[strin]',  // Unknown type in array
+});
+
+// Correct
+const schema = parseSchema({
+  tags: '[string]',
+});
+```
+
+### ICETYPE_1005: UNKNOWN_PARAMETRIC_TYPE
+
+**Description:** Unknown parametric type (types with parameters like vector dimensions).
+
+**Common Causes:**
+- Invalid parametric type name
+- Wrong parameter format
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  embedding: 'vect[1536]',  // Unknown parametric type
+});
+
+// Correct
+const schema = parseSchema({
+  embedding: 'vector[1536]',
+});
+```
+
+### ICETYPE_1006: INVALID_MAP_PARAMS
+
+**Description:** Invalid parameters for a map type.
+
+**Common Causes:**
+- Missing key or value type
+- Invalid type in map definition
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  metadata: 'map<string>',  // Missing value type
+});
+
+// Correct
+const schema = parseSchema({
+  metadata: 'map<string, json>',
+});
+```
+
+### ICETYPE_1007: INVALID_PARAM_VALUE
+
+**Description:** Invalid value for a type parameter.
+
+**Common Causes:**
+- Non-numeric dimension for vector
+- Invalid precision for decimal
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  embedding: 'vector[abc]',  // Non-numeric dimension
+});
+
+// Correct
+const schema = parseSchema({
+  embedding: 'vector[1536]',
+});
+```
+
+### ICETYPE_1008: EMPTY_RELATION
+
+**Description:** Relation definition is empty.
+
+**Common Causes:**
+- Empty relation string
+- Incomplete relation syntax
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  posts: '->',  // Empty relation
+});
+
+// Correct
+const schema = parseSchema({
+  posts: '-> Post',
+});
+```
+
+### ICETYPE_1009: MISSING_RELATION_OPERATOR
+
+**Description:** Relation is missing the arrow operator.
+
+**Common Causes:**
+- Forgot to include relation operator (`->` or `<-`)
+- Incorrect relation syntax
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  author: 'User',  // Missing relation operator
+});
+
+// Correct - if this is a relation
+const schema = parseSchema({
+  author: '-> User',
+});
+```
+
+### ICETYPE_1010: MISSING_TARGET_TYPE
+
+**Description:** Relation is missing the target entity type.
+
+**Common Causes:**
+- Arrow operator without target type
+- Whitespace after operator
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  posts: '[Post] ->',  // Missing back-reference
+});
+
+// Correct
+const schema = parseSchema({
+  posts: '[Post] -> author',
+});
+```
+
+---
+
+## Schema Validation Errors (2xxx)
+
+Validation errors occur when the schema structure is invalid.
+
+| Code | Name | Description |
+|------|------|-------------|
+| `ICETYPE_2000` | `SCHEMA_VALIDATION_ERROR` | General validation error |
+| `ICETYPE_2001` | `MISSING_SCHEMA_NAME` | Schema is missing $type name |
+| `ICETYPE_2002` | `UNKNOWN_PARTITION_FIELD` | $partitionBy references unknown field |
+| `ICETYPE_2003` | `UNKNOWN_INDEX_FIELD` | $index references unknown field |
+| `ICETYPE_2004` | `UNKNOWN_FTS_FIELD` | $fts references unknown field |
+| `ICETYPE_2005` | `UNKNOWN_VECTOR_FIELD` | $vector references unknown field |
+| `ICETYPE_2006` | `INVALID_VECTOR_DIMENSIONS` | Invalid vector dimensions |
+| `ICETYPE_2007` | `CONFLICTING_MODIFIERS` | Conflicting field modifiers |
+
+### ICETYPE_2000: SCHEMA_VALIDATION_ERROR
+
+**Description:** General schema validation failure.
+
+**Common Causes:**
+- Invalid schema structure
+- Multiple validation issues
+
+**How to Fix:** Check the error message for specific details about what failed validation.
+
+### ICETYPE_2001: MISSING_SCHEMA_NAME
+
+**Description:** Schema is missing the required `$type` directive.
+
+**Common Causes:**
+- Forgot to add $type
+- Typo in directive name
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  id: 'uuid!',
+  name: 'string',
+});
+
+// Correct
+const schema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  name: 'string',
+});
+```
+
+### ICETYPE_2002: UNKNOWN_PARTITION_FIELD
+
+**Description:** The `$partitionBy` directive references a field that does not exist.
+
+**Common Causes:**
+- Typo in field name
+- Field was removed or renamed
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  $type: 'User',
+  $partitionBy: ['tenant_id'],  // Field doesn't exist
+  id: 'uuid!',
+  tenantId: 'string!',
+});
+
+// Correct
+const schema = parseSchema({
+  $type: 'User',
+  $partitionBy: ['tenantId'],
+  id: 'uuid!',
+  tenantId: 'string!',
+});
+```
+
+### ICETYPE_2003: UNKNOWN_INDEX_FIELD
+
+**Description:** The `$index` directive references a field that does not exist.
+
+**Common Causes:**
+- Typo in field name
+- Field was removed or renamed
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  $type: 'User',
+  $index: [['createdat']],  // Wrong case
+  createdAt: 'timestamp',
+});
+
+// Correct
+const schema = parseSchema({
+  $type: 'User',
+  $index: [['createdAt']],
+  createdAt: 'timestamp',
+});
+```
+
+### ICETYPE_2004: UNKNOWN_FTS_FIELD
+
+**Description:** The `$fts` (full-text search) directive references a field that does not exist.
+
+**Common Causes:**
+- Typo in field name
+- Field is not a text type
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  $type: 'Article',
+  $fts: ['titl'],  // Typo
+  title: 'string',
+  body: 'text',
+});
+
+// Correct
+const schema = parseSchema({
+  $type: 'Article',
+  $fts: ['title', 'body'],
+  title: 'string',
+  body: 'text',
+});
+```
+
+### ICETYPE_2005: UNKNOWN_VECTOR_FIELD
+
+**Description:** The `$vector` directive references a field that does not exist.
+
+**Common Causes:**
+- Typo in field name
+- Field is not a vector type
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  $type: 'Document',
+  $vector: 'embeddings',  // Typo (plural)
+  embedding: 'vector[1536]',
+});
+
+// Correct
+const schema = parseSchema({
+  $type: 'Document',
+  $vector: 'embedding',
+  embedding: 'vector[1536]',
+});
+```
+
+### ICETYPE_2006: INVALID_VECTOR_DIMENSIONS
+
+**Description:** Vector field has invalid dimensions.
+
+**Common Causes:**
+- Dimension is zero or negative
+- Dimension exceeds maximum
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  $type: 'Document',
+  embedding: 'vector[0]',  // Invalid dimension
+});
+
+// Correct
+const schema = parseSchema({
+  $type: 'Document',
+  embedding: 'vector[1536]',
+});
+```
+
+### ICETYPE_2007: CONFLICTING_MODIFIERS
+
+**Description:** Field has conflicting modifiers that cannot be used together.
+
+**Common Causes:**
+- Using both required (!) and optional (?) on the same field
+- Incompatible modifier combinations
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const schema = parseSchema({
+  $type: 'User',
+  email: 'string!?',  // Both required and optional
+});
+
+// Correct - pick one
+const schema = parseSchema({
+  $type: 'User',
+  email: 'string!',  // Required
+});
+```
+
+---
+
+## Adapter Errors (3xxx)
+
+Adapter errors occur when transforming schemas to output formats.
+
+| Code | Name | Description |
+|------|------|-------------|
+| `ICETYPE_3000` | `ADAPTER_ERROR` | General adapter error |
+| `ICETYPE_3001` | `ADAPTER_ALREADY_REGISTERED` | Adapter with this name exists |
+| `ICETYPE_3002` | `ADAPTER_NOT_FOUND` | Requested adapter not found |
+| `ICETYPE_3003` | `MISSING_ADAPTER_OPTION` | Required adapter option missing |
+| `ICETYPE_3004` | `INVALID_ADAPTER_CONFIG` | Invalid adapter configuration |
+
+### ICETYPE_3000: ADAPTER_ERROR
+
+**Description:** General error during adapter transformation.
+
+**Common Causes:**
+- Schema incompatible with output format
+- Adapter internal error
+
+**How to Fix:** Check the error message for specific details about what failed.
+
+### ICETYPE_3001: ADAPTER_ALREADY_REGISTERED
+
+**Description:** An adapter with the same name is already registered.
+
+**Common Causes:**
+- Duplicate adapter registration
+- Naming conflict
+
+**How to Fix:**
+
+```typescript
+// Wrong - registering same adapter twice
+registerAdapter('iceberg', icebergAdapter);
+registerAdapter('iceberg', customIcebergAdapter);  // Error
+
+// Correct - use unique names
+registerAdapter('iceberg', icebergAdapter);
+registerAdapter('custom-iceberg', customIcebergAdapter);
+```
+
+### ICETYPE_3002: ADAPTER_NOT_FOUND
+
+**Description:** The requested adapter is not registered.
+
+**Common Causes:**
+- Typo in adapter name
+- Adapter not installed/imported
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const output = transform(schema, 'icebrg');  // Typo
+
+// Correct
+import '@icetype/iceberg';  // Make sure adapter is imported
+const output = transform(schema, 'iceberg');
+```
+
+### ICETYPE_3003: MISSING_ADAPTER_OPTION
+
+**Description:** A required option for the adapter is missing.
+
+**Common Causes:**
+- Forgot to provide required option
+- Option name typo
+
+**How to Fix:**
+
+```typescript
+// Wrong - Iceberg adapter requires location for some operations
+const output = transform(schema, 'iceberg', {});
+
+// Correct
+const output = transform(schema, 'iceberg', {
+  location: 's3://bucket/tables/users',
+});
+```
+
+### ICETYPE_3004: INVALID_ADAPTER_CONFIG
+
+**Description:** The adapter configuration is invalid.
+
+**Common Causes:**
+- Wrong option type
+- Invalid option value
+
+**How to Fix:**
+
+```typescript
+// Wrong
+const output = transform(schema, 'iceberg', {
+  location: 123,  // Should be string
+});
+
+// Correct
+const output = transform(schema, 'iceberg', {
+  location: 's3://bucket/tables/users',
+});
+```
+
+---
+
+## Schema Loading Errors (4xxx)
+
+Schema loading errors occur when reading schema files.
+
+| Code | Name | Description |
+|------|------|-------------|
+| `ICETYPE_4000` | `SCHEMA_LOAD_ERROR` | General schema loading error |
+| `ICETYPE_4001` | `FILE_NOT_FOUND` | Schema file not found |
+| `ICETYPE_4002` | `UNSUPPORTED_FILE_TYPE` | File extension not supported |
+| `ICETYPE_4003` | `NO_SCHEMAS_FOUND` | No schemas exported from file |
+| `ICETYPE_4004` | `MODULE_LOAD_ERROR` | Error loading JS/TS module |
+| `ICETYPE_4005` | `JSON_PARSE_ERROR` | Error parsing JSON file |
+
+### ICETYPE_4000: SCHEMA_LOAD_ERROR
+
+**Description:** General error loading schema file.
+
+**Common Causes:**
+- File permission issues
+- Corrupted file
+
+**How to Fix:** Check the error message for specific details about the loading failure.
+
+### ICETYPE_4001: FILE_NOT_FOUND
+
+**Description:** The specified schema file does not exist.
+
+**Common Causes:**
+- Typo in file path
+- File was moved or deleted
+- Wrong working directory
+
+**How to Fix:**
+
+```bash
+# Check the file exists
+ls -la ./schema.ts
+
+# Use correct path
+ice validate --schema ./src/schema.ts
+```
+
+### ICETYPE_4002: UNSUPPORTED_FILE_TYPE
+
+**Description:** The file extension is not supported.
+
+**Common Causes:**
+- Using an unsupported file format
+- Missing file extension
+
+**Supported extensions:** `.ts`, `.js`, `.mjs`, `.json`
+
+**How to Fix:**
+
+```bash
+# Wrong
+ice validate --schema ./schema.yaml
+
+# Correct - use supported format
+ice validate --schema ./schema.ts
+```
+
+### ICETYPE_4003: NO_SCHEMAS_FOUND
+
+**Description:** The file was loaded but no schemas were found.
+
+**Common Causes:**
+- File does not export any schemas
+- Schemas not created with parseSchema()
+- Incorrect export syntax
+
+**How to Fix:**
+
+```typescript
+// Wrong - not exported
+const UserSchema = parseSchema({ $type: 'User' });
+
+// Correct - exported
+export const UserSchema = parseSchema({ $type: 'User' });
+```
+
+### ICETYPE_4004: MODULE_LOAD_ERROR
+
+**Description:** Error loading JavaScript or TypeScript module.
+
+**Common Causes:**
+- Syntax error in module
+- Missing dependencies
+- TypeScript not compiled
+
+**How to Fix:**
+
+```bash
+# For TypeScript files, use tsx
+npx tsx node_modules/.bin/ice validate -s ./schema.ts
+
+# Or compile TypeScript first
+npx tsc schema.ts
+ice validate --schema ./schema.js
+```
+
+### ICETYPE_4005: JSON_PARSE_ERROR
+
+**Description:** Error parsing JSON schema file.
+
+**Common Causes:**
+- Invalid JSON syntax
+- Trailing commas
+- Unquoted keys
+
+**How to Fix:**
+
+```json
+// Wrong - trailing comma
+{
+  "$type": "User",
+  "id": "uuid!",
+}
+
+// Correct
+{
+  "$type": "User",
+  "id": "uuid!"
+}
+```
+
+---
+
+## CLI Errors
+
+CLI-specific errors for command-line operations.
+
+| Code | Name | Description |
+|------|------|-------------|
+| `ICETYPE_CLI_MISSING_OPTION` | `MissingOptionError` | Required CLI option not provided |
+| `ICETYPE_CLI_INVALID_OPTION` | `InvalidOptionError` | CLI option has invalid value |
+
+### ICETYPE_CLI_MISSING_OPTION
+
+**Description:** A required command-line option was not provided.
+
+**Common Causes:**
+- Forgot required option
+- Typo in option name
+
+**How to Fix:**
+
+```bash
+# Wrong - missing required --schema
+ice validate
+
+# Correct
+ice validate --schema ./schema.ts
+```
+
+### ICETYPE_CLI_INVALID_OPTION
+
+**Description:** A command-line option has an invalid value.
+
+**Common Causes:**
+- Wrong value type
+- Value not in allowed list
+
+**How to Fix:**
+
+```bash
+# Wrong - invalid output format
+ice generate --schema ./schema.ts --format invalid
+
+# Correct - use valid format
+ice generate --schema ./schema.ts --output ./types.ts
+```
+
+---
+
+## Programmatic Error Handling
+
+### Type Guards
+
+Use type guards to handle specific error types:
+
+```typescript
+import {
+  isIceTypeError,
+  isParseError,
+  isSchemaValidationError,
+  isAdapterError,
+  isSchemaLoadError,
+} from '@icetype/core';
+
+try {
+  const schema = parseSchema(input);
+} catch (error) {
+  if (isParseError(error)) {
+    // Handle parse error with line/column info
+    console.error(`Parse error at ${error.line}:${error.column}`);
+    console.error(error.formatWithSource(source));
+  } else if (isSchemaValidationError(error)) {
+    // Handle validation error with path info
+    console.error(`Validation error at ${error.path}`);
+  } else if (isAdapterError(error)) {
+    // Handle adapter error
+    console.error(`Adapter '${error.adapterName}' failed: ${error.message}`);
+  } else if (isSchemaLoadError(error)) {
+    // Handle file loading error
+    console.error(`Failed to load ${error.filePath}`);
+  } else if (isIceTypeError(error)) {
+    // Handle any other IceType error
+    console.error(error.format());
+  } else {
+    throw error;
+  }
+}
+```
+
+### Error Formatting
+
+Format errors for display:
+
+```typescript
+import { getErrorMessage } from '@icetype/core';
+
+try {
+  // ...
+} catch (error) {
+  // Returns formatted error with code and context
+  console.error(getErrorMessage(error));
+}
+```
+
+### Error Serialization
+
+Convert errors to JSON for logging or API responses:
+
+```typescript
+try {
+  // ...
+} catch (error) {
+  if (isIceTypeError(error)) {
+    const json = error.toJSON();
+    // { name, message, code, context, cause }
+    logger.error(json);
+  }
+}
+```
