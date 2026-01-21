@@ -1,0 +1,351 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SQLite DDL Snapshots > All field types DDL output > should match snapshot for all types schema 1`] = `
+"CREATE TABLE AllTypes (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  stringField TEXT NOT NULL,
+  textField TEXT NOT NULL,
+  intField INTEGER NOT NULL,
+  longField INTEGER NOT NULL,
+  bigintField INTEGER NOT NULL,
+  floatField REAL NOT NULL,
+  doubleField REAL NOT NULL,
+  boolField INTEGER NOT NULL,
+  booleanField INTEGER NOT NULL,
+  uuidField TEXT NOT NULL,
+  timestampField TEXT NOT NULL,
+  timestamptzField TEXT NOT NULL,
+  dateField TEXT NOT NULL,
+  timeField TEXT NOT NULL,
+  jsonField TEXT NOT NULL,
+  binaryField BLOB NOT NULL,
+  decimalField REAL NOT NULL,
+  stringArray TEXT NOT NULL,
+  intArray TEXT NOT NULL
+);"
+`;
+
+exports[`SQLite DDL Snapshots > All field types DDL output > should match snapshot for all types schema with options 1`] = `
+"CREATE TABLE IF NOT EXISTS AllTypes (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  stringField TEXT NOT NULL,
+  textField TEXT NOT NULL,
+  intField INTEGER NOT NULL,
+  longField INTEGER NOT NULL,
+  bigintField INTEGER NOT NULL,
+  floatField REAL NOT NULL,
+  doubleField REAL NOT NULL,
+  boolField INTEGER NOT NULL,
+  booleanField INTEGER NOT NULL,
+  uuidField TEXT NOT NULL,
+  timestampField TEXT NOT NULL,
+  timestamptzField TEXT NOT NULL,
+  dateField TEXT NOT NULL,
+  timeField TEXT NOT NULL,
+  jsonField TEXT NOT NULL,
+  binaryField BLOB NOT NULL,
+  decimalField REAL NOT NULL,
+  stringArray TEXT NOT NULL,
+  intArray TEXT NOT NULL
+) STRICT;"
+`;
+
+exports[`SQLite DDL Snapshots > Complex schema with relations DDL output > should match snapshot for complex schema 1`] = `
+"CREATE TABLE Post (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  id TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL UNIQUE,
+  content TEXT NOT NULL,
+  authorId TEXT NOT NULL UNIQUE,
+  categoryId TEXT,
+  publishedAt TEXT,
+  viewCount INTEGER NOT NULL,
+  isPublished INTEGER NOT NULL,
+  metadata TEXT NOT NULL,
+  tags TEXT NOT NULL,
+  UNIQUE (id),
+  UNIQUE (title),
+  UNIQUE (authorId)
+);"
+`;
+
+exports[`SQLite DDL Snapshots > Complex schema with relations DDL output > should match snapshot for complex schema with all options 1`] = `
+"CREATE TABLE IF NOT EXISTS Post (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  id TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL UNIQUE,
+  content TEXT NOT NULL,
+  authorId TEXT NOT NULL UNIQUE,
+  categoryId TEXT,
+  publishedAt TEXT,
+  viewCount INTEGER NOT NULL,
+  isPublished INTEGER NOT NULL,
+  metadata TEXT NOT NULL,
+  tags TEXT NOT NULL,
+  UNIQUE (id),
+  UNIQUE (title),
+  UNIQUE (authorId)
+) STRICT;"
+`;
+
+exports[`SQLite DDL Snapshots > Edge case DDL output > should match snapshot for empty schema (only system fields) 1`] = `
+"CREATE TABLE EmptyEntity (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL
+);"
+`;
+
+exports[`SQLite DDL Snapshots > Edge case DDL output > should match snapshot for schema with all modifiers 1`] = `
+"CREATE TABLE Modifiers (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  requiredField TEXT NOT NULL UNIQUE,
+  optionalField TEXT,
+  uniqueField TEXT NOT NULL UNIQUE,
+  requiredUnique TEXT NOT NULL UNIQUE,
+  arrayField TEXT NOT NULL,
+  UNIQUE (requiredField),
+  UNIQUE (uniqueField),
+  UNIQUE (requiredUnique)
+);"
+`;
+
+exports[`SQLite DDL Snapshots > Edge case DDL output > should match snapshot for schema with reserved words 1`] = `
+"CREATE TABLE Reserved (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  "select" TEXT NOT NULL,
+  "from" TEXT NOT NULL,
+  "where" TEXT NOT NULL,
+  "order" TEXT NOT NULL,
+  "group" TEXT NOT NULL
+);"
+`;
+
+exports[`SQLite DDL Snapshots > Edge case DDL output > should match snapshot for schema with special characters in name 1`] = `
+"CREATE TABLE "My-Special_Entity" (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  id TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  UNIQUE (id)
+);"
+`;
+
+exports[`SQLite DDL Snapshots > Indexes and constraints DDL output > should match snapshot for indexed schema 1`] = `
+"CREATE TABLE Product (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  id TEXT NOT NULL UNIQUE,
+  sku TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL UNIQUE,
+  price REAL NOT NULL UNIQUE,
+  quantity INTEGER NOT NULL,
+  isActive INTEGER NOT NULL,
+  createdAt TEXT NOT NULL,
+  UNIQUE (id),
+  UNIQUE (sku),
+  UNIQUE (name),
+  UNIQUE (price)
+);"
+`;
+
+exports[`SQLite DDL Snapshots > Indexes and constraints DDL output > should match snapshot for indexed schema with indexes 1`] = `
+"CREATE TABLE Product (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  id TEXT NOT NULL UNIQUE,
+  sku TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL UNIQUE,
+  price REAL NOT NULL UNIQUE,
+  quantity INTEGER NOT NULL,
+  isActive INTEGER NOT NULL,
+  createdAt TEXT NOT NULL,
+  UNIQUE (id),
+  UNIQUE (sku),
+  UNIQUE (name),
+  UNIQUE (price)
+);
+
+CREATE INDEX idx_Product_id ON Product (id);
+CREATE INDEX idx_Product_sku ON Product (sku);
+CREATE INDEX idx_Product_name ON Product (name);
+CREATE INDEX idx_Product_price ON Product (price);"
+`;
+
+exports[`SQLite DDL Snapshots > Indexes and constraints DDL output > should match snapshot for indexed schema without system fields 1`] = `
+"CREATE TABLE Product (
+  id TEXT NOT NULL UNIQUE,
+  sku TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL UNIQUE,
+  price REAL NOT NULL UNIQUE,
+  quantity INTEGER NOT NULL,
+  isActive INTEGER NOT NULL,
+  createdAt TEXT NOT NULL,
+  UNIQUE (id),
+  UNIQUE (sku),
+  UNIQUE (name),
+  UNIQUE (price)
+);
+
+CREATE INDEX idx_Product_id ON Product (id);
+CREATE INDEX idx_Product_sku ON Product (sku);
+CREATE INDEX idx_Product_name ON Product (name);
+CREATE INDEX idx_Product_price ON Product (price);"
+`;
+
+exports[`SQLite DDL Snapshots > SQLite-specific features DDL output > should match snapshot for array fields (JSON in TEXT) 1`] = `
+"CREATE TABLE ArrayTest (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  id TEXT NOT NULL UNIQUE,
+  tags TEXT NOT NULL,
+  scores TEXT NOT NULL,
+  uuids TEXT NOT NULL,
+  UNIQUE (id)
+);"
+`;
+
+exports[`SQLite DDL Snapshots > SQLite-specific features DDL output > should match snapshot for schema with STRICT and WITHOUT ROWID 1`] = `
+"CREATE TABLE "User" (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  id TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  age INTEGER,
+  UNIQUE (id),
+  UNIQUE (email)
+) WITHOUT ROWID, STRICT;"
+`;
+
+exports[`SQLite DDL Snapshots > SQLite-specific features DDL output > should match snapshot for schema with WITHOUT ROWID 1`] = `
+"CREATE TABLE "User" (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  id TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  age INTEGER,
+  UNIQUE (id),
+  UNIQUE (email)
+) WITHOUT ROWID;"
+`;
+
+exports[`SQLite DDL Snapshots > Simple schema DDL output > should match snapshot for simple schema 1`] = `
+"CREATE TABLE "User" (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  id TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  age INTEGER,
+  UNIQUE (id),
+  UNIQUE (email)
+);"
+`;
+
+exports[`SQLite DDL Snapshots > Simple schema DDL output > should match snapshot for simple schema with IF NOT EXISTS 1`] = `
+"CREATE TABLE IF NOT EXISTS "User" (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  id TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  age INTEGER,
+  UNIQUE (id),
+  UNIQUE (email)
+);"
+`;
+
+exports[`SQLite DDL Snapshots > Simple schema DDL output > should match snapshot for simple schema with STRICT mode 1`] = `
+"CREATE TABLE "User" (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  id TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  age INTEGER,
+  UNIQUE (id),
+  UNIQUE (email)
+) STRICT;"
+`;
+
+exports[`SQLite DDL Snapshots > Simple schema DDL output > should match snapshot for simple schema with custom table name 1`] = `
+"CREATE TABLE users_table (
+  "$id" TEXT NOT NULL PRIMARY KEY,
+  "$type" TEXT NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" INTEGER NOT NULL,
+  "$updatedAt" INTEGER NOT NULL,
+  id TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  age INTEGER,
+  UNIQUE (id),
+  UNIQUE (email)
+);"
+`;
+
+exports[`SQLite DDL Snapshots > Simple schema DDL output > should match snapshot for simple schema without system fields 1`] = `
+"CREATE TABLE "User" (
+  id TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  age INTEGER,
+  UNIQUE (id),
+  UNIQUE (email)
+);"
+`;
