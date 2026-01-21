@@ -8,6 +8,8 @@
  * @packageDocumentation
  */
 
+import { SYSTEM_COLUMNS } from '@icetype/core';
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -54,6 +56,26 @@ export class InvalidSchemaNameError extends Error {
 }
 
 /**
+ * Error thrown when an identifier is invalid (e.g., empty, whitespace-only, contains control characters).
+ */
+export class InvalidIdentifierError extends Error {
+  constructor(identifier: string, reason: string) {
+    super(`Invalid identifier: "${identifier.slice(0, 20)}${identifier.length > 20 ? '...' : ''}". ${reason}`);
+    this.name = 'InvalidIdentifierError';
+  }
+}
+
+/**
+ * Error thrown when an identifier exceeds the maximum length for a dialect.
+ */
+export class IdentifierTooLongError extends Error {
+  constructor(identifier: string, dialect: SqlDialect, maxLength: number, actualLength: number, unit: 'bytes' | 'characters') {
+    super(`Identifier too long for ${dialect}: "${identifier.slice(0, 20)}${identifier.length > 20 ? '...' : ''}". Maximum is ${maxLength} ${unit}, got ${actualLength}.`);
+    this.name = 'IdentifierTooLongError';
+  }
+}
+
+/**
  * Validate a SQL schema name to prevent SQL injection.
  *
  * Schema names must:
@@ -94,13 +116,12 @@ export function validateSchemaName(name: string): void {
 }
 
 // =============================================================================
-// SQL Reserved Keywords (for PostgreSQL)
+// SQL Reserved Keywords (for all dialects)
 // =============================================================================
 
 /**
  * Common SQL reserved keywords that should always be quoted when used as identifiers.
- * This is a subset of PostgreSQL reserved keywords that are most commonly used
- * and could cause issues if not quoted.
+ * These keywords are reserved across most SQL dialects and could cause issues if not quoted.
  */
 const SQL_RESERVED_KEYWORDS = new Set([
   'select', 'from', 'where', 'insert', 'update', 'delete', 'drop', 'create',
@@ -121,13 +142,60 @@ const SQL_RESERVED_KEYWORDS = new Set([
  * @param identifier - The identifier to check
  * @returns True if the identifier is a reserved keyword
  */
-function isReservedKeyword(identifier: string): boolean {
+export function isReservedKeyword(identifier: string): boolean {
   return SQL_RESERVED_KEYWORDS.has(identifier.toLowerCase());
 }
 
 // =============================================================================
 // Identifier Escaping
 // =============================================================================
+
+/**
+ * Check if a string contains only ASCII characters (no Unicode).
+ * @param str - The string to check
+ * @returns True if the string contains only ASCII characters
+ */
+function isAsciiOnly(str: string): boolean {
+  // eslint-disable-next-line no-control-regex
+  return /^[\x00-\x7F]*$/.test(str);
+}
+
+/**
+ * Check if an identifier needs quoting based on its content.
+ * An identifier needs quoting if it:
+ * - Contains non-ASCII characters (Unicode)
+ * - Contains special characters (anything besides ASCII letters, digits, underscore)
+ * - Starts with a digit
+ * - Starts with $ (system fields)
+ * - Is empty or contains only whitespace
+ * - Is a SQL reserved keyword
+ *
+ * @param identifier - The identifier to check
+ * @returns True if the identifier needs quoting
+ */
+function needsQuoting(identifier: string): boolean {
+  // Empty or whitespace-only identifiers need quoting
+  if (!identifier || identifier.trim() === '') {
+    return true;
+  }
+
+  // Check for non-ASCII characters (Unicode) - these always need quoting
+  if (!isAsciiOnly(identifier)) {
+    return true;
+  }
+
+  // Simple ASCII identifier pattern: starts with letter/underscore, followed by letters/digits/underscore
+  const isSimpleIdentifier = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(identifier);
+
+  // Check if starts with $ (system fields)
+  const startsWithDollar = identifier.startsWith('$');
+
+  // Check if it's a reserved keyword
+  const isKeyword = isReservedKeyword(identifier);
+
+  // Needs quoting if not a simple identifier OR starts with $ OR is a keyword
+  return !isSimpleIdentifier || startsWithDollar || isKeyword;
+}
 
 /**
  * Escape an identifier for the given SQL dialect.
@@ -137,10 +205,12 @@ function isReservedKeyword(identifier: string): boolean {
  * - ClickHouse and MySQL use backticks (`identifier`)
  *
  * Identifiers are escaped (quoted) if they:
- * - Contain special characters (anything besides letters, digits, underscore)
+ * - Contain special characters (anything besides ASCII letters, digits, underscore)
+ * - Contain non-ASCII characters (Unicode)
  * - Start with a digit
  * - Start with $ (system fields)
- * - Are SQL reserved keywords (PostgreSQL only)
+ * - Are SQL reserved keywords (all dialects)
+ * - Are empty or contain only whitespace
  *
  * @param identifier - The identifier to escape
  * @param dialect - The SQL dialect to use
@@ -148,12 +218,7 @@ function isReservedKeyword(identifier: string): boolean {
  */
 export function escapeIdentifier(identifier: string, dialect: SqlDialect): string {
   // Check if identifier needs escaping
-  const isSimpleIdentifier = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(identifier);
-  const startsWithDollar = identifier.startsWith('$');
-  const isKeyword = dialect === 'postgres' && isReservedKeyword(identifier);
-
-  // If it's a simple identifier without special conditions, return as-is
-  if (isSimpleIdentifier && !startsWithDollar && !isKeyword) {
+  if (!needsQuoting(identifier)) {
     return identifier;
   }
 
@@ -167,6 +232,116 @@ export function escapeIdentifier(identifier: string, dialect: SqlDialect): strin
     const escaped = identifier.replace(/"/g, '""');
     return `"${escaped}"`;
   }
+}
+
+// =============================================================================
+// Identifier Validation
+// =============================================================================
+
+/**
+ * Maximum identifier lengths by dialect.
+ * - PostgreSQL: 63 bytes (NAMEDATALEN - 1)
+ * - MySQL: 64 characters
+ * - SQLite: No documented limit (we use 1000 as a practical limit)
+ * - ClickHouse: No documented limit (we use 1000 as a practical limit)
+ * - DuckDB: No documented limit (we use 1000 as a practical limit)
+ */
+const MAX_IDENTIFIER_LENGTH: Record<SqlDialect, { max: number; unit: 'bytes' | 'characters' }> = {
+  postgres: { max: 63, unit: 'bytes' },
+  mysql: { max: 64, unit: 'characters' },
+  sqlite: { max: 1000, unit: 'characters' },
+  clickhouse: { max: 1000, unit: 'characters' },
+  duckdb: { max: 1000, unit: 'characters' },
+};
+
+/**
+ * Dangerous control characters that should be rejected in identifiers.
+ * Includes:
+ * - NULL byte (0x00)
+ * - Control characters (0x01-0x1F, 0x7F)
+ * - Bidirectional text override characters (security risk)
+ */
+// eslint-disable-next-line no-control-regex
+const DANGEROUS_CHAR_PATTERN = /[\x00-\x1F\x7F\u202A-\u202E\u2066-\u2069]/;
+
+/**
+ * Result of identifier validation.
+ */
+export interface IdentifierValidationResult {
+  /** Whether the identifier is valid */
+  valid: boolean;
+  /** The identifier that was validated */
+  identifier: string;
+  /** The dialect used for validation */
+  dialect: SqlDialect;
+  /** Whether the identifier needs quoting */
+  needsQuoting: boolean;
+  /** Whether the identifier is a reserved keyword */
+  isReservedKeyword: boolean;
+  /** Byte length of the identifier (UTF-8) */
+  byteLength: number;
+  /** Character length of the identifier */
+  charLength: number;
+}
+
+/**
+ * Validate an identifier for the given SQL dialect.
+ *
+ * Validates:
+ * - Not empty or whitespace-only
+ * - Does not exceed maximum length for the dialect
+ * - Does not contain dangerous control characters
+ * - Does not contain bidirectional override characters (security risk)
+ *
+ * @param identifier - The identifier to validate
+ * @param dialect - The SQL dialect to validate against
+ * @returns Validation result with details
+ * @throws InvalidIdentifierError if the identifier is empty, whitespace-only, or contains dangerous characters
+ * @throws IdentifierTooLongError if the identifier exceeds the maximum length for the dialect
+ */
+export function validateIdentifier(identifier: string, dialect: SqlDialect): IdentifierValidationResult {
+  // Check for empty identifier
+  if (!identifier || identifier.length === 0) {
+    throw new InvalidIdentifierError(identifier, 'Identifier cannot be empty.');
+  }
+
+  // Check for whitespace-only identifier
+  if (identifier.trim() === '') {
+    throw new InvalidIdentifierError(identifier, 'Identifier cannot be whitespace-only.');
+  }
+
+  // Check for dangerous control characters (including null bytes and bidi overrides)
+  if (DANGEROUS_CHAR_PATTERN.test(identifier)) {
+    throw new InvalidIdentifierError(identifier, 'Identifier contains dangerous control characters.');
+  }
+
+  // Calculate lengths
+  // Use Buffer.byteLength for UTF-8 byte count
+  const byteLength = Buffer.byteLength(identifier, 'utf8');
+  // Use spread operator to properly count Unicode code points (not UTF-16 code units)
+  const charLength = [...identifier].length;
+
+  // Check length limits by dialect
+  const lengthConfig = MAX_IDENTIFIER_LENGTH[dialect];
+  const actualLength = lengthConfig.unit === 'bytes' ? byteLength : charLength;
+
+  if (actualLength > lengthConfig.max) {
+    throw new IdentifierTooLongError(identifier, dialect, lengthConfig.max, actualLength, lengthConfig.unit);
+  }
+
+  // Determine if it needs quoting and if it's a keyword
+  const isKeyword = isReservedKeyword(identifier);
+  const requiresQuoting = needsQuoting(identifier);
+
+  return {
+    valid: true,
+    identifier,
+    dialect,
+    needsQuoting: requiresQuoting,
+    isReservedKeyword: isKeyword,
+    byteLength,
+    charLength,
+  };
 }
 
 // =============================================================================
@@ -322,31 +497,31 @@ export function generateSystemColumns(dialect: SqlDialect): SqlColumn[] {
 
   return [
     {
-      name: '$id',
+      name: SYSTEM_COLUMNS.$id.name,
       type: types.stringType,
-      nullable: false,
-      primaryKey: true,
+      nullable: SYSTEM_COLUMNS.$id.nullable,
+      primaryKey: SYSTEM_COLUMNS.$id.primaryKey,
     },
     {
-      name: '$type',
+      name: SYSTEM_COLUMNS.$type.name,
       type: types.stringType,
-      nullable: false,
+      nullable: SYSTEM_COLUMNS.$type.nullable,
     },
     {
-      name: '$version',
+      name: SYSTEM_COLUMNS.$version.name,
       type: types.intType,
-      nullable: false,
-      default: '1',
+      nullable: SYSTEM_COLUMNS.$version.nullable,
+      default: String(SYSTEM_COLUMNS.$version.defaultValue),
     },
     {
-      name: '$createdAt',
+      name: SYSTEM_COLUMNS.$createdAt.name,
       type: types.bigintType,
-      nullable: false,
+      nullable: SYSTEM_COLUMNS.$createdAt.nullable,
     },
     {
-      name: '$updatedAt',
+      name: SYSTEM_COLUMNS.$updatedAt.name,
       type: types.bigintType,
-      nullable: false,
+      nullable: SYSTEM_COLUMNS.$updatedAt.nullable,
     },
   ];
 }

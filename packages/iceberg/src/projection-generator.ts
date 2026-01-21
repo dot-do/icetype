@@ -24,7 +24,7 @@
  */
 
 import type { IceTypeSchema, FieldDefinition, ProjectionType } from '@icetype/core';
-import { expandRelations } from '@icetype/core';
+import { expandRelations, SYSTEM_COLUMNS } from '@icetype/core';
 
 import type { IcebergSchema, IcebergField, IcebergType } from './types.js';
 
@@ -186,7 +186,7 @@ export class ProjectionSchemaGenerator {
     for (const field of systemFields) {
       field.id = this.nextFieldId++;
       fields.push(field);
-      if (field.name === '$id') {
+      if (field.name === SYSTEM_COLUMNS.$id.name) {
         identifierFieldIds.push(field.id);
       }
     }
@@ -254,36 +254,36 @@ export class ProjectionSchemaGenerator {
     return [
       {
         id: 0,
-        name: '$id',
-        required: true,
+        name: SYSTEM_COLUMNS.$id.name,
+        required: !SYSTEM_COLUMNS.$id.nullable,
         type: { type: 'string' },
         doc: 'Document unique identifier',
       },
       {
         id: 0,
-        name: '$type',
-        required: true,
+        name: SYSTEM_COLUMNS.$type.name,
+        required: !SYSTEM_COLUMNS.$type.nullable,
         type: { type: 'string' },
         doc: 'Document type/collection',
       },
       {
         id: 0,
-        name: '$version',
-        required: true,
+        name: SYSTEM_COLUMNS.$version.name,
+        required: !SYSTEM_COLUMNS.$version.nullable,
         type: { type: 'int' },
         doc: 'Document version for optimistic concurrency',
       },
       {
         id: 0,
-        name: '$createdAt',
-        required: true,
+        name: SYSTEM_COLUMNS.$createdAt.name,
+        required: !SYSTEM_COLUMNS.$createdAt.nullable,
         type: { type: 'long' },
         doc: 'Document creation timestamp (epoch ms)',
       },
       {
         id: 0,
-        name: '$updatedAt',
-        required: true,
+        name: SYSTEM_COLUMNS.$updatedAt.name,
+        required: !SYSTEM_COLUMNS.$updatedAt.nullable,
         type: { type: 'long' },
         doc: 'Document last update timestamp (epoch ms)',
       },

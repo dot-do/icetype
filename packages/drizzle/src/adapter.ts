@@ -7,6 +7,7 @@
  */
 
 import type { IceTypeSchema, FieldDefinition } from '@icetype/core';
+import { SYSTEM_COLUMNS } from '@icetype/core';
 import type { SchemaAdapter } from '@icetype/adapters';
 
 import type {
@@ -37,12 +38,13 @@ import { VERSION } from './version.js';
 
 /**
  * System field definitions for IceType.
+ * Uses SYSTEM_COLUMNS from @icetype/core as the single source of truth.
  */
 const SYSTEM_FIELDS = [
-  { name: '$id', type: 'text', nullable: false, primaryKey: true },
-  { name: '$type', type: 'text', nullable: false, primaryKey: false },
-  { name: '$createdAt', type: 'timestamp', nullable: false, primaryKey: false },
-  { name: '$updatedAt', type: 'timestamp', nullable: false, primaryKey: false },
+  { name: SYSTEM_COLUMNS.$id.name, type: 'text', nullable: SYSTEM_COLUMNS.$id.nullable, primaryKey: SYSTEM_COLUMNS.$id.primaryKey ?? false },
+  { name: SYSTEM_COLUMNS.$type.name, type: 'text', nullable: SYSTEM_COLUMNS.$type.nullable, primaryKey: false },
+  { name: SYSTEM_COLUMNS.$createdAt.name, type: 'timestamp', nullable: SYSTEM_COLUMNS.$createdAt.nullable, primaryKey: false },
+  { name: SYSTEM_COLUMNS.$updatedAt.name, type: 'timestamp', nullable: SYSTEM_COLUMNS.$updatedAt.nullable, primaryKey: false },
 ];
 
 // =============================================================================

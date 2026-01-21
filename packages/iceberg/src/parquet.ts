@@ -10,6 +10,7 @@ import type {
   IceTypeSchema,
   FieldDefinition,
 } from '@icetype/core';
+import { SYSTEM_COLUMNS } from '@icetype/core';
 
 import type {
   ParquetPrimitiveType,
@@ -237,41 +238,41 @@ export class ParquetSchemaGenerator {
   private generateSystemFields(): ParquetField[] {
     return [
       {
-        name: '$id',
+        name: SYSTEM_COLUMNS.$id.name,
         type: 'BYTE_ARRAY',
-        repetition: 'REQUIRED',
+        repetition: SYSTEM_COLUMNS.$id.nullable ? 'OPTIONAL' : 'REQUIRED',
         convertedType: 'UTF8',
         logicalType: { type: 'STRING' },
         fieldId: this.nextFieldId++,
       },
       {
-        name: '$type',
+        name: SYSTEM_COLUMNS.$type.name,
         type: 'BYTE_ARRAY',
-        repetition: 'REQUIRED',
+        repetition: SYSTEM_COLUMNS.$type.nullable ? 'OPTIONAL' : 'REQUIRED',
         convertedType: 'UTF8',
         logicalType: { type: 'STRING' },
         fieldId: this.nextFieldId++,
       },
       {
-        name: '$version',
+        name: SYSTEM_COLUMNS.$version.name,
         type: 'INT32',
-        repetition: 'REQUIRED',
+        repetition: SYSTEM_COLUMNS.$version.nullable ? 'OPTIONAL' : 'REQUIRED',
         convertedType: 'INT_32',
         logicalType: { type: 'INTEGER', precision: 32 },
         fieldId: this.nextFieldId++,
       },
       {
-        name: '$createdAt',
+        name: SYSTEM_COLUMNS.$createdAt.name,
         type: 'INT64',
-        repetition: 'REQUIRED',
+        repetition: SYSTEM_COLUMNS.$createdAt.nullable ? 'OPTIONAL' : 'REQUIRED',
         convertedType: 'TIMESTAMP_MILLIS',
         logicalType: { type: 'TIMESTAMP', isAdjustedToUTC: false, unit: 'MILLIS' },
         fieldId: this.nextFieldId++,
       },
       {
-        name: '$updatedAt',
+        name: SYSTEM_COLUMNS.$updatedAt.name,
         type: 'INT64',
-        repetition: 'REQUIRED',
+        repetition: SYSTEM_COLUMNS.$updatedAt.nullable ? 'OPTIONAL' : 'REQUIRED',
         convertedType: 'TIMESTAMP_MILLIS',
         logicalType: { type: 'TIMESTAMP', isAdjustedToUTC: false, unit: 'MILLIS' },
         fieldId: this.nextFieldId++,
