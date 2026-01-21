@@ -1,11 +1,12 @@
 # IceType VS Code Extension
 
-Syntax highlighting and language support for the [IceType](https://github.com/dot-do/icetype) schema language.
+Syntax highlighting, autocomplete, and language support for the [IceType](https://github.com/dot-do/icetype) schema language.
 
 ## Features
 
-- Syntax highlighting for `.ice` and `.icetype` files
-- Syntax highlighting for IceType schemas embedded in TypeScript/JavaScript
+- **Syntax highlighting** for `.ice` and `.icetype` files
+- **Syntax highlighting** for IceType schemas embedded in TypeScript/JavaScript
+- **IntelliSense autocomplete** for types, modifiers, directives, and relations
 - Auto-closing brackets and quotes
 - Code folding
 - Comment toggling
@@ -149,6 +150,44 @@ const userSchema = parseSchema({
 | `$unique` | Unique constraints |
 | `$primaryKey` | Primary key columns |
 | `$sortBy` | Sort order columns |
+
+## Autocomplete
+
+The extension provides intelligent autocomplete (IntelliSense) for IceType schemas. Completions are triggered automatically when typing and include:
+
+### Type Completions
+
+Start typing inside a string value to see available types:
+- Primitive types: `uuid`, `string`, `text`, `int`, `bigint`, `float`, `double`, `decimal`, `boolean`, `date`, `datetime`, `timestamp`, `time`, `json`, `jsonb`, `binary`, `blob`, `bytes`, `esm`
+- Vector type: `vector[1536]` (with dimension snippet)
+- Enum type: `enum(value1,value2)` (with values snippet)
+
+### Modifier Completions
+
+After typing a type, completions appear for:
+- `!` - Required field
+- `?` - Optional field
+- `#index` - Secondary index
+- `#unique` - Unique constraint
+- `#fts` - Full-text search index
+- `#sparse` - Sparse index
+
+### Directive Completions
+
+Type `$` to see available directives:
+- `$type`, `$partitionBy`, `$index`, `$fts`, `$vector`, `$unique`, `$primaryKey`, `$sortBy`, `$cluster`, `$check`, `$default`, `$validate`, `$computed`, `$cascade`, `$onDelete`, `$onUpdate`, `$ttl`, `$immutable`, `$audit`, `$encrypted`
+
+### Relation Completions
+
+Type `-`, `<`, or `~` to see relation operators:
+- `->` - Forward relation (belongs to)
+- `<-` - Backward relation (has many)
+- `[Entity] ->` - Has many with back-reference
+- `~>` - Fuzzy/semantic relation
+- `<~` - Backward fuzzy relation
+- `<->` - Bidirectional relation
+
+Each completion includes documentation explaining the syntax and usage examples.
 
 ## Snippets
 

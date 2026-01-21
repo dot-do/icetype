@@ -53,6 +53,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comment toggling (single-line and block comments)
 - Word pattern matching for IceType identifiers
 
+#### Autocomplete (IntelliSense)
+- Completions for all primitive types with documentation
+- Field modifier completions (`!`, `?`, `#index`, `#unique`, `#fts`, `#sparse`)
+- Directive completions (`$type`, `$partitionBy`, `$index`, `$fts`, `$vector`, etc.)
+- Relation operator completions (`->`, `<-`, `~>`, `<~`, `<->`)
+- Context-aware completions based on cursor position
+- Snippet support for complex types (`vector[1536]`, `decimal(10,2)`, `enum()`)
+- Works in both standalone IceType files and embedded schemas in TypeScript/JavaScript
+
 #### Editor Features
 - Status bar indicator when editing IceType files
 - Semantic token support for enhanced theming
@@ -72,7 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Planned features for upcoming versions:
 
 - Language Server Protocol (LSP) support
-- IntelliSense and autocomplete
+- Enhanced autocomplete with entity name suggestions
 - Schema validation and diagnostics
 - Go to definition for entity references
 - Hover information for types and fields

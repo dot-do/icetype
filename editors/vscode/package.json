@@ -1,7 +1,7 @@
 {
   "name": "icetype-vscode",
   "displayName": "IceType",
-  "description": "Syntax highlighting, snippets, and language support for IceType - the type-safe schema language for edge-native databases",
+  "description": "Syntax highlighting, autocomplete, snippets, and language support for IceType - the type-safe schema language for edge-native databases",
   "version": "0.1.0",
   "publisher": "icetype",
   "author": {
