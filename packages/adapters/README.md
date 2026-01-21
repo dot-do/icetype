@@ -10,7 +10,7 @@ npm install @icetype/adapters
 pnpm add @icetype/adapters
 ```
 
-## Quick Start
+## Usage
 
 ```typescript
 import { parseSchema } from '@icetype/core';
@@ -37,7 +37,7 @@ const metadata = icebergAdapter?.transform(schema, {
 });
 ```
 
-## API Reference
+## API
 
 ### Registry Functions
 
@@ -326,6 +326,60 @@ const { createMySQLAdapter } = await import('@icetype/mysql');
 ```
 
 This pattern works well with bundlers like Vite, esbuild, and webpack that support dynamic imports and code splitting.
+
+## Examples
+
+### Basic Registry Usage
+
+```typescript
+import { createAdapterRegistry } from '@icetype/adapters';
+import { PostgresAdapter } from '@icetype/postgres';
+import { MySQLAdapter } from '@icetype/mysql';
+import { parseSchema } from '@icetype/core';
+
+// Create registry
+const registry = createAdapterRegistry();
+registry.register(new PostgresAdapter());
+registry.register(new MySQLAdapter());
+
+// Parse schema
+const schema = parseSchema({
+  $type: 'User',
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string',
+});
+
+// Generate DDL for PostgreSQL
+const pgAdapter = registry.get('postgres');
+const pgDDL = pgAdapter?.transform(schema, { schema: 'public' });
+const pgSQL = pgAdapter?.serialize(pgDDL);
+
+// Generate DDL for MySQL
+const mysqlAdapter = registry.get('mysql');
+const mysqlDDL = mysqlAdapter?.transform(schema);
+const mysqlSQL = mysqlAdapter?.serialize(mysqlDDL);
+```
+
+### Multi-Dialect Support
+
+```typescript
+import { createAdapterRegistry } from '@icetype/adapters';
+
+function generateDDL(schema, dialect: string) {
+  const adapter = registry.get(dialect);
+  if (!adapter) {
+    throw new Error(`Unknown dialect: ${dialect}`);
+  }
+  const ddl = adapter.transform(schema);
+  return adapter.serialize(ddl);
+}
+
+// Use with any registered adapter
+const pgSQL = generateDDL(userSchema, 'postgres');
+const mysqlSQL = generateDDL(userSchema, 'mysql');
+const sqliteSQL = generateDDL(userSchema, 'sqlite');
+```
 
 ## License
 

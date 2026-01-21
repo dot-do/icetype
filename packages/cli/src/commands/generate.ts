@@ -18,16 +18,22 @@ import {
   checkSchemasExist,
 } from '../utils/cli-error.js';
 import type { NullableStyle } from '../utils/config.js';
+import {
+  validateSchemaPath,
+  validateOutputPath,
+  checkSymlinkSafety,
+} from '../utils/path-sanitizer.js';
 
 const GENERATE_HELP: HelpCommand = {
   name: 'generate',
   description: 'Generate TypeScript types from IceType schema',
-  usage: 'ice generate --schema <file> [--output <file>] [--watch] [--nullable-style <style>]',
+  usage: 'ice generate --schema <file> [--output <file>] [--watch] [--nullable-style <style>] [--debounce <ms>]',
   options: [
     { name: 'schema', short: 's', description: 'Path to the schema file', required: true },
     { name: 'output', short: 'o', description: 'Output file path (default: <schema>.generated.ts)' },
     { name: 'nullable-style', description: 'Nullable type style: union (T | null | undefined), optional (T | undefined), strict (T | null). Default: union' },
     { name: 'watch', short: 'w', description: 'Watch mode for automatic regeneration' },
+    { name: 'debounce', description: 'Debounce time in milliseconds for watch mode. Default: 100' },
     { name: 'quiet', short: 'q', description: 'Suppress non-error output' },
     { name: 'verbose', short: 'v', description: 'Enable verbose logging' },
   ],
@@ -48,6 +54,8 @@ export interface GenerateOptions {
   output?: string;
   /** Enable watch mode for automatic regeneration. */
   watch?: boolean;
+  /** Debounce time in milliseconds for watch mode. */
+  debounceMs?: number;
   /** Suppress non-error output. */
   quiet?: boolean;
   /** Enable verbose logging. */
@@ -105,32 +113,48 @@ export async function generate(args: string[]) {
     process.exit(0);
   }
 
-  const { values } = parseArgs({
-    args,
-    options: {
-      schema: { type: 'string', short: 's' },
-      output: { type: 'string', short: 'o' },
-      'nullable-style': { type: 'string' },
-      watch: { type: 'boolean', short: 'w' },
-      quiet: { type: 'boolean', short: 'q' },
-      verbose: { type: 'boolean', short: 'v' },
-    },
-  });
+  let values: ReturnType<typeof parseArgs>['values'];
+  try {
+    ({ values } = parseArgs({
+      args,
+      options: {
+        schema: { type: 'string', short: 's' },
+        output: { type: 'string', short: 'o' },
+        'nullable-style': { type: 'string' },
+        watch: { type: 'boolean', short: 'w' },
+        debounce: { type: 'string' },
+        quiet: { type: 'boolean', short: 'q' },
+        verbose: { type: 'boolean', short: 'v' },
+      },
+    }));
+  } catch (error) {
+    // Handle ambiguous option error for --debounce with negative value
+    if (error instanceof Error && error.message.includes('--debounce') && error.message.includes('ambiguous')) {
+      throw new Error('--debounce must be a positive number');
+    }
+    throw error;
+  }
 
   // Validate required options - throws if missing
   requireOption(
-    values.schema,
+    values.schema as string | undefined,
     'schema',
     'generate',
     'ice generate --schema ./schema.ts --output ./types.ts [--watch]'
   );
 
   // values.schema is guaranteed to be string after the check above
-  const schemaPath = values.schema;
+  const schemaPath = values.schema as string;
   const outputPath = typeof values.output === 'string' ? values.output : schemaPath.replace(/\.(ts|js|mjs|json)$/, '.generated.ts');
 
+  // Validate paths for security
+  validateSchemaPath(schemaPath);
+  validateOutputPath(outputPath);
+  checkSymlinkSafety(schemaPath);
+  checkSymlinkSafety(outputPath);
+
   // Validate nullable-style option
-  const nullableStyleValue = values['nullable-style'];
+  const nullableStyleValue = values['nullable-style'] as string | undefined;
   let nullableStyle: NullableStyle = 'union';
   if (nullableStyleValue !== undefined) {
     if (nullableStyleValue !== 'union' && nullableStyleValue !== 'optional' && nullableStyleValue !== 'strict') {
@@ -141,12 +165,24 @@ export async function generate(args: string[]) {
     nullableStyle = nullableStyleValue;
   }
 
+  // Validate debounce option
+  let debounceMs: number | undefined;
+  const debounceValue = values.debounce as string | undefined;
+  if (debounceValue !== undefined) {
+    const parsedDebounce = parseInt(debounceValue, 10);
+    if (isNaN(parsedDebounce) || parsedDebounce <= 0) {
+      throw new Error('--debounce must be a positive number');
+    }
+    debounceMs = parsedDebounce;
+  }
+
   const options: GenerateOptions = {
     schema: schemaPath,
     output: outputPath,
-    watch: values.watch ?? false,
-    quiet: values.quiet ?? false,
-    verbose: values.verbose ?? false,
+    watch: (values.watch ?? false) as boolean,
+    debounceMs,
+    quiet: (values.quiet ?? false) as boolean,
+    verbose: (values.verbose ?? false) as boolean,
     nullableStyle,
   };
 
@@ -163,6 +199,7 @@ export async function generate(args: string[]) {
       runGeneration: async () => {
         await runGeneration(options);
       },
+      debounceMs: options.debounceMs,
       quiet: options.quiet,
       verbose: options.verbose,
     });
@@ -274,17 +311,21 @@ function getNullableSuffix(style: NullableStyle): string {
  * Convert IceType field to TypeScript type
  *
  * Handles nullable types based on the configured style:
- * - 'union' (default): Optional fields generate `T | null | undefined`
- * - 'optional': Optional fields generate `T | undefined`
- * - 'strict': Optional fields generate `T | null`
+ * - 'union' (default): Nullable fields generate `T | null | undefined`
+ * - 'optional': Nullable fields generate `T | undefined`
+ * - 'strict': Nullable fields generate `T | null`
  *
- * Required fields (!) always generate just `T`.
+ * Fields are nullable unless they have the `!` (required) modifier.
+ * This follows SQL semantics where columns are nullable by default.
  */
 function fieldToTypeScript(field: FieldDefinition, nullableStyle: NullableStyle = 'union'): string {
+  // A field is nullable if it doesn't have the '!' (required) modifier
+  const isNullable = field.modifier !== '!';
+
   if (field.relation) {
     // Relations become string IDs or arrays of string IDs
     const baseType = field.isArray ? 'string[]' : 'string';
-    if (field.isOptional) {
+    if (isNullable) {
       return `${baseType}${getNullableSuffix(nullableStyle)}`;
     }
     return baseType;
@@ -330,7 +371,7 @@ function fieldToTypeScript(field: FieldDefinition, nullableStyle: NullableStyle 
     baseType = `${baseType}[]`;
   }
 
-  if (field.isOptional) {
+  if (isNullable) {
     return `${baseType}${getNullableSuffix(nullableStyle)}`;
   }
 

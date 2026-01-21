@@ -18,7 +18,9 @@
       "import": "./dist/cli.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
@@ -51,9 +53,12 @@
     "@icetype/postgres": "workspace:*",
     "@icetype/prisma": "workspace:*",
     "@icetype/sqlite": "workspace:*",
+    "glob": "^11.0.0",
     "jiti": "^2.6.1"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-explicit-resource-management": "^7.27.4",
+    "@babel/plugin-transform-explicit-resource-management": "^7.28.6",
     "@types/node": "^22.0.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"

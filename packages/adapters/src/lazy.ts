@@ -46,6 +46,34 @@ const KNOWN_ADAPTERS: Record<string, AdapterConfig> = {
     packageName: '@icetype/mysql',
     factoryName: 'createMySQLAdapter',
   },
+  sqlite: {
+    packageName: '@icetype/sqlite',
+    factoryName: 'createSQLiteAdapter',
+  },
+  clickhouse: {
+    packageName: '@icetype/clickhouse',
+    factoryName: 'createClickHouseAdapter',
+  },
+  duckdb: {
+    packageName: '@icetype/duckdb',
+    factoryName: 'createDuckDBAdapter',
+  },
+  iceberg: {
+    packageName: '@icetype/iceberg',
+    factoryName: 'createIcebergAdapter',
+  },
+  parquet: {
+    packageName: '@icetype/iceberg',
+    factoryName: 'createParquetAdapter',
+  },
+  drizzle: {
+    packageName: '@icetype/drizzle',
+    factoryName: 'createDrizzleAdapter',
+  },
+  prisma: {
+    packageName: '@icetype/prisma',
+    factoryName: 'createPrismaAdapter',
+  },
 };
 
 // =============================================================================
@@ -106,12 +134,36 @@ export async function lazyLoadAdapter(name: string): Promise<SchemaAdapter> {
   let module: Record<string, unknown>;
   try {
     // Use dynamic import to load the adapter package
-    if (name === 'postgres') {
-      module = await import('@icetype/postgres');
-    } else if (name === 'mysql') {
-      module = await import('@icetype/mysql');
-    } else {
-      throw new Error(`Adapter '${name}' is registered but no import path is configured`);
+    // Each adapter needs an explicit import path for bundler tree-shaking
+    switch (name) {
+      case 'postgres':
+        module = await import('@icetype/postgres');
+        break;
+      case 'mysql':
+        module = await import('@icetype/mysql');
+        break;
+      case 'sqlite':
+        module = await import('@icetype/sqlite');
+        break;
+      case 'clickhouse':
+        module = await import('@icetype/clickhouse');
+        break;
+      case 'duckdb':
+        module = await import('@icetype/duckdb');
+        break;
+      case 'iceberg':
+      case 'parquet':
+        // Both iceberg and parquet adapters are in @icetype/iceberg package
+        module = await import('@icetype/iceberg');
+        break;
+      case 'drizzle':
+        module = await import('@icetype/drizzle');
+        break;
+      case 'prisma':
+        module = await import('@icetype/prisma');
+        break;
+      default:
+        throw new Error(`Adapter '${name}' is registered but no import path is configured`);
     }
   } catch (error) {
     throw new Error(

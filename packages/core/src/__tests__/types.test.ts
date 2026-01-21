@@ -28,9 +28,8 @@ describe('createSchemaId', () => {
     expect(schemaId).toBe('user-schema');
   });
 
-  it('should create a SchemaId from an empty string', () => {
-    const id = createSchemaId('');
-    expect(id).toBe('');
+  it('should throw for empty string', () => {
+    expect(() => createSchemaId('')).toThrow('Invalid SchemaId');
   });
 
   it('should create a SchemaId from a string with special characters', () => {
@@ -89,9 +88,8 @@ describe('createFieldId', () => {
     expect(id).toBe(0);
   });
 
-  it('should create a FieldId from a negative number', () => {
-    const id = createFieldId(-1);
-    expect(id).toBe(-1);
+  it('should throw for negative number', () => {
+    expect(() => createFieldId(-1)).toThrow('Invalid FieldId');
   });
 
   it('should create a FieldId from a very large number', () => {
@@ -99,30 +97,24 @@ describe('createFieldId', () => {
     expect(id).toBe(Number.MAX_SAFE_INTEGER);
   });
 
-  it('should create a FieldId from a very small number', () => {
-    const id = createFieldId(Number.MIN_SAFE_INTEGER);
-    expect(id).toBe(Number.MIN_SAFE_INTEGER);
+  it('should throw for very small (negative) number', () => {
+    expect(() => createFieldId(Number.MIN_SAFE_INTEGER)).toThrow('Invalid FieldId');
   });
 
-  it('should create a FieldId from a floating point number', () => {
-    // Note: FieldId is typed as number, so floats are allowed at runtime
-    const id = createFieldId(3.14);
-    expect(id).toBe(3.14);
+  it('should throw for floating point number', () => {
+    expect(() => createFieldId(3.14)).toThrow('Invalid FieldId');
   });
 
-  it('should create a FieldId from NaN', () => {
-    const id = createFieldId(NaN);
-    expect(Number.isNaN(id)).toBe(true);
+  it('should throw for NaN', () => {
+    expect(() => createFieldId(NaN)).toThrow('Invalid FieldId');
   });
 
-  it('should create a FieldId from Infinity', () => {
-    const id = createFieldId(Infinity);
-    expect(id).toBe(Infinity);
+  it('should throw for Infinity', () => {
+    expect(() => createFieldId(Infinity)).toThrow('Invalid FieldId');
   });
 
-  it('should create a FieldId from negative Infinity', () => {
-    const id = createFieldId(-Infinity);
-    expect(id).toBe(-Infinity);
+  it('should throw for negative Infinity', () => {
+    expect(() => createFieldId(-Infinity)).toThrow('Invalid FieldId');
   });
 
   it('should preserve number type at runtime', () => {
@@ -144,9 +136,8 @@ describe('createRelationId', () => {
     expect(relationId).toBe('user-posts');
   });
 
-  it('should create a RelationId from an empty string', () => {
-    const id = createRelationId('');
-    expect(id).toBe('');
+  it('should throw for empty string', () => {
+    expect(() => createRelationId('')).toThrow('Invalid RelationId');
   });
 
   it('should create a RelationId from a string with special characters', () => {
@@ -254,10 +245,8 @@ describe('Edge Cases', () => {
       expect(id).toBe('undefined');
     });
 
-    it('should handle string with only whitespace', () => {
-      const id = createSchemaId('   ');
-      expect(id).toBe('   ');
-      expect(id.trim()).toBe('');
+    it('should throw for string with only whitespace', () => {
+      expect(() => createSchemaId('   ')).toThrow('Invalid SchemaId');
     });
 
     it('should handle string with null character', () => {
@@ -274,9 +263,8 @@ describe('Edge Cases', () => {
       expect(Object.is(id, -0)).toBe(true);
     });
 
-    it('should handle Number.EPSILON', () => {
-      const id = createFieldId(Number.EPSILON);
-      expect(id).toBe(Number.EPSILON);
+    it('should throw for Number.EPSILON (not an integer)', () => {
+      expect(() => createFieldId(Number.EPSILON)).toThrow('Invalid FieldId');
     });
 
     it('should handle numbers beyond safe integer range', () => {
@@ -324,7 +312,7 @@ describe('Type Discrimination', () => {
 
   it('should distinguish FieldId from string IDs by type', () => {
     const fieldId = createFieldId(1);
-    const schemaId = createSchemaId('1');
+    const schemaId = createSchemaId('schema1');
 
     expect(typeof fieldId).toBe('number');
     expect(typeof schemaId).toBe('string');

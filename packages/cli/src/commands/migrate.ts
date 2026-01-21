@@ -24,6 +24,12 @@ import {
   checkSchemaLoadErrors,
   checkSchemasExist,
 } from '../utils/cli-error.js';
+import {
+  validateSchemaPath,
+  validateMigrationOutputPath,
+  validateDirectoryPath,
+  checkSymlinkSafety,
+} from '../utils/path-sanitizer.js';
 
 // =============================================================================
 // Types and Constants
@@ -956,9 +962,22 @@ export async function migrateGenerate(args: string[]): Promise<void> {
     },
   });
 
+  // Validate paths for security BEFORE other required option checks
+  // This ensures security validations are checked first
+  const schemaPath = values.schema as string | undefined;
+  const outputPath = typeof values.output === 'string' ? values.output : undefined;
+  if (schemaPath) {
+    validateSchemaPath(schemaPath);
+    checkSymlinkSafety(schemaPath);
+  }
+  if (outputPath) {
+    validateMigrationOutputPath(outputPath);
+    checkSymlinkSafety(outputPath);
+  }
+
   // Validate required options
   requireOption(
-    values.schema,
+    schemaPath,
     'schema',
     'migrate generate',
     'ice migrate generate --schema ./schema.ts --from 1 --to 2'
@@ -982,8 +1001,6 @@ export async function migrateGenerate(args: string[]): Promise<void> {
   const format = values.format as string;
   validateOptionValue(format, 'format', SUPPORTED_FORMATS);
 
-  const schemaPath = values.schema;
-  const outputPath = typeof values.output === 'string' ? values.output : undefined;
   const quiet = values.quiet === true;
   const verbose = values.verbose === true;
 
@@ -1121,6 +1138,16 @@ export async function migrateDiff(args: string[]): Promise<void> {
   const outputPath = typeof values.output === 'string' ? values.output : undefined;
   const quiet = values.quiet === true;
   const verbose = values.verbose === true;
+
+  // Validate paths for security
+  validateSchemaPath(oldPath);
+  checkSymlinkSafety(oldPath);
+  validateSchemaPath(newPath);
+  checkSymlinkSafety(newPath);
+  if (outputPath) {
+    validateMigrationOutputPath(outputPath);
+    checkSymlinkSafety(outputPath);
+  }
 
   // Create logger based on verbosity
   const logLevel = verbose ? LogLevel.DEBUG : quiet ? LogLevel.ERROR : LogLevel.INFO;
@@ -1361,6 +1388,14 @@ export async function migratePlan(args: string[]): Promise<void> {
   const quiet = values.quiet === true;
   const verbose = values.verbose === true;
 
+  // Validate paths for security
+  validateSchemaPath(schemaPath);
+  checkSymlinkSafety(schemaPath);
+  if (outputPath) {
+    validateMigrationOutputPath(outputPath);
+    checkSymlinkSafety(outputPath);
+  }
+
   // Create logger based on verbosity
   const logLevel = verbose ? LogLevel.DEBUG : quiet ? LogLevel.ERROR : LogLevel.INFO;
   const logger = createLogger({ level: logLevel, quiet });
@@ -1537,6 +1572,12 @@ export async function migrateDev(args: string[]): Promise<void> {
   const quiet = values.quiet === true;
   // database-url can come from --database-url or --db (unused for now, will be used for real DB connections)
   // const databaseUrl = (values['database-url'] || values.db) as string | undefined;
+
+  // Validate paths for security
+  validateSchemaPath(schemaPath);
+  checkSymlinkSafety(schemaPath);
+  validateDirectoryPath(migrationsDir);
+  checkSymlinkSafety(migrationsDir);
 
   // Detect if colors should be used
   const noColor = process.env.NO_COLOR !== undefined || !process.stdout.isTTY;
@@ -1812,6 +1853,12 @@ export async function migrateUp(args: string[]): Promise<void> {
   const jsonOutput = values.json === true;
   const target = values.target as string | undefined;
 
+  // Validate paths for security
+  validateSchemaPath(schemaPath);
+  checkSymlinkSafety(schemaPath);
+  validateDirectoryPath(migrationsDir);
+  checkSymlinkSafety(migrationsDir);
+
   // Load schema (validates it exists)
   const loadResult = await loadSchemaFile(schemaPath);
   if (loadResult.errors.length > 0) {
@@ -2055,6 +2102,12 @@ export async function migrateDown(args: string[]): Promise<void> {
   const verbose = values.verbose === true;
   const jsonOutput = values.json === true;
   const step = parseInt(values.step as string, 10) || 1;
+
+  // Validate paths for security
+  validateSchemaPath(schemaPath);
+  checkSymlinkSafety(schemaPath);
+  validateDirectoryPath(migrationsDir);
+  checkSymlinkSafety(migrationsDir);
 
   // Load schema (validates it exists)
   const loadResult = await loadSchemaFile(schemaPath);
@@ -2354,6 +2407,12 @@ export async function migrateStatus(args: string[]): Promise<void> {
   const jsonOutput = values.json === true;
   // Note: dry-run is accepted but status is inherently read-only
   // const dryRun = values['dry-run'] === true;
+
+  // Validate paths for security
+  validateSchemaPath(schemaPath);
+  checkSymlinkSafety(schemaPath);
+  validateDirectoryPath(migrationsDir);
+  checkSymlinkSafety(migrationsDir);
 
   // Detect if colors should be used
   const noColor = process.env.NO_COLOR !== undefined || !process.stdout.isTTY;

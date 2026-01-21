@@ -147,7 +147,7 @@ describe('ClickHouseMigrationGenerator - ADD COLUMN', () => {
     const statements = generator.generate(diff);
 
     expect(statements).toHaveLength(1);
-    expect(statements[0]).toBe('ALTER TABLE events ADD COLUMN timestamp_ns Int64;');
+    expect(statements[0]).toBe('ALTER TABLE `events` ADD COLUMN timestamp_ns Int64;');
   });
 
   it('should generate ADD COLUMN for UUID type', () => {
@@ -187,7 +187,7 @@ describe('ClickHouseMigrationGenerator - ADD COLUMN', () => {
     const statements = generator.generate(diff);
 
     expect(statements).toHaveLength(1);
-    expect(statements[0]).toBe('ALTER TABLE events ADD COLUMN created_at DateTime64(3);');
+    expect(statements[0]).toBe('ALTER TABLE `events` ADD COLUMN created_at DateTime64(3);');
   });
 
   it('should generate ADD COLUMN for array types', () => {
@@ -290,7 +290,7 @@ describe('ClickHouseMigrationGenerator - ADD COLUMN', () => {
     const statements = generator.generate(diff);
 
     expect(statements).toHaveLength(1);
-    expect(statements[0]).toBe('ALTER TABLE events ADD COLUMN metadata JSON;');
+    expect(statements[0]).toBe('ALTER TABLE `events` ADD COLUMN metadata JSON;');
   });
 });
 
@@ -519,7 +519,7 @@ describe('ClickHouseMigrationGenerator - ClickHouse Type Syntax', () => {
     const statements = generator.generate(diff);
 
     expect(statements[0]).toBe(
-      'ALTER TABLE events ADD COLUMN event_type LowCardinality(String);'
+      'ALTER TABLE `events` ADD COLUMN event_type LowCardinality(String);'
     );
   });
 
@@ -545,7 +545,7 @@ describe('ClickHouseMigrationGenerator - ClickHouse Type Syntax', () => {
     const statements = generator.generate(diff);
 
     expect(statements[0]).toBe(
-      'ALTER TABLE events ADD COLUMN category LowCardinality(Nullable(String));'
+      'ALTER TABLE `events` ADD COLUMN category LowCardinality(Nullable(String));'
     );
   });
 
@@ -636,7 +636,7 @@ describe('ClickHouseMigrationGenerator - Materialized Columns', () => {
     );
 
     expect(statement).toBe(
-      'ALTER TABLE events ADD COLUMN event_date Date MATERIALIZED toDate(created_at);'
+      'ALTER TABLE `events` ADD COLUMN event_date Date MATERIALIZED toDate(created_at);'
     );
   });
 

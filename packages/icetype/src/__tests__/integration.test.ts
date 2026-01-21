@@ -255,7 +255,7 @@ describe('Schema to ClickHouse DDL Flow', () => {
 
     // Step 4: Verify DDL syntax
     expect(sql).toContain('CREATE TABLE');
-    expect(sql).toContain('analytics.user');
+    expect(sql).toContain('analytics.`user`');
     expect(sql).toContain('ENGINE = ReplacingMergeTree()');
     expect(sql).toContain('ORDER BY (id)');
     expect(sql).toContain('PARTITION BY toYYYYMM(created_at)');
@@ -335,8 +335,8 @@ describe('Schema to DuckDB DDL Flow', () => {
 
     // Step 4: Verify DDL syntax
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS');
-    // DuckDB uses unquoted schema.table format
-    expect(sql).toContain('public.User');
+    // DuckDB uses quoted identifiers for schema.table format
+    expect(sql).toContain('"public"."User"');
 
     // System columns
     expect(sql).toContain('"$id"');

@@ -481,7 +481,8 @@ describe('Dynamic Adapter Imports', () => {
       // This should just show help text without loading any adapters
 
       // With lazy loading, displaying help shouldn't trigger adapter imports
-      const { generateHelpText, type HelpCommand } = await import('../utils/help.js');
+      const { generateHelpText } = await import('../utils/help.js');
+      type HelpCommand = Awaited<typeof import('../utils/help.js')>['HelpCommand'];
 
       const helpDef: HelpCommand = {
         name: 'test',

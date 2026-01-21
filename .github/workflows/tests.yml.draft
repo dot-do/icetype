@@ -1,0 +1,186 @@
+# CI Test Workflow Requirements Draft
+# ===================================
+# This is the RED phase TDD documentation for the CI test workflow.
+# The actual tests.yml file does not exist yet - this defines what it SHOULD do.
+
+# STATUS: NOT IMPLEMENTED (RED)
+# This draft documents the requirements for issue icetype-1kz.4
+# Implementation will happen in issue icetype-1kz.5 (GREEN phase)
+
+# =============================================================================
+# TEST MATRIX REQUIREMENTS
+# =============================================================================
+
+# 1. Node.js Versions
+# -------------------
+# - Node 18 (LTS Hydrogen) - minimum supported version
+# - Node 20 (LTS Iron) - current LTS
+# - Node 22 (Latest) - future compatibility
+#
+# Rationale: IceType targets modern runtimes. Node 18 is minimum because:
+# - ES modules support
+# - Native fetch
+# - Test runner stability
+
+# 2. Operating Systems
+# --------------------
+# - ubuntu-latest (primary)
+# - macos-latest (for native module compatibility)
+# - windows-latest (for cross-platform CLI support)
+#
+# Rationale: Users may run IceType CLI or dev tools on any platform.
+# SQLite native bindings (better-sqlite3) need cross-platform testing.
+
+# 3. Test Commands
+# ----------------
+# Unit Tests:
+#   - pnpm test (runs turbo run test across all packages)
+#   - Runs vitest in each package
+#
+# Type Checking:
+#   - pnpm build (includes TypeScript compilation)
+#   - tsc --noEmit for pure type checking
+#
+# Integration Tests (Docker required):
+#   - pnpm test:integration:postgres (PostgreSQL via testcontainers)
+#   - pnpm test:integration:mysql (MySQL via testcontainers)
+#   - pnpm test:integration (all integration tests)
+#
+# Linting:
+#   - pnpm lint (when implemented)
+
+# 4. Coverage Reporting
+# ---------------------
+# Configuration (from vitest.config.ts):
+#   - Provider: v8
+#   - Reporters: text, lcov, html
+#   - Thresholds:
+#       - lines: 80%
+#       - branches: 75%
+#       - functions: 80%
+#       - statements: 80%
+#   - Include: packages/*/src/**/*.ts
+#   - Exclude: node_modules, dist, __tests__, test-utils, *.test.ts, *.d.ts
+#
+# Actions:
+#   - Generate coverage on ubuntu-latest + Node 20 only (single run)
+#   - Upload to Codecov or similar service
+#   - Comment coverage diff on PRs
+
+# 5. Docker Requirements for Integration Tests
+# --------------------------------------------
+# - PostgreSQL container (via @testcontainers/postgresql)
+# - MySQL container (via @testcontainers/mysql)
+# - Docker must be available on runner
+# - ubuntu-latest has Docker pre-installed
+# - Integration tests should run as separate job
+# - Consider timeout-minutes: 30 for container spin-up
+
+# =============================================================================
+# PROPOSED WORKFLOW STRUCTURE
+# =============================================================================
+
+# name: Tests
+#
+# on:
+#   push:
+#     branches: [main]
+#   pull_request:
+#     branches: [main]
+#
+# permissions:
+#   contents: read
+#   pull-requests: write  # for coverage comments
+#
+# jobs:
+#   # Job 1: Unit tests across matrix
+#   test:
+#     name: Test (Node ${{ matrix.node }}, ${{ matrix.os }})
+#     runs-on: ${{ matrix.os }}
+#     strategy:
+#       fail-fast: false
+#       matrix:
+#         node: [18, 20, 22]
+#         os: [ubuntu-latest, macos-latest, windows-latest]
+#         exclude:
+#           # Optionally exclude some combos for speed
+#           - os: windows-latest
+#             node: 18
+#     steps:
+#       - Checkout
+#       - Setup pnpm (v9)
+#       - Setup Node.js with cache
+#       - Install dependencies (pnpm install --frozen-lockfile)
+#       - Build packages (pnpm build)
+#       - Run tests (pnpm test)
+#
+#   # Job 2: Type checking (single run)
+#   typecheck:
+#     name: Type Check
+#     runs-on: ubuntu-latest
+#     steps:
+#       - Checkout
+#       - Setup pnpm/Node
+#       - Install dependencies
+#       - Run tsc --noEmit OR pnpm build for type checking
+#
+#   # Job 3: Coverage (single run)
+#   coverage:
+#     name: Coverage
+#     runs-on: ubuntu-latest
+#     steps:
+#       - Checkout
+#       - Setup pnpm/Node 20
+#       - Install dependencies
+#       - Build packages
+#       - Run tests with coverage (pnpm test:coverage)
+#       - Upload coverage artifact
+#       - Upload to Codecov (optional)
+#       - Comment on PR with coverage diff
+#
+#   # Job 4: Integration tests (Docker required)
+#   integration:
+#     name: Integration Tests
+#     runs-on: ubuntu-latest
+#     timeout-minutes: 30
+#     steps:
+#       - Checkout
+#       - Setup pnpm/Node 20
+#       - Install dependencies
+#       - Build packages
+#       - Run PostgreSQL integration tests (pnpm test:integration:postgres)
+#       - Run MySQL integration tests (pnpm test:integration:mysql)
+#       # SQLite doesn't need Docker - runs in unit tests
+
+# =============================================================================
+# VERIFICATION REQUIREMENTS
+# =============================================================================
+
+# A CI/CD workflow verification test should check:
+# 1. File .github/workflows/tests.yml exists
+# 2. Contains required jobs: test, typecheck, coverage, integration
+# 3. Test matrix includes Node 18, 20, 22
+# 4. Test matrix includes ubuntu, macos, windows
+# 5. Coverage thresholds are configured
+# 6. Integration tests are separate job with proper timeout
+
+# =============================================================================
+# ADDITIONAL CONSIDERATIONS
+# =============================================================================
+
+# Caching:
+#   - Use pnpm cache (built into setup-node with cache: 'pnpm')
+#   - Consider caching turbo build outputs
+#
+# Artifacts:
+#   - Upload coverage reports
+#   - Upload test results (JUnit format for GH integration)
+#
+# Concurrency:
+#   - Cancel in-progress runs on same PR
+#   - group: ${{ github.workflow }}-${{ github.ref }}
+#   - cancel-in-progress: true
+#
+# Dependencies:
+#   - benchmarks.yml already exists for performance testing
+#   - This workflow focuses on correctness, not performance

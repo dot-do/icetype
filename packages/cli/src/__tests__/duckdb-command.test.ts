@@ -214,8 +214,8 @@ describe('ice duckdb command', () => {
       });
 
       expect(result).toContain('analytics');
-      // DuckDB adapter uses unquoted identifiers when valid
-      expect(result).toContain('analytics.User');
+      // DuckDB adapter uses quoted identifiers for schema.table
+      expect(result).toContain('analytics."User"');
     });
 
     it('should handle multiple schemas in a file', async () => {

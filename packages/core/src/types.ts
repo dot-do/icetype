@@ -25,16 +25,43 @@ export type RelationId = string & { readonly __brand: 'RelationId' };
 
 /** Create a SchemaId from a string */
 export function createSchemaId(id: string): SchemaId {
+  // Validate non-empty string
+  if (!id || id.trim() === '') {
+    throw new TypeError('Invalid SchemaId: identifier cannot be empty or whitespace-only');
+  }
+  // Validate identifier pattern (cannot start with a number)
+  if (/^\d/.test(id)) {
+    throw new TypeError(`Invalid SchemaId: identifier cannot start with a number: "${id}"`);
+  }
   return id as SchemaId;
 }
 
 /** Create a FieldId from a number */
 export function createFieldId(id: number): FieldId {
+  // Validate finite number (not NaN or Infinity)
+  if (!Number.isFinite(id)) {
+    if (Number.isNaN(id)) {
+      throw new TypeError(`Invalid FieldId: value cannot be NaN`);
+    }
+    throw new TypeError(`Invalid FieldId: value cannot be Infinity`);
+  }
+  // Validate integer
+  if (!Number.isInteger(id)) {
+    throw new TypeError(`Invalid FieldId: value must be an integer, got ${id}`);
+  }
+  // Validate non-negative
+  if (id < 0) {
+    throw new TypeError(`Invalid FieldId: value must be non-negative, got ${id}`);
+  }
   return id as FieldId;
 }
 
 /** Create a RelationId from a string */
 export function createRelationId(id: string): RelationId {
+  // Validate non-empty string
+  if (!id || id.trim() === '') {
+    throw new TypeError('Invalid RelationId: identifier cannot be empty or whitespace-only');
+  }
   return id as RelationId;
 }
 

@@ -2,13 +2,54 @@
  * IceType Plugin System
  *
  * Provides adapter/plugin discovery, registration, and lifecycle management.
- * Supports:
- * - Discovering adapters from node_modules (icetype-adapter-* packages)
- * - Registering custom adapters programmatically
- * - Plugin configuration via package.json
- * - Loading adapters lazily by name
- * - Plugin lifecycle hooks (init, validate, generate, dispose)
- * - Plugin dependencies
+ *
+ * ## Features
+ *
+ * - **Adapter Discovery**: Auto-discover adapters from node_modules (icetype-adapter-* packages)
+ * - **Programmatic Registration**: Register custom adapters and plugins at runtime
+ * - **Package.json Configuration**: Configure plugins via package.json icetype field
+ * - **Lazy Loading**: Load adapters on-demand by name for better startup performance
+ * - **Lifecycle Hooks**: Full lifecycle support (init, validate, transform, generate, dispose)
+ * - **Dependency Management**: Declare and resolve plugin dependencies with version checking
+ * - **Type Safety**: Use TypedPlugin and TypedPluginHooks for full generic type support
+ *
+ * ## Quick Start
+ *
+ * ```typescript
+ * import { createPluginManager, type TypedPlugin } from '@icetype/core';
+ *
+ * // Create a plugin manager
+ * const manager = createPluginManager();
+ *
+ * // Register a type-safe plugin
+ * interface MyContext { appName: string }
+ * interface MyOutput { sql: string }
+ *
+ * const myPlugin: TypedPlugin<MyContext, IceTypeSchema, {}, MyOutput> = {
+ *   name: 'my-plugin',
+ *   version: '1.0.0',
+ *   hooks: {
+ *     init: async (context) => {
+ *       console.log(`Initializing for ${context.appName}`);
+ *     },
+ *     transform: async (schema) => ({
+ *       sql: `CREATE TABLE ${schema.name}`,
+ *     }),
+ *   },
+ * };
+ *
+ * manager.register(myPlugin);
+ * await manager.initialize('my-plugin', { appName: 'MyApp' });
+ * const result = await manager.execute('my-plugin', 'transform', schema);
+ * ```
+ *
+ * ## Plugin Lifecycle
+ *
+ * 1. **Registration**: Plugin is registered with `register()` or `registerAdapter()`
+ * 2. **Loading**: For lazy plugins, loaded on first use with `load()`
+ * 3. **Initialization**: `init` hook called with context via `initialize()`
+ * 4. **Execution**: Hooks called via `execute()` - validate, transform, generate
+ * 5. **Disposal**: `dispose` hook called via `dispose()` or `shutdown()`
  *
  * @packageDocumentation
  */
@@ -155,28 +196,161 @@ export class PluginLifecycleError extends IceTypeError {
 
 /**
  * Plugin dependency specification.
+ *
+ * Declares a dependency on another plugin with version constraints.
+ * Dependencies are resolved before plugin initialization.
+ *
+ * @example
+ * ```typescript
+ * const plugin: Plugin = {
+ *   name: 'my-plugin',
+ *   version: '1.0.0',
+ *   dependencies: [
+ *     { name: 'base-plugin', version: '^1.0.0' },           // Compatible with 1.x
+ *     { name: 'utility-plugin', version: '~2.1.0' },        // Approximate 2.1.x
+ *     { name: 'optional-plugin', version: '^1.0.0', optional: true }, // Optional
+ *   ],
+ *   hooks: { transform: async (s) => s },
+ * };
+ * ```
  */
 export interface PluginDependency {
-  /** Name of the dependency */
+  /** Name of the dependency plugin (must be registered in the same PluginManager) */
   name: string;
-  /** Required version (semver range) */
+  /** Required version using semver range syntax (^x.y.z, ~x.y.z, or exact x.y.z) */
   version: string;
-  /** Whether dependency is optional */
+  /** If true, missing dependency won't throw an error during resolution */
   optional?: boolean;
 }
 
 /**
- * Plugin lifecycle hooks.
+ * Plugin lifecycle hooks (non-generic version).
+ *
+ * Defines the hook functions that plugins can implement. The `transform` hook is required;
+ * all others are optional. This interface uses `unknown` types for maximum flexibility.
+ *
+ * For type-safe hooks with generics, use {@link TypedPluginHooks} instead.
+ *
+ * ## Hook Execution Order
+ *
+ * 1. `init` - Called once during plugin initialization
+ * 2. `validate` - Called to validate schema before transformation
+ * 3. `transform` - Called to transform schema (required)
+ * 4. `generate` - Called to generate output from transformed schema
+ * 5. `dispose` - Called during plugin cleanup
+ *
+ * @example
+ * ```typescript
+ * const hooks: PluginHooks = {
+ *   init: async (context) => {
+ *     console.log('Plugin initialized');
+ *   },
+ *   validate: async (schema) => {
+ *     const errors = [];
+ *     // ... validation logic
+ *     return { valid: errors.length === 0, errors };
+ *   },
+ *   transform: async (schema, options, deps) => {
+ *     // Transform the schema
+ *     return { sql: 'CREATE TABLE ...' };
+ *   },
+ *   dispose: async () => {
+ *     console.log('Plugin disposed');
+ *   },
+ * };
+ * ```
+ *
+ * @see {@link TypedPluginHooks} for type-safe generic version
  */
 export interface PluginHooks {
-  /** Called when plugin is initialized with context */
+  /**
+   * Called when plugin is initialized with context.
+   * Use this to set up resources, connections, or configuration.
+   * @param context - Application context (type is unknown; cast to your context type)
+   */
   init?: (context: unknown) => Promise<void>;
-  /** Called to validate a schema before transformation */
+  /**
+   * Called to validate a schema before transformation.
+   * Return validation errors to prevent transformation from proceeding.
+   * @param schema - The schema to validate
+   * @returns Validation result with valid flag and array of errors
+   */
   validate?: (schema: unknown) => Promise<{ valid: boolean; errors: unknown[] }>;
-  /** Called to generate output from a schema */
+  /**
+   * Called to generate additional output from a schema.
+   * Useful for generating documentation, types, or other artifacts.
+   * @param schema - The schema to generate from
+   * @param options - Generation options
+   */
   generate?: (schema: unknown, options?: unknown) => Promise<unknown>;
-  /** Called to transform a schema (required) */
+  /**
+   * Called to transform a schema (required hook).
+   * This is the main plugin functionality - transform input schema to output format.
+   * @param schema - The input schema to transform
+   * @param options - Transformation options
+   * @param deps - Map of dependency plugins (available when using executeWithDependencies)
+   * @returns The transformed output
+   */
   transform: (schema: unknown, options?: unknown, deps?: Map<string, Plugin>) => Promise<unknown>;
+  /**
+   * Called when plugin is disposed.
+   * Use this to clean up resources, close connections, etc.
+   */
+  dispose?: () => void | Promise<void>;
+}
+
+/**
+ * Type-safe plugin lifecycle hooks with generic parameters.
+ *
+ * This interface provides full type safety for plugin hooks, allowing
+ * plugin authors to specify exact types for context, schema, options,
+ * and output without requiring casts.
+ *
+ * @typeParam TContext - The type of the context passed to init
+ * @typeParam TSchema - The type of the schema passed to validate/transform/generate
+ * @typeParam TOptions - The type of options passed to transform
+ * @typeParam TOutput - The return type of transform
+ * @typeParam TGenOptions - The type of options passed to generate
+ * @typeParam TGenOutput - The return type of generate
+ *
+ * @example
+ * ```typescript
+ * interface MyContext { appName: string; }
+ * interface MySchema { name: string; fields: Map<string, Field>; }
+ * interface MyOptions { schemaName: string; }
+ * interface MyOutput { sql: string; tables: string[]; }
+ *
+ * const hooks: TypedPluginHooks<MyContext, MySchema, MyOptions, MyOutput> = {
+ *   init: async (context) => {
+ *     // context is typed as MyContext
+ *     console.log(context.appName);
+ *   },
+ *   transform: async (schema, options) => {
+ *     // schema is MySchema, options is MyOptions
+ *     return {
+ *       sql: `CREATE TABLE ${options?.schemaName}.${schema.name}`,
+ *       tables: [schema.name],
+ *     };
+ *   },
+ * };
+ * ```
+ */
+export interface TypedPluginHooks<
+  TContext = unknown,
+  TSchema = unknown,
+  TOptions = unknown,
+  TOutput = unknown,
+  TGenOptions = unknown,
+  TGenOutput = unknown
+> {
+  /** Called when plugin is initialized with typed context */
+  init?: (context: TContext) => Promise<void>;
+  /** Called to validate a schema before transformation */
+  validate?: (schema: TSchema) => Promise<{ valid: boolean; errors: Array<{ path: string; message: string; code: string }> }>;
+  /** Called to generate output from a schema */
+  generate?: (schema: TSchema, options?: TGenOptions) => Promise<TGenOutput>;
+  /** Called to transform a schema (required) */
+  transform: (schema: TSchema, options?: TOptions, deps?: Map<string, Plugin>) => Promise<TOutput>;
   /** Called when plugin is disposed */
   dispose?: () => void | Promise<void>;
 }
@@ -193,6 +367,61 @@ export interface Plugin {
   dependencies?: PluginDependency[];
   /** Plugin lifecycle hooks */
   hooks: PluginHooks;
+}
+
+/**
+ * Type-safe plugin interface with generic parameters.
+ *
+ * This interface provides full type safety for plugins, allowing
+ * plugin authors to specify exact types for context, schema, options,
+ * and output without requiring casts.
+ *
+ * @typeParam TContext - The type of the context passed to init
+ * @typeParam TSchema - The type of the schema passed to validate/transform/generate
+ * @typeParam TOptions - The type of options passed to transform
+ * @typeParam TOutput - The return type of transform
+ *
+ * @example
+ * ```typescript
+ * interface MyContext { appName: string; }
+ * interface MySchema { name: string; fields: Map<string, Field>; }
+ * interface MyOptions { schemaName: string; }
+ * interface MyOutput { sql: string; tables: string[]; }
+ *
+ * const myPlugin: TypedPlugin<MyContext, MySchema, MyOptions, MyOutput> = {
+ *   name: 'my-plugin',
+ *   version: '1.0.0',
+ *   hooks: {
+ *     init: async (context) => {
+ *       // context is typed as MyContext
+ *       console.log(context.appName);
+ *     },
+ *     transform: async (schema, options) => {
+ *       // schema is MySchema, options is MyOptions
+ *       // return type is MyOutput
+ *       return {
+ *         sql: `CREATE TABLE ${schema.name}`,
+ *         tables: [schema.name],
+ *       };
+ *     },
+ *   },
+ * };
+ * ```
+ */
+export interface TypedPlugin<
+  TContext = unknown,
+  TSchema = unknown,
+  TOptions = unknown,
+  TOutput = unknown
+> {
+  /** Plugin name */
+  name: string;
+  /** Plugin version */
+  version: string;
+  /** Plugin dependencies */
+  dependencies?: PluginDependency[];
+  /** Plugin lifecycle hooks */
+  hooks: TypedPluginHooks<TContext, TSchema, TOptions, TOutput>;
 }
 
 /**
@@ -248,6 +477,39 @@ export interface PluginConfig {
   pluginName: string;
   /** Plugin options */
   options: Record<string, unknown>;
+}
+
+/**
+ * Type-safe plugin configuration with generic options.
+ *
+ * This interface provides full type safety for plugin configuration,
+ * allowing users to specify the exact shape of plugin options.
+ *
+ * @typeParam TOptions - The type of the options object
+ *
+ * @example
+ * ```typescript
+ * interface PostgresOptions {
+ *   connectionString: string;
+ *   poolSize: number;
+ *   ssl: boolean;
+ * }
+ *
+ * const config: TypedPluginConfig<PostgresOptions> = {
+ *   pluginName: 'postgres',
+ *   options: {
+ *     connectionString: 'postgres://localhost/db',
+ *     poolSize: 10,
+ *     ssl: true,
+ *   },
+ * };
+ * ```
+ */
+export interface TypedPluginConfig<TOptions extends Record<string, unknown> = Record<string, unknown>> {
+  /** Plugin name */
+  pluginName: string;
+  /** Type-safe plugin options */
+  options: TOptions;
 }
 
 /**
@@ -336,6 +598,43 @@ function satisfiesVersion(availableVersion: string, requiredRange: string): bool
 }
 
 // =============================================================================
+// Schema Adapter Compatibility Types
+// =============================================================================
+
+/**
+ * Schema adapter interface (compatible with @icetype/adapters).
+ * This is a simplified version for plugin system integration.
+ */
+export interface SchemaAdapterCompat<TOutput = unknown, TOptions = unknown> {
+  /** Unique adapter name */
+  readonly name: string;
+  /** Adapter version */
+  readonly version: string;
+  /** Transform schema to output format */
+  transform(schema: unknown, options?: TOptions): TOutput;
+  /** Serialize output to string */
+  serialize(output: TOutput): string;
+  /** Optional: serialize with indexes */
+  serializeWithIndexes?(output: TOutput): string;
+  /** Optional: initialize adapter */
+  init?(context: unknown): Promise<void>;
+  /** Optional: dispose adapter */
+  dispose?(): Promise<void>;
+  /** Optional: validate schema */
+  validate?(schema: unknown): { valid: boolean; errors: string[] };
+}
+
+/**
+ * Discovered item type for unified discovery.
+ */
+export interface DiscoveredItem {
+  /** Item name */
+  name: string;
+  /** Item type - 'plugin' or 'adapter' */
+  type: 'plugin' | 'adapter';
+}
+
+// =============================================================================
 // Plugin Manager Implementation
 // =============================================================================
 
@@ -345,6 +644,10 @@ function satisfiesVersion(availableVersion: string, requiredRange: string): bool
 export interface PluginManager {
   /** Register a plugin */
   register(plugin: Plugin, options?: { force?: boolean }): void;
+  /** Register a schema adapter as a plugin */
+  registerAdapter(adapter: SchemaAdapterCompat): void;
+  /** Get the original adapter by name */
+  getAdapter<T = unknown, O = unknown>(name: string): SchemaAdapterCompat<T, O> | undefined;
   /** Unregister a plugin by name */
   unregister(name: string): boolean | Promise<boolean>;
   /** Get a plugin by name */
@@ -353,6 +656,10 @@ export interface PluginManager {
   has(name: string): boolean;
   /** List all registered plugin names */
   list(): string[];
+  /** List only plugins (not adapters) */
+  listPlugins(): string[];
+  /** List only adapters */
+  listAdapters(): string[];
   /** Clear all registered plugins */
   clear(): void;
   /** Load a plugin manifest from package */
@@ -387,6 +694,10 @@ export interface PluginManager {
   validateManifest(manifest: PluginManifest): void;
   /** Wait for auto-discovery to complete */
   ready(): Promise<void>;
+  /** Discover all plugins and adapters */
+  discoverAll(options?: { patterns?: string[] }): Promise<DiscoveredItem[]>;
+  /** Create a unified registry that combines plugin and adapter interfaces */
+  createUnifiedRegistry(): PluginManager;
   /** Plugin manager configuration */
   config: PluginManagerConfig;
 }
@@ -409,6 +720,11 @@ export function createPluginManager(options: PluginManagerConfig = {}): PluginMa
   const initializedPlugins = new Set<string>();
   const manifestCache = new Map<string, PluginManifest>();
 
+  // Adapter storage - separate from plugins for namespace support
+  const adapters = new Map<string, SchemaAdapterCompat>();
+  const adapterNames = new Set<string>();
+  const pluginNames = new Set<string>();
+
   // Auto-discovery state
   let discoveryPromise: Promise<void> | null = null;
 
@@ -416,10 +732,10 @@ export function createPluginManager(options: PluginManagerConfig = {}): PluginMa
   if (config.autoDiscover) {
     discoveryPromise = (async () => {
       try {
-        const adapters = await discoverAdapters({
+        const discoveredAdapters = await discoverAdapters({
           patterns: config.discoverPatterns,
         });
-        for (const adapter of adapters) {
+        for (const adapter of discoveredAdapters) {
           // Register lazy loaders for discovered adapters
           lazyLoaders.set(adapter.name, async () => {
             const module = await import(adapter.packageName);
@@ -454,6 +770,68 @@ export function createPluginManager(options: PluginManagerConfig = {}): PluginMa
 
       plugins.set(plugin.name, plugin);
       loadedPlugins.add(plugin.name);
+      pluginNames.add(plugin.name);
+    },
+
+    registerAdapter(adapter: SchemaAdapterCompat): void {
+      // Validate adapter
+      if (!adapter.name || adapter.name.trim() === '') {
+        throw new Error('Adapter name is required');
+      }
+      if (typeof adapter.transform !== 'function') {
+        throw new Error('Adapter must have a transform method');
+      }
+      if (typeof adapter.serialize !== 'function') {
+        throw new Error('Adapter must have a serialize method');
+      }
+
+      // Check for duplicates
+      if (plugins.has(adapter.name)) {
+        throw new Error(`Plugin or adapter '${adapter.name}' is already registered`);
+      }
+
+      // Store the original adapter
+      adapters.set(adapter.name, adapter);
+      adapterNames.add(adapter.name);
+
+      // Create a plugin wrapper for the adapter
+      const wrappedPlugin: Plugin = {
+        name: adapter.name,
+        version: adapter.version,
+        hooks: {
+          // Wrap the sync transform as async
+          transform: async (schema: unknown, options?: unknown) => {
+            return adapter.transform(schema, options);
+          },
+          // Map init if available
+          init: adapter.init ? async (context: unknown) => {
+            await adapter.init!(context);
+          } : undefined,
+          // Map dispose if available
+          dispose: adapter.dispose ? async () => {
+            await adapter.dispose!();
+          } : undefined,
+          // Map validate if available (convert sync to async)
+          validate: adapter.validate ? async (schema: unknown) => {
+            const result = adapter.validate!(schema);
+            return {
+              valid: result.valid,
+              errors: result.errors,
+            };
+          } : undefined,
+          // Map serialize as generate hook
+          generate: async (transformedOutput: unknown) => {
+            return adapter.serialize(transformedOutput);
+          },
+        },
+      };
+
+      plugins.set(adapter.name, wrappedPlugin);
+      loadedPlugins.add(adapter.name);
+    },
+
+    getAdapter<T = unknown, O = unknown>(name: string): SchemaAdapterCompat<T, O> | undefined {
+      return adapters.get(name) as SchemaAdapterCompat<T, O> | undefined;
     },
 
     unregister(name: string): boolean | Promise<boolean> {
@@ -467,6 +845,9 @@ export function createPluginManager(options: PluginManagerConfig = {}): PluginMa
           plugins.delete(name);
           loadedPlugins.delete(name);
           initializedPlugins.delete(name);
+          adapters.delete(name);
+          adapterNames.delete(name);
+          pluginNames.delete(name);
           return true;
         })();
       }
@@ -475,6 +856,9 @@ export function createPluginManager(options: PluginManagerConfig = {}): PluginMa
       plugins.delete(name);
       loadedPlugins.delete(name);
       initializedPlugins.delete(name);
+      adapters.delete(name);
+      adapterNames.delete(name);
+      pluginNames.delete(name);
       return true;
     },
 
@@ -497,12 +881,23 @@ export function createPluginManager(options: PluginManagerConfig = {}): PluginMa
       return Array.from(names);
     },
 
+    listPlugins(): string[] {
+      return Array.from(pluginNames);
+    },
+
+    listAdapters(): string[] {
+      return Array.from(adapterNames);
+    },
+
     clear() {
       plugins.clear();
       lazyLoaders.clear();
       loadedPlugins.clear();
       initializedPlugins.clear();
       manifestCache.clear();
+      adapters.clear();
+      adapterNames.clear();
+      pluginNames.clear();
     },
 
     async loadManifest(name: string): Promise<PluginManifest> {
@@ -839,6 +1234,36 @@ export function createPluginManager(options: PluginManagerConfig = {}): PluginMa
       if (discoveryPromise) {
         await discoveryPromise;
       }
+    },
+
+    async discoverAll(opts?: { patterns?: string[] }): Promise<DiscoveredItem[]> {
+      const patterns = opts?.patterns ?? ['icetype-adapter-*', 'icetype-plugin-*', '@icetype/*'];
+      const results: DiscoveredItem[] = [];
+
+      try {
+        const discovered = await discoverAdapters({ patterns });
+
+        for (const item of discovered) {
+          // Determine type based on pattern or manifest
+          const isAdapter = item.manifest?.icetype !== undefined ||
+            item.packageName.includes('adapter');
+          const isPlugin = item.packageName.includes('plugin');
+
+          results.push({
+            name: item.name,
+            type: isAdapter ? 'adapter' : (isPlugin ? 'plugin' : 'adapter'),
+          });
+        }
+      } catch {
+        // Return empty array on error
+      }
+
+      return results;
+    },
+
+    createUnifiedRegistry(): PluginManager {
+      // Return this manager itself, as it already supports both interfaces
+      return manager;
     },
   };
 

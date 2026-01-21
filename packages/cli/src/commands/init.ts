@@ -7,6 +7,10 @@
 import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
+import {
+  validateDirectoryPath,
+  checkSymlinkSafety,
+} from '../utils/path-sanitizer.js';
 
 const SCHEMA_TEMPLATE = `/**
  * IceType Schema Definition
@@ -106,6 +110,10 @@ export async function init(args: string[]) {
 
   const dir = typeof values.dir === 'string' ? values.dir : '.';
   const force = values.force === true;
+
+  // Validate directory path for security
+  validateDirectoryPath(dir);
+  checkSymlinkSafety(dir);
 
   // Create directory if needed
   if (dir !== '.' && !existsSync(dir)) {

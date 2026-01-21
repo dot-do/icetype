@@ -1082,3 +1082,747 @@ describe('parseDirectives', () => {
     });
   });
 });
+
+// =============================================================================
+// GREEN Phase Tests: Critical Path Coverage
+// =============================================================================
+//
+// These tests address coverage gaps identified in icetype-syl.7:
+// - parser.ts lines 699-728: Type alias handling and unknown type errors
+// - parser.ts lines 920-927: IceTypeParser.parse method
+// - parser.ts line 1192: Conflicting modifiers warning
+// - parser.ts lines 1197-1202: Relation validation for missing target type
+// - inferType function: Complex objects, Date, binary data
+// - splitGenericParams: Deeply nested generics
+// =============================================================================
+
+import {
+  IceTypeParser,
+  inferType,
+  parseSchema,
+  validateSchema,
+  isValidPrimitiveType,
+  isValidModifier,
+  isValidRelationOperator,
+  isValidParametricType,
+  isValidGenericType,
+} from '../parser.js';
+
+describe('GREEN Phase: Critical Path Coverage', () => {
+  // ===========================================================================
+  // Type Alias Handling (lines 698-700)
+  // ===========================================================================
+  describe('Type Alias Handling', () => {
+    it('should convert bool alias to boolean', () => {
+      const field = parseField('bool');
+      expect(field.type).toBe('boolean');
+    });
+
+    it('should convert bool alias with modifiers', () => {
+      const field = parseField('bool!');
+      expect(field.type).toBe('boolean');
+      expect(field.isUnique).toBe(true);
+    });
+
+    it('should convert bool alias with default value', () => {
+      const field = parseField('bool = true');
+      expect(field.type).toBe('boolean');
+      expect(field.defaultValue).toBe(true);
+    });
+
+    it('should convert bool array alias', () => {
+      const field = parseField('bool[]');
+      expect(field.type).toBe('boolean');
+      expect(field.isArray).toBe(true);
+    });
+  });
+
+  // ===========================================================================
+  // Unknown Type Errors (lines 702-709)
+  // ===========================================================================
+  describe('Unknown Type Error Handling', () => {
+    it('should throw ParseError for completely unknown type', () => {
+      expect(() => parseField('foobartype')).toThrow(/[Uu]nknown type/);
+    });
+
+    it('should throw ParseError with correct error code', () => {
+      try {
+        parseField('invalidtype');
+        expect.fail('Should have thrown');
+      } catch (e) {
+        expect((e as Error).message).toContain('Unknown type');
+      }
+    });
+
+    it('should throw for misspelled type names', () => {
+      expect(() => parseField('strng')).toThrow(/[Uu]nknown type/);
+      expect(() => parseField('integr')).toThrow(/[Uu]nknown type/);
+      expect(() => parseField('booleen')).toThrow(/[Uu]nknown type/);
+    });
+
+    it('should throw for unknown type with modifiers', () => {
+      expect(() => parseField('badtype!')).toThrow(/[Uu]nknown type/);
+      expect(() => parseField('badtype?')).toThrow(/[Uu]nknown type/);
+      expect(() => parseField('badtype#')).toThrow(/[Uu]nknown type/);
+    });
+
+    it('should throw for unknown array type', () => {
+      expect(() => parseField('badtype[]')).toThrow(/[Uu]nknown type/);
+    });
+
+    it('should throw for unknown type with default value', () => {
+      expect(() => parseField('badtype = "value"')).toThrow(/[Uu]nknown type/);
+    });
+  });
+
+  // ===========================================================================
+  // IceTypeParser.parse Method (lines 920-927)
+  // ===========================================================================
+  describe('IceTypeParser.parse method', () => {
+    const parser = new IceTypeParser();
+
+    it('should parse a minimal schema', () => {
+      const schema = parser.parse({
+        $type: 'User',
+        id: 'uuid!',
+      });
+
+      expect(schema.name).toBe('User');
+      expect(schema.fields.has('id')).toBe(true);
+      expect(schema.fields.get('id')?.type).toBe('uuid');
+    });
+
+    it('should handle schema without $type', () => {
+      const schema = parser.parse({
+        id: 'uuid!',
+      });
+
+      expect(schema.name).toBe('Unknown');
+    });
+
+    it('should skip directive fields when parsing', () => {
+      const schema = parser.parse({
+        $type: 'Test',
+        $partitionBy: ['id'],
+        $index: [['name']],
+        id: 'uuid!',
+        name: 'string',
+      });
+
+      expect(schema.fields.has('$partitionBy')).toBe(false);
+      expect(schema.fields.has('$index')).toBe(false);
+      expect(schema.fields.has('id')).toBe(true);
+      expect(schema.fields.has('name')).toBe(true);
+    });
+
+    it('should set field name from key', () => {
+      const schema = parser.parse({
+        $type: 'User',
+        myFieldName: 'string',
+      });
+
+      expect(schema.fields.get('myFieldName')?.name).toBe('myFieldName');
+    });
+
+    it('should extract relations from string field definitions', () => {
+      const schema = parser.parse({
+        $type: 'Post',
+        author: '-> User',
+      });
+
+      expect(schema.relations.has('author')).toBe(true);
+      expect(schema.relations.get('author')?.targetType).toBe('User');
+    });
+
+    it('should parse schema with object-style field definitions', () => {
+      const schema = parser.parse({
+        $type: 'Config',
+        setting: { type: 'string', default: 'value' },
+      });
+
+      expect(schema.fields.get('setting')?.type).toBe('string');
+      expect(schema.fields.get('setting')?.defaultValue).toBe('value');
+    });
+
+    it('should handle object-style field with optional flag', () => {
+      const schema = parser.parse({
+        $type: 'User',
+        nickname: { type: 'string', optional: true },
+      });
+
+      expect(schema.fields.get('nickname')?.isOptional).toBe(true);
+    });
+
+    it('should handle object-style field with unique flag', () => {
+      const schema = parser.parse({
+        $type: 'User',
+        email: { type: 'string', unique: true },
+      });
+
+      expect(schema.fields.get('email')?.isUnique).toBe(true);
+    });
+
+    it('should handle object-style field with required flag', () => {
+      const schema = parser.parse({
+        $type: 'User',
+        name: { type: 'string', required: true },
+      });
+
+      expect(schema.fields.get('name')?.modifier).toBe('!');
+    });
+
+    it('should fallback to json type for objects without type property', () => {
+      const schema = parser.parse({
+        $type: 'Data',
+        config: { foo: 'bar' } as unknown as string,
+      });
+
+      expect(schema.fields.get('config')?.type).toBe('json');
+    });
+
+    it('should set createdAt and updatedAt timestamps', () => {
+      const before = Date.now();
+      const schema = parser.parse({ $type: 'Test', id: 'uuid!' });
+      const after = Date.now();
+
+      expect(schema.createdAt).toBeGreaterThanOrEqual(before);
+      expect(schema.createdAt).toBeLessThanOrEqual(after);
+      expect(schema.updatedAt).toBeGreaterThanOrEqual(before);
+      expect(schema.updatedAt).toBeLessThanOrEqual(after);
+    });
+
+    it('should set version to 1', () => {
+      const schema = parser.parse({ $type: 'Test', id: 'uuid!' });
+      expect(schema.version).toBe(1);
+    });
+  });
+
+  // ===========================================================================
+  // Conflicting Modifiers Warning (line 1192)
+  // ===========================================================================
+  describe('validateSchema: Conflicting Modifiers Warning', () => {
+    it('should warn when field has both required and optional modifiers', () => {
+      // Create a schema with conflicting modifiers by directly manipulating
+      const schema = parseSchema({
+        $type: 'Test',
+        field: 'string!?',
+      });
+
+      // Manually set the condition that triggers the warning
+      const field = schema.fields.get('field');
+      if (field) {
+        field.isOptional = true;
+        field.modifier = '!';
+      }
+
+      const result = validateSchema(schema);
+      expect(result.warnings.some((w) => w.code === 'CONFLICTING_MODIFIERS')).toBe(true);
+    });
+  });
+
+  // ===========================================================================
+  // Relation Validation - Missing Target Type (lines 1196-1202)
+  // ===========================================================================
+  describe('validateSchema: Relation Missing Target Type', () => {
+    it('should error when relation has no target type', () => {
+      // Create schema and manually add a malformed relation
+      const schema = parseSchema({
+        $type: 'Test',
+        id: 'uuid!',
+      });
+
+      // Add a relation with empty target type
+      schema.relations.set('badRelation', {
+        operator: '->',
+        targetType: '',
+      });
+
+      const result = validateSchema(schema);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.code === 'MISSING_TARGET_TYPE')).toBe(true);
+    });
+
+    it('should report correct path for missing target type error', () => {
+      const schema = parseSchema({
+        $type: 'Test',
+        id: 'uuid!',
+      });
+
+      schema.relations.set('myRelation', {
+        operator: '->',
+        targetType: '',
+      });
+
+      const result = validateSchema(schema);
+      const error = result.errors.find((e) => e.code === 'MISSING_TARGET_TYPE');
+      expect(error?.path).toBe('myRelation');
+      expect(error?.message).toContain('missing target type');
+    });
+  });
+
+  // ===========================================================================
+  // inferType Function Coverage
+  // ===========================================================================
+  describe('inferType Function', () => {
+    it('should infer timestamp from Date objects', () => {
+      const date = new Date();
+      expect(inferType(date)).toBe('timestamp');
+    });
+
+    it('should infer binary from Uint8Array', () => {
+      const buffer = new Uint8Array([1, 2, 3]);
+      expect(inferType(buffer)).toBe('binary');
+    });
+
+    it('should infer bigint type from bigint values', () => {
+      expect(inferType(BigInt(123))).toBe('bigint');
+    });
+
+    it('should infer bigint for numbers outside int range', () => {
+      expect(inferType(2147483648)).toBe('bigint');
+      expect(inferType(-2147483649)).toBe('bigint');
+    });
+
+    it('should infer int for numbers within int range', () => {
+      expect(inferType(2147483647)).toBe('int');
+      expect(inferType(-2147483648)).toBe('int');
+      expect(inferType(0)).toBe('int');
+    });
+
+    it('should infer float for non-integer numbers', () => {
+      expect(inferType(3.14159)).toBe('float');
+      expect(inferType(-2.5)).toBe('float');
+    });
+
+    it('should infer json? for null and undefined', () => {
+      expect(inferType(null)).toBe('json?');
+      expect(inferType(undefined)).toBe('json?');
+    });
+
+    it('should infer json for plain objects', () => {
+      expect(inferType({ foo: 'bar' })).toBe('json');
+      expect(inferType({})).toBe('json');
+    });
+
+    it('should infer json[] for empty arrays', () => {
+      expect(inferType([])).toBe('json[]');
+    });
+
+    it('should infer element type for non-empty arrays', () => {
+      expect(inferType([1, 2, 3])).toBe('int[]');
+      expect(inferType(['a', 'b', 'c'])).toBe('string[]');
+      expect(inferType([true, false])).toBe('bool[]');
+    });
+
+    it('should infer uuid from uuid-formatted strings', () => {
+      expect(inferType('550e8400-e29b-41d4-a716-446655440000')).toBe('uuid');
+    });
+
+    it('should infer timestamp from ISO timestamp strings', () => {
+      expect(inferType('2024-01-15T10:30:00Z')).toBe('timestamp');
+      expect(inferType('2024-01-15T10:30:00.123Z')).toBe('timestamp');
+    });
+
+    it('should infer date from date-formatted strings', () => {
+      expect(inferType('2024-01-15')).toBe('date');
+    });
+
+    it('should infer time from time-formatted strings', () => {
+      expect(inferType('10:30:00')).toBe('time');
+    });
+
+    it('should infer string for regular strings', () => {
+      expect(inferType('hello world')).toBe('string');
+      expect(inferType('')).toBe('string');
+    });
+
+    it('should infer bool for boolean values', () => {
+      expect(inferType(true)).toBe('bool');
+      expect(inferType(false)).toBe('bool');
+    });
+
+    it('should infer json for symbol type (fallback)', () => {
+      expect(inferType(Symbol('test'))).toBe('json');
+    });
+
+    it('should infer json for function type (fallback)', () => {
+      expect(inferType(() => {})).toBe('json');
+    });
+  });
+
+  // ===========================================================================
+  // Generic Type Parsing - Deeply Nested
+  // ===========================================================================
+  describe('Deeply Nested Generic Types', () => {
+    it('should parse map with nested map value type', () => {
+      const field = parseField('map<string, map<string, int>>');
+      expect(field.type).toBe('map');
+    });
+
+    it('should parse list with nested map element type', () => {
+      const field = parseField('list<map<string, int>>');
+      expect(field.type).toBe('list');
+    });
+
+    it('should parse map with nested list value type', () => {
+      const field = parseField('map<string, list<int>>');
+      expect(field.type).toBe('map');
+    });
+
+    it('should parse deeply nested generic: map<string, map<int, list<boolean>>>', () => {
+      const field = parseField('map<string, map<int, list<boolean>>>');
+      expect(field.type).toBe('map');
+    });
+
+    it('should throw for map with wrong number of params', () => {
+      expect(() => parseField('map<string>')).toThrow(/requires exactly 2 type parameters/i);
+      expect(() => parseField('map<string, int, bool>')).toThrow(/requires exactly 2 type parameters/i);
+    });
+
+    it('should throw for unknown generic type', () => {
+      expect(() => parseField('unknowngeneric<string>')).toThrow(/[Uu]nknown generic type/i);
+    });
+
+    it('should throw for unknown parametric type', () => {
+      expect(() => parseField('unknownparam(10)')).toThrow(/[Uu]nknown parametric type/i);
+    });
+
+    it('should throw for non-numeric parametric parameter', () => {
+      expect(() => parseField('decimal(abc)')).toThrow(/Invalid parameter value/i);
+    });
+  });
+
+  // ===========================================================================
+  // parseDirectives Edge Cases
+  // ===========================================================================
+  describe('parseDirectives Edge Cases', () => {
+    it('should handle $projection directive with valid values', () => {
+      const directives = parseDirectives({ $projection: 'oltp' });
+      expect((directives as { projection?: string }).projection).toBe('oltp');
+    });
+
+    it('should handle $projection with olap value', () => {
+      const directives = parseDirectives({ $projection: 'olap' });
+      expect((directives as { projection?: string }).projection).toBe('olap');
+    });
+
+    it('should handle $projection with both value', () => {
+      const directives = parseDirectives({ $projection: 'both' });
+      expect((directives as { projection?: string }).projection).toBe('both');
+    });
+
+    it('should ignore invalid $projection values', () => {
+      const directives = parseDirectives({ $projection: 'invalid' });
+      expect((directives as { projection?: string }).projection).toBeUndefined();
+    });
+
+    it('should handle $from directive', () => {
+      const directives = parseDirectives({ $from: 'SourceEntity' });
+      expect((directives as { from?: string }).from).toBe('SourceEntity');
+    });
+
+    it('should handle $expand directive', () => {
+      const directives = parseDirectives({ $expand: ['relation1', 'relation2'] });
+      expect((directives as { expand?: string[] }).expand).toEqual(['relation1', 'relation2']);
+    });
+
+    it('should handle $flatten directive', () => {
+      const directives = parseDirectives({ $flatten: { aliasField: 'source.path' } });
+      expect((directives as { flatten?: Record<string, string> }).flatten).toEqual({ aliasField: 'source.path' });
+    });
+
+    it('should ignore $flatten with non-string values', () => {
+      const directives = parseDirectives({ $flatten: { key: 123 } as unknown as Record<string, string> });
+      expect((directives as { flatten?: Record<string, string> }).flatten).toBeUndefined();
+    });
+
+    it('should handle empty $index array', () => {
+      const directives = parseDirectives({ $index: [] });
+      expect(directives.index).toEqual([]);
+    });
+
+    it('should handle $vector with multiple fields', () => {
+      const directives = parseDirectives({ $vector: { field1: 768, field2: 1536 } });
+      expect(directives.vector).toHaveLength(2);
+    });
+
+    it('should ignore non-number vector dimensions', () => {
+      const directives = parseDirectives({ $vector: { field: 'bad' as unknown as number } });
+      expect(directives.vector).toEqual([]);
+    });
+  });
+
+  // ===========================================================================
+  // Additional parseField Error Cases
+  // ===========================================================================
+  describe('parseField Additional Error Cases', () => {
+    it('should handle empty string after trimming', () => {
+      expect(() => parseField('   ')).toThrow(/[Ee]mpty type string/);
+    });
+
+    it('should throw for modifier-only input', () => {
+      expect(() => parseField('!')).toThrow(/Invalid modifier position/);
+      expect(() => parseField('?')).toThrow(/Invalid modifier position/);
+      expect(() => parseField('#')).toThrow(/Invalid modifier position/);
+    });
+
+    it('should handle decimal with zero precision', () => {
+      const field = parseField('decimal(0,0)');
+      expect(field.type).toBe('decimal');
+      expect(field.precision).toBe(0);
+      expect(field.scale).toBe(0);
+    });
+
+    it('should handle char type with length', () => {
+      const field = parseField('char(1)');
+      expect(field.type).toBe('char');
+      expect(field.length).toBe(1);
+    });
+
+    it('should handle fixed type with length', () => {
+      const field = parseField('fixed(32)');
+      expect(field.type).toBe('fixed');
+      expect(field.length).toBe(32);
+    });
+  });
+
+  // ===========================================================================
+  // parseRelation Additional Edge Cases
+  // ===========================================================================
+  describe('parseRelation Additional Edge Cases', () => {
+    it('should handle relation with array and optional modifiers', () => {
+      const rel = parseRelation('-> User[]?');
+      expect(rel.operator).toBe('->');
+      expect(rel.targetType).toBe('User');
+    });
+
+    it('should handle fuzzy backward relation with inverse', () => {
+      const rel = parseRelation('<~ Product.related');
+      expect(rel.operator).toBe('<~');
+      expect(rel.targetType).toBe('Product');
+      expect(rel.inverse).toBe('related');
+    });
+  });
+
+  // ===========================================================================
+  // IceTypeParser Instance Methods
+  // ===========================================================================
+  describe('IceTypeParser Instance Methods', () => {
+    const parser = new IceTypeParser();
+
+    it('should parse field with relation', () => {
+      const field = parser.parseField('-> User.posts');
+      expect(field.relation).toBeDefined();
+      expect(field.relation?.targetType).toBe('User');
+      expect(field.relation?.inverse).toBe('posts');
+    });
+
+    it('should parse relation directly', () => {
+      const rel = parser.parseRelation('<- Comment.post');
+      expect(rel.operator).toBe('<-');
+      expect(rel.targetType).toBe('Comment');
+      expect(rel.inverse).toBe('post');
+    });
+
+    it('should validate schema with all directive types', () => {
+      const schema = parser.parse({
+        $type: 'FullSchema',
+        $partitionBy: ['tenantId'],
+        $index: [['email'], ['status', 'createdAt']],
+        $fts: ['title', 'content'],
+        $vector: { embedding: 1536 },
+        tenantId: 'uuid!',
+        email: 'string#',
+        status: 'string',
+        createdAt: 'timestamp',
+        title: 'string',
+        content: 'text',
+        embedding: 'json',
+      });
+
+      const result = parser.validateSchema(schema);
+      expect(result.valid).toBe(true);
+    });
+  });
+
+  // ===========================================================================
+  // Exported Function Tests
+  // ===========================================================================
+  describe('Exported Convenience Functions', () => {
+    it('parseSchema should work for complete schema', () => {
+      const schema = parseSchema({
+        $type: 'User',
+        id: 'uuid!',
+        name: 'string',
+        email: 'string#',
+      });
+
+      expect(schema.name).toBe('User');
+      expect(schema.fields.size).toBe(3);
+    });
+
+    it('validateSchema should return valid result for correct schema', () => {
+      const schema = parseSchema({
+        $type: 'Test',
+        id: 'uuid!',
+      });
+
+      const result = validateSchema(schema);
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+  });
+
+  // ===========================================================================
+  // Type Guard Functions
+  // ===========================================================================
+  describe('Type Guard Functions', () => {
+    describe('isValidPrimitiveType', () => {
+      it('should return true for valid primitive types', () => {
+        expect(isValidPrimitiveType('string')).toBe(true);
+        expect(isValidPrimitiveType('int')).toBe(true);
+        expect(isValidPrimitiveType('float')).toBe(true);
+        expect(isValidPrimitiveType('boolean')).toBe(true);
+        expect(isValidPrimitiveType('uuid')).toBe(true);
+        expect(isValidPrimitiveType('timestamp')).toBe(true);
+        expect(isValidPrimitiveType('date')).toBe(true);
+        expect(isValidPrimitiveType('json')).toBe(true);
+        expect(isValidPrimitiveType('text')).toBe(true);
+        expect(isValidPrimitiveType('binary')).toBe(true);
+      });
+
+      it('should return true for uppercase primitive types', () => {
+        expect(isValidPrimitiveType('STRING')).toBe(true);
+        expect(isValidPrimitiveType('INT')).toBe(true);
+      });
+
+      it('should return false for non-primitive types', () => {
+        expect(isValidPrimitiveType('map')).toBe(false);
+        expect(isValidPrimitiveType('list')).toBe(false);
+        expect(isValidPrimitiveType('decimal')).toBe(false);
+        expect(isValidPrimitiveType('unknown')).toBe(false);
+      });
+    });
+
+    describe('isValidModifier', () => {
+      it('should return true for valid modifiers', () => {
+        expect(isValidModifier('!')).toBe(true);
+        expect(isValidModifier('#')).toBe(true);
+        expect(isValidModifier('?')).toBe(true);
+        expect(isValidModifier('')).toBe(true);
+      });
+
+      it('should return false for invalid modifiers', () => {
+        expect(isValidModifier('@')).toBe(false);
+        expect(isValidModifier('*')).toBe(false);
+        expect(isValidModifier('!!')).toBe(false);
+      });
+    });
+
+    describe('isValidRelationOperator', () => {
+      it('should return true for valid relation operators', () => {
+        expect(isValidRelationOperator('->')).toBe(true);
+        expect(isValidRelationOperator('~>')).toBe(true);
+        expect(isValidRelationOperator('<-')).toBe(true);
+        expect(isValidRelationOperator('<~')).toBe(true);
+      });
+
+      it('should return false for invalid operators', () => {
+        expect(isValidRelationOperator('=>')).toBe(false);
+        expect(isValidRelationOperator('--')).toBe(false);
+        expect(isValidRelationOperator('>')).toBe(false);
+      });
+    });
+
+    describe('isValidParametricType', () => {
+      it('should return true for valid parametric types', () => {
+        expect(isValidParametricType('decimal')).toBe(true);
+        expect(isValidParametricType('varchar')).toBe(true);
+        expect(isValidParametricType('char')).toBe(true);
+        expect(isValidParametricType('fixed')).toBe(true);
+      });
+
+      it('should return true for uppercase parametric types', () => {
+        expect(isValidParametricType('DECIMAL')).toBe(true);
+        expect(isValidParametricType('VARCHAR')).toBe(true);
+      });
+
+      it('should return false for non-parametric types', () => {
+        expect(isValidParametricType('string')).toBe(false);
+        expect(isValidParametricType('map')).toBe(false);
+      });
+    });
+
+    describe('isValidGenericType', () => {
+      it('should return true for valid generic types', () => {
+        expect(isValidGenericType('map')).toBe(true);
+        expect(isValidGenericType('struct')).toBe(true);
+        expect(isValidGenericType('enum')).toBe(true);
+        expect(isValidGenericType('ref')).toBe(true);
+        expect(isValidGenericType('list')).toBe(true);
+      });
+
+      it('should return true for uppercase generic types', () => {
+        expect(isValidGenericType('MAP')).toBe(true);
+        expect(isValidGenericType('LIST')).toBe(true);
+      });
+
+      it('should return false for non-generic types', () => {
+        expect(isValidGenericType('string')).toBe(false);
+        expect(isValidGenericType('decimal')).toBe(false);
+      });
+    });
+  });
+
+  // ===========================================================================
+  // Edge Cases for Relation String Parsing
+  // ===========================================================================
+  describe('parseRelation Edge Cases for Empty Strings', () => {
+    it('should throw for whitespace-only relation string', () => {
+      expect(() => parseRelation('   ')).toThrow(/non-empty string/i);
+    });
+
+    it('should throw for tab-only relation string', () => {
+      expect(() => parseRelation('\t\t')).toThrow(/non-empty string/i);
+    });
+  });
+
+  // ===========================================================================
+  // Object-style Field Definitions with Relations
+  // ===========================================================================
+  describe('Object-style Field with Relation', () => {
+    const parser = new IceTypeParser();
+
+    it('should extract relations from object-style field definitions', () => {
+      const schema = parser.parse({
+        $type: 'Post',
+        author: { type: '-> User' },
+      });
+
+      expect(schema.fields.has('author')).toBe(true);
+      expect(schema.relations.has('author')).toBe(true);
+      expect(schema.relations.get('author')?.targetType).toBe('User');
+    });
+
+    it('should handle object-style field with fuzzy relation', () => {
+      const schema = parser.parse({
+        $type: 'Product',
+        similar: { type: '~> Product' },
+      });
+
+      expect(schema.relations.has('similar')).toBe(true);
+      expect(schema.relations.get('similar')?.operator).toBe('~>');
+    });
+
+    it('should handle object-style field with backward relation', () => {
+      const schema = parser.parse({
+        $type: 'User',
+        posts: { type: '<- Post.author' },
+      });
+
+      expect(schema.relations.has('posts')).toBe(true);
+      expect(schema.relations.get('posts')?.operator).toBe('<-');
+      expect(schema.relations.get('posts')?.inverse).toBe('author');
+    });
+  });
+});

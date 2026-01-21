@@ -8,6 +8,7 @@
  * - Installed adapter packages
  * - Common configuration issues
  * - Suggests fixes for problems found
+ * - Auto-fix capability with --fix flag
  */
 
 import * as fs from 'node:fs';
@@ -18,10 +19,83 @@ import { parseArgs } from 'node:util';
 // Symbols for status indicators
 const CHECKMARK = '\u2713';
 const WARNING = '\u26A0';
+const INFO = '\u2139';
+
+// Package manager types
+type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'bun';
+
+/**
+ * Detects which package manager is being used in the project
+ */
+function detectPackageManager(cwd: string): PackageManager {
+  // Check for lock files in order of preference
+  if (fs.existsSync(join(cwd, 'bun.lockb')) || fs.existsSync(join(cwd, 'bun.lock'))) {
+    return 'bun';
+  }
+  if (fs.existsSync(join(cwd, 'pnpm-lock.yaml'))) {
+    return 'pnpm';
+  }
+  if (fs.existsSync(join(cwd, 'yarn.lock'))) {
+    return 'yarn';
+  }
+  // Default to npm
+  return 'npm';
+}
+
+/**
+ * Returns the install command for a package based on the detected package manager
+ */
+function getInstallCommand(pm: PackageManager, pkg: string, dev: boolean = false): string {
+  switch (pm) {
+    case 'bun':
+      return dev ? `bun add -d ${pkg}` : `bun add ${pkg}`;
+    case 'pnpm':
+      return dev ? `pnpm add -D ${pkg}` : `pnpm add ${pkg}`;
+    case 'yarn':
+      return dev ? `yarn add -D ${pkg}` : `yarn add ${pkg}`;
+    case 'npm':
+    default:
+      return dev ? `npm install -D ${pkg}` : `npm install ${pkg}`;
+  }
+}
+
+/**
+ * Returns the run command prefix for the detected package manager
+ */
+function getRunPrefix(pm: PackageManager): string {
+  switch (pm) {
+    case 'bun':
+      return 'bunx';
+    case 'pnpm':
+      return 'pnpm dlx';
+    case 'yarn':
+      return 'yarn dlx';
+    case 'npm':
+    default:
+      return 'npx';
+  }
+}
 
 // Minimum supported versions
 const MIN_NODE_MAJOR = 18;
 const MIN_TS_MAJOR = 5;
+
+// Fixable issue types
+type FixableIssue =
+  | 'missing-typescript'
+  | 'missing-tsconfig'
+  | 'outdated-package'
+  | 'tsconfig-strict'
+  | 'tsconfig-module-resolution'
+  | 'tsconfig-target';
+
+interface Suggestion {
+  issue: string;
+  fix: string;
+  command?: string;
+  fixable: boolean;
+  fixType?: FixableIssue;
+}
 
 // Track issues for final report
 interface DoctorResult {
@@ -39,7 +113,9 @@ interface DoctorResult {
   configFound: boolean;
   configConflict: boolean;
   recommendations: string[];
+  suggestions: Suggestion[];
   criticalIssues: boolean;
+  packageManager: PackageManager;
 }
 
 function parseVersion(version: string): { major: number; minor: number; patch: number } | null {
@@ -203,7 +279,12 @@ function runDoctor(options: {
 }): DoctorResult {
   const { cwd } = options;
   const recommendations: string[] = [];
+  const suggestions: Suggestion[] = [];
   let criticalIssues = false;
+
+  // Detect package manager for appropriate commands
+  const packageManager = detectPackageManager(cwd);
+  const runPrefix = getRunPrefix(packageManager);
 
   // Check Node.js version
   const nodeCheck = checkNodeVersion();
@@ -224,15 +305,38 @@ function runDoctor(options: {
   // Check schema directory (not used in output but checked for test expectations)
   checkSchemaDirectory(cwd);
 
-  // Build recommendations
+  // Build recommendations and suggestions
   if (!nodeCheck.supported) {
-    recommendations.push(`Upgrade Node.js to v${MIN_NODE_MAJOR} or higher (current: v${nodeCheck.version})`);
+    const rec = `Upgrade Node.js to v${MIN_NODE_MAJOR} or higher (current: v${nodeCheck.version})`;
+    recommendations.push(rec);
+    suggestions.push({
+      issue: `Node.js ${nodeCheck.version} is below the minimum supported version (${MIN_NODE_MAJOR}+)`,
+      fix: 'Upgrade Node.js using nvm, fnm, or download from nodejs.org',
+      command: `nvm install ${MIN_NODE_MAJOR} && nvm use ${MIN_NODE_MAJOR}`,
+      fixable: false,
+    });
   }
 
   if (!tsVersion) {
-    recommendations.push('Install TypeScript: npm install typescript');
+    const installCmd = getInstallCommand(packageManager, 'typescript', true);
+    recommendations.push(`Install TypeScript: ${installCmd}`);
+    suggestions.push({
+      issue: 'TypeScript is not installed',
+      fix: 'Install TypeScript as a dev dependency',
+      command: installCmd,
+      fixable: true,
+      fixType: 'missing-typescript',
+    });
   } else if (!tsCheck.supported) {
-    recommendations.push(`Upgrade TypeScript to v${MIN_TS_MAJOR}.0 or higher: npm install typescript@5`);
+    const installCmd = getInstallCommand(packageManager, 'typescript@5', true);
+    recommendations.push(`Upgrade TypeScript to v${MIN_TS_MAJOR}.0 or higher: ${installCmd}`);
+    suggestions.push({
+      issue: `TypeScript ${tsVersion} is below the recommended version (${MIN_TS_MAJOR}+)`,
+      fix: 'Upgrade TypeScript to version 5.x',
+      command: installCmd,
+      fixable: true,
+      fixType: 'missing-typescript',
+    });
   }
 
   // Critical issues only when both Node is unsupported AND TypeScript is missing
@@ -242,14 +346,78 @@ function runDoctor(options: {
   }
 
   if (!tsconfigCheck.found) {
-    recommendations.push('Create tsconfig.json: tsc --init');
+    recommendations.push(`Create tsconfig.json: ${runPrefix} tsc --init`);
+    suggestions.push({
+      issue: 'tsconfig.json not found',
+      fix: 'Initialize TypeScript configuration file',
+      command: `${runPrefix} tsc --init`,
+      fixable: true,
+      fixType: 'missing-tsconfig',
+    });
+  } else if (tsconfigCheck.parseError) {
+    suggestions.push({
+      issue: 'tsconfig.json contains invalid JSON',
+      fix: 'Fix the JSON syntax errors in tsconfig.json or regenerate it',
+      command: `${runPrefix} tsc --init`,
+      fixable: false,
+    });
+  } else if (tsconfigCheck.issues.length > 0) {
+    // Add specific suggestions for each tsconfig issue
+    for (const issue of tsconfigCheck.issues) {
+      if (issue.includes('strict mode')) {
+        suggestions.push({
+          issue: 'TypeScript strict mode is disabled',
+          fix: 'Enable strict mode in tsconfig.json for better type safety',
+          fixable: true,
+          fixType: 'tsconfig-strict',
+        });
+      } else if (issue.includes('moduleResolution')) {
+        suggestions.push({
+          issue: 'Using legacy Node module resolution',
+          fix: 'Update moduleResolution to "bundler" or "node16" in tsconfig.json',
+          fixable: true,
+          fixType: 'tsconfig-module-resolution',
+        });
+      } else if (issue.includes('target')) {
+        suggestions.push({
+          issue: 'TypeScript target is outdated',
+          fix: 'Update target to "ES2020" or higher in tsconfig.json',
+          fixable: true,
+          fixType: 'tsconfig-target',
+        });
+      }
+    }
   }
 
   if (packageCheck.packages.some(p => p.outdated)) {
     const outdatedPackages = packageCheck.packages.filter(p => p.outdated);
     for (const pkg of outdatedPackages) {
-      recommendations.push(`Upgrade ${pkg.name} to 1.0.x: npm install ${pkg.name}@latest (recommend 1.0.x)`);
+      const installCmd = getInstallCommand(packageManager, `${pkg.name}@latest`, false);
+      recommendations.push(`Upgrade ${pkg.name} to 1.0.x: ${installCmd} (recommend 1.0.x)`);
+      suggestions.push({
+        issue: `${pkg.name}@${pkg.version} is outdated`,
+        fix: 'Upgrade to the latest stable version (1.0.x)',
+        command: installCmd,
+        fixable: true,
+        fixType: 'outdated-package',
+      });
     }
+  }
+
+  if (packageCheck.versionMismatch) {
+    suggestions.push({
+      issue: 'Version mismatch between @icetype packages',
+      fix: 'Ensure all @icetype packages are on the same major version',
+      fixable: false,
+    });
+  }
+
+  if (configCheck.conflict) {
+    suggestions.push({
+      issue: 'Multiple icetype config files found',
+      fix: 'Remove duplicate config files, keep only one (icetype.config.ts recommended)',
+      fixable: false,
+    });
   }
 
   return {
@@ -267,12 +435,14 @@ function runDoctor(options: {
     configFound: configCheck.found,
     configConflict: configCheck.conflict,
     recommendations,
+    suggestions,
     criticalIssues,
+    packageManager,
   };
 }
 
-function printResult(result: DoctorResult, options: { verbose: boolean; quiet: boolean; json: boolean }) {
-  const { quiet, json } = options;
+function printResult(result: DoctorResult, options: { verbose: boolean; quiet: boolean; json: boolean; fix: boolean }) {
+  const { quiet, json, verbose } = options;
 
   if (json) {
     console.log(JSON.stringify(result, null, 2));
@@ -281,6 +451,9 @@ function printResult(result: DoctorResult, options: { verbose: boolean; quiet: b
 
   if (!quiet) {
     console.log('Checking IceType package compatibility...\n');
+    if (verbose) {
+      console.log(`${INFO} Using package manager: ${result.packageManager}\n`);
+    }
   }
 
   // Node.js section
@@ -357,6 +530,29 @@ function printResult(result: DoctorResult, options: { verbose: boolean; quiet: b
     }
   }
 
+  // Detailed suggestions section (verbose mode or when there are issues)
+  const fixableSuggestions = result.suggestions.filter(s => s.fixable && s.command);
+  if (verbose && result.suggestions.length > 0) {
+    console.log('\nDetailed suggestions:');
+    for (const suggestion of result.suggestions) {
+      console.log(`\n  ${WARNING} ${suggestion.issue}`);
+      console.log(`    Fix: ${suggestion.fix}`);
+      if (suggestion.command) {
+        console.log(`    Run: ${suggestion.command}`);
+      }
+    }
+  }
+
+  // Quick fix commands section
+  if (fixableSuggestions.length > 0 && !quiet) {
+    console.log('\nQuick fix commands:');
+    for (const suggestion of fixableSuggestions) {
+      if (suggestion.command) {
+        console.log(`  ${suggestion.command}`);
+      }
+    }
+  }
+
   // All clear message
   const hasIssues = !result.nodeSupported ||
     !result.typeScriptVersion ||
@@ -372,6 +568,115 @@ function printResult(result: DoctorResult, options: { verbose: boolean; quiet: b
   }
 }
 
+/**
+ * Applies automatic fixes for issues that can be safely fixed
+ */
+async function applyFixes(result: DoctorResult, cwd: string): Promise<{ fixed: string[]; failed: string[] }> {
+  const fixed: string[] = [];
+  const failed: string[] = [];
+  const runPrefix = getRunPrefix(result.packageManager);
+
+  for (const suggestion of result.suggestions) {
+    if (!suggestion.fixable || !suggestion.command) continue;
+
+    console.log(`\n${INFO} Fixing: ${suggestion.issue}`);
+    console.log(`  Running: ${suggestion.command}`);
+
+    try {
+      switch (suggestion.fixType) {
+        case 'missing-typescript':
+        case 'outdated-package':
+          // Run package install command
+          childProcess.execSync(suggestion.command, {
+            cwd,
+            stdio: 'inherit',
+          });
+          fixed.push(suggestion.issue);
+          console.log(`  ${CHECKMARK} Fixed!`);
+          break;
+
+        case 'missing-tsconfig':
+          // Initialize tsconfig.json
+          childProcess.execSync(`${runPrefix} tsc --init`, {
+            cwd,
+            stdio: 'inherit',
+          });
+          fixed.push(suggestion.issue);
+          console.log(`  ${CHECKMARK} Fixed!`);
+          break;
+
+        case 'tsconfig-strict':
+          // Update tsconfig.json to enable strict mode
+          if (updateTsconfig(cwd, { strict: true })) {
+            fixed.push(suggestion.issue);
+            console.log(`  ${CHECKMARK} Fixed!`);
+          } else {
+            failed.push(suggestion.issue);
+            console.log(`  ${WARNING} Failed to update tsconfig.json`);
+          }
+          break;
+
+        case 'tsconfig-module-resolution':
+          // Update tsconfig.json moduleResolution
+          if (updateTsconfig(cwd, { moduleResolution: 'bundler' })) {
+            fixed.push(suggestion.issue);
+            console.log(`  ${CHECKMARK} Fixed!`);
+          } else {
+            failed.push(suggestion.issue);
+            console.log(`  ${WARNING} Failed to update tsconfig.json`);
+          }
+          break;
+
+        case 'tsconfig-target':
+          // Update tsconfig.json target
+          if (updateTsconfig(cwd, { target: 'ES2020' })) {
+            fixed.push(suggestion.issue);
+            console.log(`  ${CHECKMARK} Fixed!`);
+          } else {
+            failed.push(suggestion.issue);
+            console.log(`  ${WARNING} Failed to update tsconfig.json`);
+          }
+          break;
+
+        default:
+          console.log(`  ${WARNING} Skipped - no automatic fix available`);
+      }
+    } catch (error) {
+      failed.push(suggestion.issue);
+      console.log(`  ${WARNING} Failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  return { fixed, failed };
+}
+
+/**
+ * Updates tsconfig.json with the given compiler options
+ */
+function updateTsconfig(cwd: string, updates: Record<string, unknown>): boolean {
+  const tsconfigPath = join(cwd, 'tsconfig.json');
+
+  try {
+    if (!fs.existsSync(tsconfigPath)) {
+      return false;
+    }
+
+    const content = fs.readFileSync(tsconfigPath, 'utf-8');
+    const tsconfig = JSON.parse(content);
+
+    if (!tsconfig.compilerOptions) {
+      tsconfig.compilerOptions = {};
+    }
+
+    Object.assign(tsconfig.compilerOptions, updates);
+
+    fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2) + '\n');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function doctor(args: string[]): Promise<void> {
   const { values } = parseArgs({
     args,
@@ -380,6 +685,7 @@ export async function doctor(args: string[]): Promise<void> {
       verbose: { type: 'boolean', short: 'v', default: false },
       quiet: { type: 'boolean', short: 'q', default: false },
       json: { type: 'boolean', default: false },
+      fix: { type: 'boolean', default: false },
     },
     allowPositionals: true,
   });
@@ -391,9 +697,10 @@ Usage: ice doctor [options]
 
 Options:
   -h, --help      Show this help message
-  -v, --verbose   Show detailed output
+  -v, --verbose   Show detailed output with fix suggestions
   -q, --quiet     Suppress non-error output
   --json          Output results as JSON
+  --fix           Automatically fix issues that can be safely resolved
 
 Checks:
   - Node.js version (requires v18+)
@@ -401,6 +708,12 @@ Checks:
   - tsconfig.json settings
   - Installed @icetype packages
   - Configuration files
+
+Examples:
+  ice doctor              Check environment and show recommendations
+  ice doctor --verbose    Show detailed suggestions with copy-paste commands
+  ice doctor --fix        Automatically fix simple issues (install packages, update tsconfig)
+  ice doctor --json       Output machine-readable JSON for CI/CD pipelines
 `);
     process.exit(0);
   }
@@ -408,6 +721,7 @@ Checks:
   const verbose = values.verbose === true;
   const quiet = values.quiet === true;
   const json = values.json === true;
+  const fix = values.fix === true;
   const cwd = process.cwd();
 
   // Check for tsconfig.json (for test expectations)
@@ -424,7 +738,35 @@ Checks:
 
   const result = runDoctor({ verbose, quiet, json, cwd });
 
-  printResult(result, { verbose, quiet, json });
+  // If fix flag is set, attempt to fix issues before printing results
+  if (fix && !json) {
+    const fixableSuggestions = result.suggestions.filter(s => s.fixable);
+    if (fixableSuggestions.length > 0) {
+      console.log(`${INFO} Attempting to fix ${fixableSuggestions.length} issue(s)...\n`);
+      const { fixed, failed } = await applyFixes(result, cwd);
+
+      if (fixed.length > 0) {
+        console.log(`\n${CHECKMARK} Fixed ${fixed.length} issue(s)`);
+      }
+      if (failed.length > 0) {
+        console.log(`${WARNING} Failed to fix ${failed.length} issue(s)`);
+      }
+
+      // Re-run doctor to show updated status
+      console.log('\n--- Re-checking after fixes ---\n');
+      const updatedResult = runDoctor({ verbose, quiet, json, cwd });
+      printResult(updatedResult, { verbose, quiet, json, fix });
+
+      if (updatedResult.criticalIssues) {
+        process.exit(1);
+      }
+      return;
+    } else {
+      console.log(`${INFO} No fixable issues found.\n`);
+    }
+  }
+
+  printResult(result, { verbose, quiet, json, fix });
 
   // Exit with code 1 if critical issues found
   if (result.criticalIssues) {

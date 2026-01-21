@@ -20,7 +20,7 @@
  * @module schema-loader
  */
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve, extname, dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createJiti, type Jiti } from 'jiti';
@@ -48,6 +48,17 @@ interface TsConfigResult {
 // =============================================================================
 
 /**
+ * Debug logging helper. Only logs when DEBUG or ICETYPE_DEBUG is set.
+ */
+function debugLog(message: string, data?: Record<string, unknown>): void {
+  if (process.env.DEBUG || process.env.ICETYPE_DEBUG) {
+    const timestamp = new Date().toISOString();
+    const dataStr = data ? ` ${JSON.stringify(data)}` : '';
+    console.log(`[${timestamp}] [schema-loader]${dataStr} ${message}`);
+  }
+}
+
+/**
  * Cache for tsconfig.json lookup results.
  * Maps directory path to the found tsconfig.json path (or null if not found).
  */
@@ -65,6 +76,20 @@ const tsConfigCache = new Map<string, TsConfigResult>();
  * This improves performance by reusing jiti instances for files sharing the same tsconfig.
  */
 const jitiCache = new Map<string, Jiti>();
+
+/**
+ * Cache for loaded module exports.
+ * Maps absolute file path to the loaded module exports and mtime.
+ * This enables module caching with proper invalidation on file changes.
+ */
+const moduleCache = new Map<string, { mtime: number; exports: Record<string, unknown> }>();
+
+/**
+ * Cache statistics counters for debugging and monitoring.
+ */
+let cacheHits = 0;
+let cacheMisses = 0;
+let cacheInvalidations = 0;
 
 // =============================================================================
 // TSConfig Resolution
@@ -158,11 +183,18 @@ function findTsConfig(startDir: string): string | null {
  * }
  * ```
  */
-function loadTsConfigPaths(tsConfigPath: string): TsConfigResult {
+function loadTsConfigPaths(tsConfigPath: string, visitedPaths: Set<string> = new Set()): TsConfigResult {
   // Check cache first
   if (tsConfigCache.has(tsConfigPath)) {
     return tsConfigCache.get(tsConfigPath)!;
   }
+
+  // Prevent circular extends
+  if (visitedPaths.has(tsConfigPath)) {
+    console.warn(`Warning: Circular tsconfig extends detected at ${tsConfigPath}`);
+    return { path: tsConfigPath, aliases: {}, baseUrl: null };
+  }
+  visitedPaths.add(tsConfigPath);
 
   const result: TsConfigResult = {
     path: tsConfigPath,
@@ -173,14 +205,49 @@ function loadTsConfigPaths(tsConfigPath: string): TsConfigResult {
   try {
     const content = readFileSync(tsConfigPath, 'utf-8');
     const tsConfig = JSON.parse(content);
+    const tsConfigDir = dirname(tsConfigPath);
+
+    // Handle extends - load base config first
+    if (tsConfig.extends) {
+      const extendsPath = resolve(tsConfigDir, tsConfig.extends);
+      // Try to find the base config file
+      let baseConfigPath: string | null = null;
+      if (existsSync(extendsPath)) {
+        baseConfigPath = extendsPath;
+      } else if (existsSync(extendsPath + '.json')) {
+        baseConfigPath = extendsPath + '.json';
+      } else {
+        // Try relative path from tsconfig location
+        const relPath = join(tsConfigDir, tsConfig.extends);
+        if (existsSync(relPath)) {
+          baseConfigPath = relPath;
+        } else if (existsSync(relPath + '.json')) {
+          baseConfigPath = relPath + '.json';
+        }
+      }
+
+      if (baseConfigPath) {
+        // Load base config recursively
+        const baseConfig = loadTsConfigPaths(baseConfigPath, visitedPaths);
+        // Inherit aliases and baseUrl from base config
+        Object.assign(result.aliases, baseConfig.aliases);
+        result.baseUrl = baseConfig.baseUrl;
+      }
+    }
+
     const compilerOptions = tsConfig.compilerOptions || {};
     const paths = compilerOptions.paths || {};
-    const baseUrl = compilerOptions.baseUrl || '.';
+    const baseUrl = compilerOptions.baseUrl;
 
-    // Resolve baseUrl relative to tsconfig.json location
-    const tsConfigDir = dirname(tsConfigPath);
-    const resolvedBaseUrl = resolve(tsConfigDir, baseUrl);
-    result.baseUrl = resolvedBaseUrl;
+    // Resolve baseUrl relative to tsconfig.json location (if specified)
+    // Only override if baseUrl is explicitly set in this config
+    if (baseUrl !== undefined) {
+      const resolvedBaseUrl = resolve(tsConfigDir, baseUrl);
+      result.baseUrl = resolvedBaseUrl;
+    }
+
+    // Use the resolved baseUrl for path resolution
+    const effectiveBaseUrl = result.baseUrl ?? tsConfigDir;
 
     // Convert tsconfig paths to jiti aliases
     // tsconfig paths: { "@schemas/*": ["./schemas/*"] }
@@ -195,11 +262,11 @@ function loadTsConfigPaths(tsConfigPath: string): TsConfigResult {
       if (pattern.endsWith('/*') && target.endsWith('/*')) {
         // Remove the /* suffix for jiti alias
         const aliasKey = pattern.slice(0, -2);
-        const aliasValue = resolve(resolvedBaseUrl, target.slice(0, -2));
+        const aliasValue = resolve(effectiveBaseUrl, target.slice(0, -2));
         result.aliases[aliasKey] = aliasValue;
       } else if (!pattern.includes('*') && !target.includes('*')) {
         // Exact match alias (e.g., "@config": ["./config.ts"])
-        result.aliases[pattern] = resolve(resolvedBaseUrl, target);
+        result.aliases[pattern] = resolve(effectiveBaseUrl, target);
       }
       // Note: Complex patterns with multiple wildcards are not supported
     }
@@ -246,8 +313,11 @@ function getJitiForFile(filePath: string): Jiti {
 
   // Check cache first
   if (jitiCache.has(cacheKey)) {
+    debugLog('Jiti instance cache hit', { tsconfig: cacheKey });
     return jitiCache.get(cacheKey)!;
   }
+
+  debugLog('Jiti instance cache miss, creating new instance', { tsconfig: cacheKey });
 
   // Load tsconfig aliases if present
   const aliases = tsConfigPath ? loadTsConfigPaths(tsConfigPath).aliases : {};
@@ -255,14 +325,24 @@ function getJitiForFile(filePath: string): Jiti {
   // Create new jiti instance
   // Use import.meta.url as the base for jiti's own module resolution.
   // The aliases handle tsconfig path resolution.
+  //
+  // Note: jiti supports most TypeScript 5.x features including:
+  // - satisfies operator (TS 5.0+)
+  // - const type parameters (TS 5.0+)
+  // - decorators (experimental)
+  //
+  // Limitation: TypeScript 5.2+ 'using' declarations (Explicit Resource Management)
+  // are not yet supported by jiti's underlying esbuild. This is an ECMAScript
+  // stage 3 proposal that requires polyfills in most runtimes.
   const jiti = createJiti(import.meta.url, {
     interopDefault: true,
-    moduleCache: false, // Disable cache for watch mode compatibility
+    moduleCache: false, // Disable cache for watch mode compatibility (we handle caching ourselves)
     alias: aliases,
   });
 
   // Cache the instance
   jitiCache.set(cacheKey, jiti);
+  debugLog('Jiti instance cached', { tsconfig: cacheKey, aliasCount: Object.keys(aliases).length });
   return jiti;
 }
 
@@ -285,9 +365,67 @@ function getJitiForFile(filePath: string): Jiti {
  * ```
  */
 export function clearSchemaLoaderCaches(): void {
+  debugLog('Clearing all caches', {
+    tsConfigPathCacheSize: tsConfigPathCache.size,
+    tsConfigCacheSize: tsConfigCache.size,
+    jitiCacheSize: jitiCache.size,
+    moduleCacheSize: moduleCache.size,
+  });
   tsConfigPathCache.clear();
   tsConfigCache.clear();
   jitiCache.clear();
+  moduleCache.clear();
+  // Reset counters
+  cacheHits = 0;
+  cacheMisses = 0;
+  cacheInvalidations = 0;
+}
+
+/**
+ * Cache statistics for debugging and monitoring.
+ */
+export interface CacheStats {
+  /** Number of cached tsconfig.json path lookups */
+  tsConfigPathCacheSize: number;
+  /** Number of cached parsed tsconfig.json files */
+  tsConfigCacheSize: number;
+  /** Number of cached jiti instances */
+  jitiCacheSize: number;
+  /** Number of cached module exports */
+  moduleCacheSize: number;
+  /** Number of cache hits (module reuse without recompilation) */
+  cacheHits: number;
+  /** Number of cache misses (fresh compilation required) */
+  cacheMisses: number;
+  /** Number of cache invalidations (file changed since last load) */
+  cacheInvalidations: number;
+}
+
+/**
+ * Get statistics about the internal caches.
+ *
+ * Useful for debugging and performance monitoring.
+ *
+ * @returns Cache statistics object
+ *
+ * @example
+ * ```ts
+ * const stats = getCacheStats();
+ * console.log('Cached jiti instances:', stats.jitiCacheSize);
+ * console.log('Cached modules:', stats.moduleCacheSize);
+ * console.log('Cache hit rate:', stats.cacheHits / (stats.cacheHits + stats.cacheMisses));
+ * ```
+ */
+export function getCacheStats(): CacheStats {
+  return {
+    tsConfigPathCacheSize: tsConfigPathCache.size,
+    tsConfigCacheSize: tsConfigCache.size,
+    jitiCacheSize: jitiCache.size,
+    moduleCacheSize: moduleCache.size,
+    cacheHits,
+    cacheMisses,
+    cacheInvalidations,
+  };
 }
 
 // =============================================================================
@@ -520,6 +658,57 @@ function analyzeModuleError(error: Error, filePath: string): SchemaLoadErrorCont
 }
 
 /**
+ * Generate a code snippet around a specific line with error highlighting.
+ *
+ * @param filePath - Path to the source file
+ * @param line - The line number with the error (1-indexed)
+ * @param column - Optional column number for caret positioning
+ * @param contextLines - Number of lines to show before and after (default: 2)
+ * @returns Formatted code snippet string, or null if file cannot be read
+ */
+function generateCodeSnippet(
+  filePath: string,
+  line: number,
+  column?: number,
+  contextLines: number = 2
+): string | null {
+  try {
+    const absolutePath = resolve(filePath);
+    if (!existsSync(absolutePath)) return null;
+
+    const content = readFileSync(absolutePath, 'utf-8');
+    const lines = content.split('\n');
+
+    // Calculate the range of lines to show
+    const startLine = Math.max(1, line - contextLines);
+    const endLine = Math.min(lines.length, line + contextLines);
+
+    // Calculate padding for line numbers
+    const maxLineNum = endLine;
+    const lineNumWidth = String(maxLineNum).length;
+
+    const snippetLines: string[] = [];
+
+    for (let i = startLine; i <= endLine; i++) {
+      const lineContent = lines[i - 1] ?? '';
+      const lineNum = String(i).padStart(lineNumWidth, ' ');
+      const marker = i === line ? '>>>' : '   ';
+      snippetLines.push(`  ${marker} ${lineNum} | ${lineContent}`);
+
+      // Add caret indicator for the error column
+      if (i === line && column !== undefined && column > 0) {
+        const caretPadding = ' '.repeat(lineNumWidth + 8 + Math.max(0, column - 1));
+        snippetLines.push(`  ${caretPadding}^`);
+      }
+    }
+
+    return snippetLines.join('\n');
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Format a module load error with structured context.
  *
  * @param filePath - Path to the file that failed to load
@@ -530,16 +719,29 @@ function formatModuleLoadError(filePath: string, error: unknown): { message: str
   const err = error instanceof Error ? error : new Error(String(error));
   const context = analyzeModuleError(err, filePath);
   const baseMessage = err.message;
+  const absolutePath = resolve(filePath);
+  const fileName = absolutePath.split('/').pop() ?? filePath;
 
-  // Build the error message
-  let message = `Failed to load module: ${filePath}\n  Error: ${baseMessage}`;
-
-  // Add location info
+  // Build the error message with file:line:column format
+  let locationSuffix = '';
   if (context.line !== undefined) {
-    const locationStr = context.column !== undefined
-      ? `line ${context.line}, column ${context.column}`
-      : `line ${context.line}`;
-    message += `\n  Location: ${locationStr}`;
+    locationSuffix = `:${context.line}`;
+    if (context.column !== undefined) {
+      locationSuffix += `:${context.column}`;
+    }
+  }
+
+  let message = `Failed to load module: ${fileName}${locationSuffix}\n  Error: ${baseMessage}`;
+
+  // Add full file path for reference
+  message += `\n  File: ${absolutePath}${locationSuffix}`;
+
+  // Add code snippet around the error location
+  if (context.line !== undefined) {
+    const snippet = generateCodeSnippet(absolutePath, context.line, context.column);
+    if (snippet) {
+      message += '\n\n  Code:\n' + snippet;
+    }
   }
 
   // Add suggestions
@@ -589,16 +791,48 @@ async function loadFromModule(filePath: string): Promise<LoadResult> {
   const absolutePath = resolve(filePath);
 
   try {
+    // Check if we have a cached module and if the file hasn't changed
+    const fileStat = statSync(absolutePath);
+    const mtime = fileStat.mtimeMs;
+    const cached = moduleCache.get(absolutePath);
+
     let module: Record<string, unknown>;
 
-    // Use jiti for TypeScript files, native import for JS files
-    if (filePath.endsWith('.ts')) {
-      // Get a jiti instance with tsconfig path resolution for this file
-      const jiti = getJitiForFile(absolutePath);
-      module = await jiti.import(absolutePath) as Record<string, unknown>;
+    if (cached && cached.mtime === mtime) {
+      // Cache hit - use cached module exports
+      cacheHits++;
+      debugLog('Cache hit', { file: absolutePath, mtime });
+      module = cached.exports;
     } else {
-      const fileUrl = pathToFileURL(absolutePath).href;
-      module = await import(fileUrl);
+      // Cache miss - need to load/compile the module
+      if (cached) {
+        // File was modified since last cache
+        cacheInvalidations++;
+        debugLog('Cache invalidation (file modified)', {
+          file: absolutePath,
+          cachedMtime: cached.mtime,
+          currentMtime: mtime,
+        });
+      } else {
+        cacheMisses++;
+        debugLog('Cache miss (first load)', { file: absolutePath });
+      }
+
+      // Use jiti for TypeScript files, native import for JS files
+      if (filePath.endsWith('.ts')) {
+        // Get a jiti instance with tsconfig path resolution for this file
+        const jiti = getJitiForFile(absolutePath);
+        module = await jiti.import(absolutePath) as Record<string, unknown>;
+      } else {
+        const fileUrl = pathToFileURL(absolutePath).href;
+        // Add a cache-busting query param for native imports if the file changed
+        const urlWithBust = cached ? `${fileUrl}?t=${mtime}` : fileUrl;
+        module = await import(urlWithBust);
+      }
+
+      // Cache the module exports
+      moduleCache.set(absolutePath, { mtime, exports: module });
+      debugLog('Module cached', { file: absolutePath, mtime });
     }
 
     // Extract all IceTypeSchema exports

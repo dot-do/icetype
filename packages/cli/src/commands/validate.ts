@@ -14,6 +14,10 @@ import {
   checkSchemaLoadErrors,
   checkSchemasExist,
 } from '../utils/cli-error.js';
+import {
+  validateSchemaPath,
+  checkSymlinkSafety,
+} from '../utils/path-sanitizer.js';
 
 const VALIDATE_HELP: HelpCommand = {
   name: 'validate',
@@ -67,6 +71,11 @@ export async function validate(args: string[]) {
 
   // values.schema is guaranteed to be string after the check above
   const schemaPath = values.schema;
+
+  // Validate path for security
+  validateSchemaPath(schemaPath);
+  checkSymlinkSafety(schemaPath);
+
   logger.info(`Validating schema: ${schemaPath}`);
 
   // Load schemas from the file

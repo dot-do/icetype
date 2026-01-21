@@ -31,7 +31,7 @@ exports[`Snapshot Tests: ClickHouse DDL Generation > should generate ClickHouse 
     birth_date Nullable(Date),
     event_time Nullable(String),
     metadata Nullable(JSON),
-    settings JSON DEFAULT '{}',
+    \`settings\` JSON DEFAULT '{}',
     raw_data Nullable(String),
     tags Array(String),
     scores Array(Int32),
@@ -107,7 +107,7 @@ exports[`Snapshot Tests: ClickHouse DDL Generation > should generate ClickHouse 
     birth_date Nullable(Date),
     event_time Nullable(String),
     metadata Nullable(JSON),
-    settings JSON DEFAULT '{}',
+    \`settings\` JSON DEFAULT '{}',
     raw_data Nullable(String),
     tags Array(String),
     scores Array(Int32),
@@ -154,7 +154,7 @@ exports[`Snapshot Tests: Cross-Backend Consistency > should generate consistent 
     birth_date Nullable(Date),
     event_time Nullable(String),
     metadata Nullable(JSON),
-    settings JSON DEFAULT '{}',
+    \`settings\` JSON DEFAULT '{}',
     raw_data Nullable(String),
     tags Array(String),
     scores Array(Int32),
@@ -205,7 +205,7 @@ exports[`Snapshot Tests: Cross-Backend Consistency > should generate consistent 
   birthDate DATE,
   eventTime TIME,
   metadata JSON,
-  settings JSON NOT NULL DEFAULT '{}',
+  "settings" JSON NOT NULL DEFAULT '{}',
   rawData BLOB,
   tags VARCHAR[] NOT NULL,
   scores INTEGER[] NOT NULL,
@@ -260,7 +260,7 @@ exports[`Snapshot Tests: Cross-Backend Consistency > should generate consistent 
   birthDate DATE,
   eventTime TIME,
   metadata JSON,
-  settings JSON NOT NULL DEFAULT '{}',
+  \`settings\` JSON NOT NULL DEFAULT '{}',
   rawData BLOB,
   tags VARCHAR(255) NOT NULL,
   scores INT NOT NULL,
@@ -387,7 +387,7 @@ exports[`Snapshot Tests: Cross-Backend Consistency > should generate consistent 
   birthDate DATE,
   eventTime TIME,
   metadata JSONB,
-  settings JSONB NOT NULL DEFAULT '{}',
+  "settings" JSONB NOT NULL DEFAULT '{}',
   rawData BYTEA,
   tags TEXT[] NOT NULL,
   scores INTEGER[] NOT NULL,
@@ -426,89 +426,89 @@ export interface ConsistentEntity {
   $updatedAt: number;
   id: string;
   tenantId: string;
-  email: string;
+  email: string | null | undefined;
   name: string;
-  description?: string;
-  content: string;
-  count: number;
-  quantity: number;
-  score?: number;
-  bigNumber?: number;
-  rate: number;
-  percentage?: number;
-  amount: number;
-  largeAmount?: number;
+  description?: string | null | undefined;
+  content: string | null | undefined;
+  count: number | null | undefined;
+  quantity: number | null | undefined;
+  score?: number | null | undefined;
+  bigNumber?: number | null | undefined;
+  rate: number | null | undefined;
+  percentage?: number | null | undefined;
+  amount: number | null | undefined;
+  largeAmount?: number | null | undefined;
   price: number;
-  tax?: number;
-  balance: number;
-  isActive: boolean;
-  isVerified?: boolean;
-  enabled: boolean;
-  referenceId?: string;
-  externalId: string;
+  tax?: number | null | undefined;
+  balance: number | null | undefined;
+  isActive: boolean | null | undefined;
+  isVerified?: boolean | null | undefined;
+  enabled: boolean | null | undefined;
+  referenceId?: string | null | undefined;
+  externalId: string | null | undefined;
   createdAt: number;
-  updatedAt?: number;
-  publishedAt?: number;
-  birthDate?: number;
-  eventTime?: number;
-  metadata?: unknown;
-  settings: unknown;
-  rawData?: Uint8Array;
-  tags: string[];
-  scores: number[];
-  weights: number[];
-  categories?: string[];
-  embedding: number[];
-  thumbnail: number[];
-  status: string;
-  category: string;
+  updatedAt?: number | null | undefined;
+  publishedAt?: number | null | undefined;
+  birthDate?: number | null | undefined;
+  eventTime?: number | null | undefined;
+  metadata?: unknown | null | undefined;
+  settings: unknown | null | undefined;
+  rawData?: Uint8Array | null | undefined;
+  tags: string[] | null | undefined;
+  scores: number[] | null | undefined;
+  weights: number[] | null | undefined;
+  categories?: string[] | null | undefined;
+  embedding: number[] | null | undefined;
+  thumbnail: number[] | null | undefined;
+  status: string | null | undefined;
+  category: string | null | undefined;
 }
 
 /** Input type for creating ConsistentEntity */
 export interface ConsistentEntityInput {
   id: string;
   tenantId: string;
-  email: string;
+  email: string | null | undefined;
   name: string;
-  description?: string;
-  content: string;
-  count: number;
-  quantity?: number;
-  score?: number;
-  bigNumber?: number;
-  rate: number;
-  percentage?: number;
-  amount: number;
-  largeAmount?: number;
+  description?: string | null | undefined;
+  content: string | null | undefined;
+  count: number | null | undefined;
+  quantity?: number | null | undefined;
+  score?: number | null | undefined;
+  bigNumber?: number | null | undefined;
+  rate: number | null | undefined;
+  percentage?: number | null | undefined;
+  amount: number | null | undefined;
+  largeAmount?: number | null | undefined;
   price: number;
-  tax?: number;
-  balance: number;
-  isActive?: boolean;
-  isVerified?: boolean;
-  enabled: boolean;
-  referenceId?: string;
-  externalId: string;
+  tax?: number | null | undefined;
+  balance: number | null | undefined;
+  isActive?: boolean | null | undefined;
+  isVerified?: boolean | null | undefined;
+  enabled: boolean | null | undefined;
+  referenceId?: string | null | undefined;
+  externalId: string | null | undefined;
   createdAt: number;
-  updatedAt?: number;
-  publishedAt?: number;
-  birthDate?: number;
-  eventTime?: number;
-  metadata?: unknown;
-  settings?: unknown;
-  rawData?: Uint8Array;
-  tags: string[];
-  scores: number[];
-  weights: number[];
-  categories?: string[];
-  embedding: number[];
-  thumbnail: number[];
-  status?: string;
-  category: string;
+  updatedAt?: number | null | undefined;
+  publishedAt?: number | null | undefined;
+  birthDate?: number | null | undefined;
+  eventTime?: number | null | undefined;
+  metadata?: unknown | null | undefined;
+  settings?: unknown | null | undefined;
+  rawData?: Uint8Array | null | undefined;
+  tags: string[] | null | undefined;
+  scores: number[] | null | undefined;
+  weights: number[] | null | undefined;
+  categories?: string[] | null | undefined;
+  embedding: number[] | null | undefined;
+  thumbnail: number[] | null | undefined;
+  status?: string | null | undefined;
+  category: string | null | undefined;
 }"
 `;
 
 exports[`Snapshot Tests: DuckDB DDL Generation > should generate DuckDB DDL for AllTypes schema 1`] = `
-"CREATE TABLE IF NOT EXISTS public.TestEntity (
+"CREATE TABLE IF NOT EXISTS "public".TestEntity (
   "$id" VARCHAR NOT NULL,
   "$type" VARCHAR NOT NULL,
   "$version" INTEGER NOT NULL DEFAULT 1,
@@ -542,7 +542,7 @@ exports[`Snapshot Tests: DuckDB DDL Generation > should generate DuckDB DDL for 
   birthDate DATE,
   eventTime TIME,
   metadata JSON,
-  settings JSON NOT NULL DEFAULT '{}',
+  "settings" JSON NOT NULL DEFAULT '{}',
   rawData BLOB,
   tags VARCHAR[] NOT NULL,
   scores INTEGER[] NOT NULL,
@@ -636,7 +636,7 @@ exports[`Snapshot Tests: DuckDB DDL Generation > should generate DuckDB DDL with
   birthDate DATE,
   eventTime TIME,
   metadata JSON,
-  settings JSON NOT NULL DEFAULT '{}',
+  "settings" JSON NOT NULL DEFAULT '{}',
   rawData BLOB,
   tags VARCHAR[] NOT NULL,
   scores INTEGER[] NOT NULL,
@@ -1529,7 +1529,7 @@ exports[`Snapshot Tests: MySQL DDL Generation > should generate MySQL DDL for Al
   birthDate DATE,
   eventTime TIME,
   metadata JSON,
-  settings JSON NOT NULL DEFAULT '{}',
+  \`settings\` JSON NOT NULL DEFAULT '{}',
   rawData BLOB,
   tags VARCHAR(255) NOT NULL,
   scores INT NOT NULL,
@@ -1623,7 +1623,7 @@ exports[`Snapshot Tests: MySQL DDL Generation > should generate MySQL DDL with a
   birthDate DATE,
   eventTime TIME,
   metadata JSON,
-  settings JSON NOT NULL DEFAULT '{}',
+  \`settings\` JSON NOT NULL DEFAULT '{}',
   rawData BLOB,
   tags VARCHAR(255) NOT NULL,
   scores INT NOT NULL,
@@ -2704,7 +2704,7 @@ exports[`Snapshot Tests: PostgreSQL DDL Generation > should generate PostgreSQL 
   birthDate DATE,
   eventTime TIME,
   metadata JSONB,
-  settings JSONB NOT NULL DEFAULT '{}',
+  "settings" JSONB NOT NULL DEFAULT '{}',
   rawData BYTEA,
   tags TEXT[] NOT NULL,
   scores INTEGER[] NOT NULL,
@@ -2798,7 +2798,7 @@ exports[`Snapshot Tests: PostgreSQL DDL Generation > should generate PostgreSQL 
   birthDate DATE,
   eventTime TIME,
   metadata JSONB,
-  settings JSONB NOT NULL DEFAULT '{}',
+  "settings" JSONB NOT NULL DEFAULT '{}',
   rawData BYTEA,
   tags TEXT[] NOT NULL,
   scores INTEGER[] NOT NULL,
@@ -2837,84 +2837,84 @@ export interface TestEntity {
   $updatedAt: number;
   id: string;
   tenantId: string;
-  email: string;
+  email: string | null | undefined;
   name: string;
-  description?: string;
-  content: string;
-  count: number;
-  quantity: number;
-  score?: number;
-  bigNumber?: number;
-  rate: number;
-  percentage?: number;
-  amount: number;
-  largeAmount?: number;
+  description?: string | null | undefined;
+  content: string | null | undefined;
+  count: number | null | undefined;
+  quantity: number | null | undefined;
+  score?: number | null | undefined;
+  bigNumber?: number | null | undefined;
+  rate: number | null | undefined;
+  percentage?: number | null | undefined;
+  amount: number | null | undefined;
+  largeAmount?: number | null | undefined;
   price: number;
-  tax?: number;
-  balance: number;
-  isActive: boolean;
-  isVerified?: boolean;
-  enabled: boolean;
-  referenceId?: string;
-  externalId: string;
+  tax?: number | null | undefined;
+  balance: number | null | undefined;
+  isActive: boolean | null | undefined;
+  isVerified?: boolean | null | undefined;
+  enabled: boolean | null | undefined;
+  referenceId?: string | null | undefined;
+  externalId: string | null | undefined;
   createdAt: number;
-  updatedAt?: number;
-  publishedAt?: number;
-  birthDate?: number;
-  eventTime?: number;
-  metadata?: unknown;
-  settings: unknown;
-  rawData?: Uint8Array;
-  tags: string[];
-  scores: number[];
-  weights: number[];
-  categories?: string[];
-  embedding: number[];
-  thumbnail: number[];
-  status: string;
-  category: string;
+  updatedAt?: number | null | undefined;
+  publishedAt?: number | null | undefined;
+  birthDate?: number | null | undefined;
+  eventTime?: number | null | undefined;
+  metadata?: unknown | null | undefined;
+  settings: unknown | null | undefined;
+  rawData?: Uint8Array | null | undefined;
+  tags: string[] | null | undefined;
+  scores: number[] | null | undefined;
+  weights: number[] | null | undefined;
+  categories?: string[] | null | undefined;
+  embedding: number[] | null | undefined;
+  thumbnail: number[] | null | undefined;
+  status: string | null | undefined;
+  category: string | null | undefined;
 }
 
 /** Input type for creating TestEntity */
 export interface TestEntityInput {
   id: string;
   tenantId: string;
-  email: string;
+  email: string | null | undefined;
   name: string;
-  description?: string;
-  content: string;
-  count: number;
-  quantity?: number;
-  score?: number;
-  bigNumber?: number;
-  rate: number;
-  percentage?: number;
-  amount: number;
-  largeAmount?: number;
+  description?: string | null | undefined;
+  content: string | null | undefined;
+  count: number | null | undefined;
+  quantity?: number | null | undefined;
+  score?: number | null | undefined;
+  bigNumber?: number | null | undefined;
+  rate: number | null | undefined;
+  percentage?: number | null | undefined;
+  amount: number | null | undefined;
+  largeAmount?: number | null | undefined;
   price: number;
-  tax?: number;
-  balance: number;
-  isActive?: boolean;
-  isVerified?: boolean;
-  enabled: boolean;
-  referenceId?: string;
-  externalId: string;
+  tax?: number | null | undefined;
+  balance: number | null | undefined;
+  isActive?: boolean | null | undefined;
+  isVerified?: boolean | null | undefined;
+  enabled: boolean | null | undefined;
+  referenceId?: string | null | undefined;
+  externalId: string | null | undefined;
   createdAt: number;
-  updatedAt?: number;
-  publishedAt?: number;
-  birthDate?: number;
-  eventTime?: number;
-  metadata?: unknown;
-  settings?: unknown;
-  rawData?: Uint8Array;
-  tags: string[];
-  scores: number[];
-  weights: number[];
-  categories?: string[];
-  embedding: number[];
-  thumbnail: number[];
-  status?: string;
-  category: string;
+  updatedAt?: number | null | undefined;
+  publishedAt?: number | null | undefined;
+  birthDate?: number | null | undefined;
+  eventTime?: number | null | undefined;
+  metadata?: unknown | null | undefined;
+  settings?: unknown | null | undefined;
+  rawData?: Uint8Array | null | undefined;
+  tags: string[] | null | undefined;
+  scores: number[] | null | undefined;
+  weights: number[] | null | undefined;
+  categories?: string[] | null | undefined;
+  embedding: number[] | null | undefined;
+  thumbnail: number[] | null | undefined;
+  status?: string | null | undefined;
+  category: string | null | undefined;
 }"
 `;
 
@@ -2937,24 +2937,24 @@ export interface Post {
   $updatedAt: number;
   id: string;
   title: string;
-  content: string;
+  content: string | null | undefined;
   authorId: string;
-  status: string;
-  publishedAt?: number;
-  tags: string[];
-  viewCount: number;
+  status: string | null | undefined;
+  publishedAt?: number | null | undefined;
+  tags: string[] | null | undefined;
+  viewCount: number | null | undefined;
 }
 
 /** Input type for creating Post */
 export interface PostInput {
   id: string;
   title: string;
-  content: string;
+  content: string | null | undefined;
   authorId: string;
-  status?: string;
-  publishedAt?: number;
-  tags: string[];
-  viewCount?: number;
+  status?: string | null | undefined;
+  publishedAt?: number | null | undefined;
+  tags: string[] | null | undefined;
+  viewCount?: number | null | undefined;
 }"
 `;
 
@@ -2977,15 +2977,15 @@ export interface SimpleEntity {
   $updatedAt: number;
   id: string;
   name: string;
-  value?: number;
-  createdAt: number;
+  value?: number | null | undefined;
+  createdAt: number | null | undefined;
 }
 
 /** Input type for creating SimpleEntity */
 export interface SimpleEntityInput {
   id: string;
   name: string;
-  value?: number;
-  createdAt?: number;
+  value?: number | null | undefined;
+  createdAt?: number | null | undefined;
 }"
 `;

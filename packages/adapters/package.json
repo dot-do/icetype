@@ -52,8 +52,14 @@
     "@icetype/core": "workspace:*"
   },
   "devDependencies": {
+    "@icetype/clickhouse": "workspace:*",
+    "@icetype/drizzle": "workspace:*",
+    "@icetype/duckdb": "workspace:*",
+    "@icetype/iceberg": "workspace:*",
     "@icetype/mysql": "workspace:*",
     "@icetype/postgres": "workspace:*",
+    "@icetype/prisma": "workspace:*",
+    "@icetype/sqlite": "workspace:*",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
   }
