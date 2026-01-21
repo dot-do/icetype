@@ -1,10 +1,13 @@
 {
   "name": "icetype-vscode",
   "displayName": "IceType",
-  "description": "Syntax highlighting and language support for IceType schema language",
+  "description": "Syntax highlighting, snippets, and language support for IceType - the type-safe schema language for edge-native databases",
   "version": "0.1.0",
   "publisher": "icetype",
-  "author": "Nathan Clevenger",
+  "author": {
+    "name": "Nathan Clevenger",
+    "url": "https://github.com/nathanclevenger"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -15,19 +18,28 @@
   "bugs": {
     "url": "https://github.com/dot-do/icetype/issues"
   },
+  "qna": "https://github.com/dot-do/icetype/discussions",
   "engines": {
     "vscode": "^1.75.0"
   },
   "categories": [
     "Programming Languages",
-    "Snippets"
+    "Snippets",
+    "Themes"
   ],
   "keywords": [
     "icetype",
     "schema",
     "typescript",
     "iceberg",
-    "parquet"
+    "parquet",
+    "database",
+    "durable-objects",
+    "cloudflare",
+    "edge",
+    "type-safe",
+    "orm",
+    "syntax-highlighting"
   ],
   "icon": "images/icon.png",
   "galleryBanner": {
@@ -42,7 +54,11 @@
         "id": "icetype",
         "aliases": ["IceType", "icetype"],
         "extensions": [".ice", ".icetype"],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./images/icon.png",
+          "dark": "./images/icon.png"
+        }
       }
     ],
     "grammars": [
@@ -65,22 +81,146 @@
         }
       }
     ],
+    "snippets": [
+      {
+        "language": "icetype",
+        "path": "./snippets/icetype.json"
+      },
+      {
+        "language": "typescript",
+        "path": "./snippets/icetype.json"
+      },
+      {
+        "language": "javascript",
+        "path": "./snippets/icetype.json"
+      }
+    ],
     "configurationDefaults": {
       "[icetype]": {
         "editor.tabSize": 2,
         "editor.insertSpaces": true,
-        "editor.formatOnSave": true
+        "editor.formatOnSave": true,
+        "editor.semanticHighlighting.enabled": true
       }
-    }
+    },
+    "colors": [
+      {
+        "id": "icetype.directiveBackground",
+        "description": "Background color for IceType directives",
+        "defaults": {
+          "dark": "#1e1e3f20",
+          "light": "#f0f0ff40",
+          "highContrast": "#000000"
+        }
+      },
+      {
+        "id": "icetype.relationArrow",
+        "description": "Color for IceType relation arrows",
+        "defaults": {
+          "dark": "#4ec9b0",
+          "light": "#267f99",
+          "highContrast": "#4ec9b0"
+        }
+      },
+      {
+        "id": "icetype.modifierRequired",
+        "description": "Color for required modifier (!)",
+        "defaults": {
+          "dark": "#ff7b72",
+          "light": "#d73a49",
+          "highContrast": "#ff7b72"
+        }
+      },
+      {
+        "id": "icetype.modifierOptional",
+        "description": "Color for optional modifier (?)",
+        "defaults": {
+          "dark": "#7ee787",
+          "light": "#22863a",
+          "highContrast": "#7ee787"
+        }
+      },
+      {
+        "id": "icetype.modifierIndex",
+        "description": "Color for index modifier (#)",
+        "defaults": {
+          "dark": "#ffa657",
+          "light": "#e36209",
+          "highContrast": "#ffa657"
+        }
+      }
+    ],
+    "semanticTokenTypes": [
+      {
+        "id": "iceDirective",
+        "superType": "keyword",
+        "description": "IceType schema directive ($type, $partitionBy, etc.)"
+      },
+      {
+        "id": "iceRelation",
+        "superType": "operator",
+        "description": "IceType relation operator (->, <-, ~>)"
+      },
+      {
+        "id": "iceModifier",
+        "superType": "keyword",
+        "description": "IceType field modifier (!, ?, #)"
+      },
+      {
+        "id": "icePrimitive",
+        "superType": "type",
+        "description": "IceType primitive type (string, int, uuid, etc.)"
+      },
+      {
+        "id": "iceEntity",
+        "superType": "class",
+        "description": "IceType entity type reference"
+      },
+      {
+        "id": "iceGeneration",
+        "superType": "operator",
+        "description": "IceType AI generation operator (~>)"
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "language": "icetype",
+        "scopes": {
+          "iceDirective": ["keyword.control.directive.icetype"],
+          "iceRelation": ["keyword.operator.relation.icetype"],
+          "iceModifier": ["keyword.operator.icetype"],
+          "icePrimitive": ["support.type.primitive.icetype"],
+          "iceEntity": ["entity.name.type.icetype"],
+          "iceGeneration": ["keyword.operator.generation.icetype"]
+        }
+      }
+    ],
+    "themes": [
+      {
+        "label": "IceType Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/icetype-dark.json"
+      },
+      {
+        "label": "IceType Light",
+        "uiTheme": "vs",
+        "path": "./themes/icetype-light.json"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "package": "vsce package",
-    "publish": "vsce publish"
+    "lint": "tsc --noEmit",
+    "package": "vsce package --no-dependencies",
+    "package:pre": "vsce package --pre-release --no-dependencies",
+    "publish": "vsce publish --no-dependencies",
+    "publish:pre": "vsce publish --pre-release --no-dependencies",
+    "generate-icon": "node scripts/generate-icon.mjs"
   },
   "devDependencies": {
+    "@types/node": "^20.0.0",
     "@types/vscode": "^1.75.0",
     "@vscode/vsce": "^2.22.0",
     "typescript": "^5.7.0"

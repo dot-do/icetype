@@ -1,0 +1,27 @@
+# Development files
+.vscode/**
+.vscode-test/**
+src/**
+scripts/**
+**/*.ts
+!*.d.ts
+.gitignore
+.gitkeep
+tsconfig.json
+**/*.map
+
+# Node modules (dependencies are bundled if needed)
+node_modules/**
+
+# Test files
+**/*.test.js
+**/*.test.ts
+**/test/**
+
+# Build artifacts
+*.vsix
+
+# Documentation and config for development
+.eslintrc.json
+.prettierrc
+.editorconfig

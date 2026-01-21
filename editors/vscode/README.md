@@ -9,6 +9,9 @@ Syntax highlighting and language support for the [IceType](https://github.com/do
 - Auto-closing brackets and quotes
 - Code folding
 - Comment toggling
+- Snippets for common schema patterns
+- Custom color themes (IceType Dark and IceType Light)
+- Semantic token support for enhanced theming
 
 ### Highlighted Elements
 
@@ -147,10 +150,84 @@ const userSchema = parseSchema({
 | `$primaryKey` | Primary key columns |
 | `$sortBy` | Sort order columns |
 
+## Snippets
+
+The extension provides snippets for quickly creating IceType schemas. Type the prefix and press Tab to expand.
+
+| Prefix | Description |
+|--------|-------------|
+| `ice-schema` | Create a complete schema with DB() |
+| `ice-entity` | Create a new entity definition |
+| `ice-field` | Add a string field |
+| `ice-relation` | Add a forward relation (belongs to) |
+| `ice-has-many` | Add a backward relation (has many) |
+| `ice-fuzzy` | Add a fuzzy/semantic relation |
+| `ice-vector` | Add a vector embedding field |
+| `ice-generate` | Add an AI-generated field |
+| `ice-partition` | Add $partitionBy directive |
+| `ice-index` | Add $index directive |
+| `ice-fts` | Add $fts (full-text search) directive |
+| `ice-user` | User entity template |
+| `ice-post` | Post entity template |
+| `ice-org` | Organization entity template |
+
+## Themes
+
+The extension includes two custom themes optimized for IceType:
+
+- **IceType Dark** - A dark theme with vibrant colors for schema elements
+- **IceType Light** - A light theme with high contrast for readability
+
+To use a theme:
+1. Open Command Palette (Ctrl+Shift+P / Cmd+Shift+P)
+2. Type "Color Theme"
+3. Select "IceType Dark" or "IceType Light"
+
+## Building & Publishing
+
+### Building the Extension
+
+```bash
+# Navigate to the extension directory
+cd editors/vscode
+
+# Install dependencies (from monorepo root)
+pnpm install
+
+# Compile TypeScript
+npm run compile
+
+# Package the extension (creates .vsix file)
+npm run package
+
+# Package a pre-release version
+npm run package:pre
+```
+
+### Publishing to VS Code Marketplace
+
+```bash
+# First, ensure you have a Personal Access Token (PAT)
+# See: https://code.visualstudio.com/api/working-with-extensions/publishing-extension
+
+# Publish to marketplace
+npm run publish
+
+# Publish a pre-release version
+npm run publish:pre
+```
+
+### Installing from VSIX
+
+```bash
+# Install the generated VSIX file
+code --install-extension icetype-vscode-0.1.0.vsix
+```
+
 ## Contributing
 
 Contributions are welcome! Please see the [main repository](https://github.com/dot-do/icetype) for contribution guidelines.
 
 ## License
 
-MIT License - see [LICENSE](../../LICENSE) for details.
+MIT License - see [LICENSE](./LICENSE) for details.

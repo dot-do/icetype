@@ -4,15 +4,36 @@
   "scopeName": "source.icetype.injection",
   "injectionSelector": "L:source.ts, L:source.tsx, L:source.js, L:source.jsx",
   "patterns": [
+    { "include": "#icetype-function-call" },
     { "include": "#icetype-object-literal" }
   ],
   "repository": {
+    "icetype-function-call": {
+      "comment": "IceType schema creation functions like DB(), Schema(), Entity()",
+      "patterns": [
+        {
+          "comment": "DB() function call",
+          "match": "\\b(DB|Schema|Entity|defineSchema|createSchema|ice)\\s*(\\()",
+          "captures": {
+            "1": { "name": "entity.name.function.icetype support.function.icetype" },
+            "2": { "name": "punctuation.definition.parameters.begin.icetype" }
+          }
+        },
+        {
+          "comment": "Import from @icetype packages",
+          "match": "(['\"])(@icetype\\/[a-z-]+|icetype)\\1",
+          "captures": {
+            "0": { "name": "string.quoted.module.icetype" }
+          }
+        }
+      ]
+    },
     "icetype-object-literal": {
       "comment": "IceType schema objects with $type directive",
       "patterns": [
         {
-          "comment": "Highlight $type directive key",
-          "match": "(\\$type)(\\s*:\\s*)(['\"])(\\w+)(['\"])",
+          "comment": "Highlight $type directive with entity name",
+          "match": "(\\$type)(\\s*:\\s*)(['\"])([A-Z][a-zA-Z0-9]*)(['\"])",
           "captures": {
             "1": { "name": "keyword.control.directive.icetype" },
             "2": { "name": "punctuation.separator.colon.icetype" },
@@ -78,67 +99,270 @@
           }
         },
         {
-          "comment": "Type strings with modifiers - required (!)",
-          "match": "(['\"])(uuid|string|text|int|integer|bigint|float|double|decimal|boolean|bool|date|datetime|timestamp|time|json|jsonb|binary|blob|bytes|esm)(!)(\\1)",
+          "comment": "Highlight $cluster directive",
+          "match": "(\\$cluster)(\\s*:\\s*)",
           "captures": {
-            "1": { "name": "punctuation.definition.string.begin.icetype" },
-            "2": { "name": "support.type.primitive.icetype" },
-            "3": { "name": "keyword.operator.required.icetype" },
-            "4": { "name": "punctuation.definition.string.end.icetype" }
+            "1": { "name": "keyword.control.directive.icetype" },
+            "2": { "name": "punctuation.separator.colon.icetype" }
           }
         },
         {
-          "comment": "Type strings with modifiers - optional (?)",
-          "match": "(['\"])(uuid|string|text|int|integer|bigint|float|double|decimal|boolean|bool|date|datetime|timestamp|time|json|jsonb|binary|blob|bytes|esm)(\\?)(\\1)",
+          "comment": "Highlight $check directive",
+          "match": "(\\$check)(\\s*:\\s*)",
           "captures": {
-            "1": { "name": "punctuation.definition.string.begin.icetype" },
-            "2": { "name": "support.type.primitive.icetype" },
-            "3": { "name": "keyword.operator.optional.icetype" },
-            "4": { "name": "punctuation.definition.string.end.icetype" }
+            "1": { "name": "keyword.control.directive.icetype" },
+            "2": { "name": "punctuation.separator.colon.icetype" }
           }
         },
         {
-          "comment": "Type strings with modifiers - indexed (#)",
-          "match": "(['\"])(uuid|string|text|int|integer|bigint|float|double|decimal|boolean|bool|date|datetime|timestamp|time|json|jsonb|binary|blob|bytes|esm)(#)(\\1)",
+          "comment": "Highlight $default directive",
+          "match": "(\\$default)(\\s*:\\s*)",
           "captures": {
-            "1": { "name": "punctuation.definition.string.begin.icetype" },
-            "2": { "name": "support.type.primitive.icetype" },
-            "3": { "name": "keyword.operator.index.icetype" },
-            "4": { "name": "punctuation.definition.string.end.icetype" }
+            "1": { "name": "keyword.control.directive.icetype" },
+            "2": { "name": "punctuation.separator.colon.icetype" }
           }
         },
         {
-          "comment": "Forward relation strings",
-          "match": "(['\"])(->)\\s*([A-Z][a-zA-Z0-9]*)(\\??)(\\1)",
+          "comment": "Highlight $validate directive",
+          "match": "(\\$validate)(\\s*:\\s*)",
+          "captures": {
+            "1": { "name": "keyword.control.directive.icetype" },
+            "2": { "name": "punctuation.separator.colon.icetype" }
+          }
+        },
+        {
+          "comment": "Highlight $computed directive",
+          "match": "(\\$computed)(\\s*:\\s*)",
+          "captures": {
+            "1": { "name": "keyword.control.directive.icetype" },
+            "2": { "name": "punctuation.separator.colon.icetype" }
+          }
+        },
+        {
+          "comment": "Highlight $cascade directive",
+          "match": "(\\$cascade)(\\s*:\\s*)",
+          "captures": {
+            "1": { "name": "keyword.control.directive.icetype" },
+            "2": { "name": "punctuation.separator.colon.icetype" }
+          }
+        },
+        {
+          "comment": "Highlight $onDelete directive",
+          "match": "(\\$onDelete)(\\s*:\\s*)",
+          "captures": {
+            "1": { "name": "keyword.control.directive.icetype" },
+            "2": { "name": "punctuation.separator.colon.icetype" }
+          }
+        },
+        {
+          "comment": "Highlight $onUpdate directive",
+          "match": "(\\$onUpdate)(\\s*:\\s*)",
+          "captures": {
+            "1": { "name": "keyword.control.directive.icetype" },
+            "2": { "name": "punctuation.separator.colon.icetype" }
+          }
+        },
+        {
+          "comment": "Highlight $ttl directive",
+          "match": "(\\$ttl)(\\s*:\\s*)",
+          "captures": {
+            "1": { "name": "keyword.control.directive.icetype" },
+            "2": { "name": "punctuation.separator.colon.icetype" }
+          }
+        },
+        {
+          "comment": "Highlight $immutable directive",
+          "match": "(\\$immutable)(\\s*:\\s*)",
+          "captures": {
+            "1": { "name": "keyword.control.directive.icetype" },
+            "2": { "name": "punctuation.separator.colon.icetype" }
+          }
+        },
+        {
+          "comment": "Highlight $audit directive",
+          "match": "(\\$audit)(\\s*:\\s*)",
+          "captures": {
+            "1": { "name": "keyword.control.directive.icetype" },
+            "2": { "name": "punctuation.separator.colon.icetype" }
+          }
+        },
+        {
+          "comment": "Highlight $encrypted directive",
+          "match": "(\\$encrypted)(\\s*:\\s*)",
+          "captures": {
+            "1": { "name": "keyword.control.directive.icetype" },
+            "2": { "name": "punctuation.separator.colon.icetype" }
+          }
+        },
+        {
+          "comment": "Vector type with dimensions: 'vector[1536]'",
+          "match": "(['\"])(vector)(\\[)(\\d+)(\\])(!)?(\\?)?(['\"])",
           "captures": {
             "1": { "name": "punctuation.definition.string.begin.icetype" },
-            "2": { "name": "keyword.operator.relation.forward.icetype" },
-            "3": { "name": "entity.name.type.icetype" },
-            "4": { "name": "keyword.operator.optional.icetype" },
+            "2": { "name": "support.type.primitive.icetype" },
+            "3": { "name": "punctuation.definition.typeparameters.begin.icetype" },
+            "4": { "name": "constant.numeric.icetype" },
+            "5": { "name": "punctuation.definition.typeparameters.end.icetype" },
+            "6": { "name": "keyword.operator.required.icetype" },
+            "7": { "name": "keyword.operator.optional.icetype" },
+            "8": { "name": "punctuation.definition.string.end.icetype" }
+          }
+        },
+        {
+          "comment": "Vector with generation: 'vector[1536] ~> sourceField'",
+          "match": "(['\"])(vector\\[\\d+\\])\\s*(~>)\\s*(\\w+)(['\"])",
+          "captures": {
+            "1": { "name": "punctuation.definition.string.begin.icetype" },
+            "2": { "name": "support.type.primitive.icetype" },
+            "3": { "name": "keyword.operator.generation.icetype" },
+            "4": { "name": "variable.other.source.icetype" },
             "5": { "name": "punctuation.definition.string.end.icetype" }
           }
         },
         {
-          "comment": "Backward relation strings",
-          "match": "(['\"])(<-)\\s*([A-Z][a-zA-Z0-9]*)\\.([a-zA-Z0-9_]+)(\\[\\])?(\\1)",
+          "comment": "Type strings with modifiers and index - required (!)",
+          "match": "(['\"])(uuid|string|text|int|integer|bigint|float|double|decimal|boolean|bool|date|datetime|timestamp|time|json|jsonb|binary|blob|bytes|esm)(!)\\s*(#)?(index|unique|fts)?(['\"])",
           "captures": {
             "1": { "name": "punctuation.definition.string.begin.icetype" },
-            "2": { "name": "keyword.operator.relation.backward.icetype" },
-            "3": { "name": "entity.name.type.icetype" },
-            "4": { "name": "variable.other.property.icetype" },
-            "5": { "name": "punctuation.definition.array.icetype" },
+            "2": { "name": "support.type.primitive.icetype" },
+            "3": { "name": "keyword.operator.required.icetype" },
+            "4": { "name": "keyword.operator.index.icetype" },
+            "5": { "name": "storage.modifier.index.icetype" },
             "6": { "name": "punctuation.definition.string.end.icetype" }
           }
         },
         {
-          "comment": "Fuzzy relation strings",
-          "match": "(['\"])(~>)\\s*([A-Z][a-zA-Z0-9]*)(\\[\\])?(\\1)",
+          "comment": "Type strings with modifiers and index - optional (?)",
+          "match": "(['\"])(uuid|string|text|int|integer|bigint|float|double|decimal|boolean|bool|date|datetime|timestamp|time|json|jsonb|binary|blob|bytes|esm)(\\?)\\s*(#)?(index|unique|fts)?(['\"])",
+          "captures": {
+            "1": { "name": "punctuation.definition.string.begin.icetype" },
+            "2": { "name": "support.type.primitive.icetype" },
+            "3": { "name": "keyword.operator.optional.icetype" },
+            "4": { "name": "keyword.operator.index.icetype" },
+            "5": { "name": "storage.modifier.index.icetype" },
+            "6": { "name": "punctuation.definition.string.end.icetype" }
+          }
+        },
+        {
+          "comment": "Type strings with index only (#)",
+          "match": "(['\"])(uuid|string|text|int|integer|bigint|float|double|decimal|boolean|bool|date|datetime|timestamp|time|json|jsonb|binary|blob|bytes|esm)(#)(index|unique|fts)?(['\"])",
+          "captures": {
+            "1": { "name": "punctuation.definition.string.begin.icetype" },
+            "2": { "name": "support.type.primitive.icetype" },
+            "3": { "name": "keyword.operator.index.icetype" },
+            "4": { "name": "storage.modifier.index.icetype" },
+            "5": { "name": "punctuation.definition.string.end.icetype" }
+          }
+        },
+        {
+          "comment": "Plain primitive types in strings",
+          "match": "(['\"])(uuid|string|text|int|integer|bigint|float|double|decimal|boolean|bool|date|datetime|timestamp|time|json|jsonb|binary|blob|bytes|esm|vector|enum|set|map)(['\"])",
+          "captures": {
+            "1": { "name": "punctuation.definition.string.begin.icetype" },
+            "2": { "name": "support.type.primitive.icetype" },
+            "3": { "name": "punctuation.definition.string.end.icetype" }
+          }
+        },
+        {
+          "comment": "Forward relation: '-> Entity' or '=> Entity'",
+          "match": "(['\"])(->|=>)\\s*([A-Z][a-zA-Z0-9]*)(!|\\?)?(['\"])",
+          "captures": {
+            "1": { "name": "punctuation.definition.string.begin.icetype" },
+            "2": { "name": "keyword.operator.relation.forward.icetype" },
+            "3": { "name": "entity.name.type.icetype" },
+            "4": { "name": "keyword.operator.icetype" },
+            "5": { "name": "punctuation.definition.string.end.icetype" }
+          }
+        },
+        {
+          "comment": "Backward relation: '<- Entity.field[]'",
+          "match": "(['\"])(<-)\\s*([A-Z][a-zA-Z0-9]*)(\\.)(\\w+)(\\[\\])?(['\"])",
+          "captures": {
+            "1": { "name": "punctuation.definition.string.begin.icetype" },
+            "2": { "name": "keyword.operator.relation.backward.icetype" },
+            "3": { "name": "entity.name.type.icetype" },
+            "4": { "name": "punctuation.accessor.icetype" },
+            "5": { "name": "variable.other.property.icetype" },
+            "6": { "name": "punctuation.definition.array.icetype" },
+            "7": { "name": "punctuation.definition.string.end.icetype" }
+          }
+        },
+        {
+          "comment": "Backward relation simple: '<- Entity'",
+          "match": "(['\"])(<-)\\s*([A-Z][a-zA-Z0-9]*)(!|\\?)?(['\"])",
+          "captures": {
+            "1": { "name": "punctuation.definition.string.begin.icetype" },
+            "2": { "name": "keyword.operator.relation.backward.icetype" },
+            "3": { "name": "entity.name.type.icetype" },
+            "4": { "name": "keyword.operator.icetype" },
+            "5": { "name": "punctuation.definition.string.end.icetype" }
+          }
+        },
+        {
+          "comment": "Has many relation: '[Entity] -> backRef'",
+          "match": "(['\"])(\\[)([A-Z][a-zA-Z0-9]*)(\\])\\s*(->|=>)\\s*(\\w+)(['\"])",
+          "captures": {
+            "1": { "name": "punctuation.definition.string.begin.icetype" },
+            "2": { "name": "punctuation.definition.array.begin.icetype" },
+            "3": { "name": "entity.name.type.icetype" },
+            "4": { "name": "punctuation.definition.array.end.icetype" },
+            "5": { "name": "keyword.operator.relation.forward.icetype" },
+            "6": { "name": "variable.other.property.icetype" },
+            "7": { "name": "punctuation.definition.string.end.icetype" }
+          }
+        },
+        {
+          "comment": "Fuzzy relation: '~> Entity' or '~> Entity[]'",
+          "match": "(['\"])(~>)\\s*([A-Z][a-zA-Z0-9]*)(\\[\\])?(['\"])",
           "captures": {
             "1": { "name": "punctuation.definition.string.begin.icetype" },
             "2": { "name": "keyword.operator.relation.fuzzy.forward.icetype" },
             "3": { "name": "entity.name.type.icetype" },
             "4": { "name": "punctuation.definition.array.icetype" },
             "5": { "name": "punctuation.definition.string.end.icetype" }
+          }
+        },
+        {
+          "comment": "Reverse fuzzy relation: '<~ Entity' or '<~ Entity[]'",
+          "match": "(['\"])(<~)\\s*([A-Z][a-zA-Z0-9]*)(\\[\\])?(['\"])",
+          "captures": {
+            "1": { "name": "punctuation.definition.string.begin.icetype" },
+            "2": { "name": "keyword.operator.relation.fuzzy.backward.icetype" },
+            "3": { "name": "entity.name.type.icetype" },
+            "4": { "name": "punctuation.definition.array.icetype" },
+            "5": { "name": "punctuation.definition.string.end.icetype" }
+          }
+        },
+        {
+          "comment": "Generation from source field: 'text ~> sourceField'",
+          "match": "(['\"])(text|string)\\s*(~>)\\s*(\\w+)(['\"])",
+          "captures": {
+            "1": { "name": "punctuation.definition.string.begin.icetype" },
+            "2": { "name": "support.type.primitive.icetype" },
+            "3": { "name": "keyword.operator.generation.icetype" },
+            "4": { "name": "variable.other.source.icetype" },
+            "5": { "name": "punctuation.definition.string.end.icetype" }
+          }
+        },
+        {
+          "comment": "Array of entity type: '[Entity]'",
+          "match": "(['\"])(\\[)([A-Z][a-zA-Z0-9]*)(\\])(['\"])",
+          "captures": {
+            "1": { "name": "punctuation.definition.string.begin.icetype" },
+            "2": { "name": "punctuation.definition.array.begin.icetype" },
+            "3": { "name": "entity.name.type.icetype" },
+            "4": { "name": "punctuation.definition.array.end.icetype" },
+            "5": { "name": "punctuation.definition.string.end.icetype" }
+          }
+        },
+        {
+          "comment": "Entity type reference: 'Entity' or 'Entity!' or 'Entity?'",
+          "match": "(['\"])([A-Z][a-zA-Z0-9]*)(!|\\?)?(['\"])",
+          "captures": {
+            "1": { "name": "punctuation.definition.string.begin.icetype" },
+            "2": { "name": "entity.name.type.icetype" },
+            "3": { "name": "keyword.operator.icetype" },
+            "4": { "name": "punctuation.definition.string.end.icetype" }
           }
         }
       ]

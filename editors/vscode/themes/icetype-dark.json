@@ -1,0 +1,245 @@
+{
+  "$schema": "vscode://schemas/color-theme",
+  "name": "IceType Dark",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#0d1117",
+    "editor.foreground": "#c9d1d9",
+    "editor.lineHighlightBackground": "#161b22",
+    "editor.selectionBackground": "#264f78",
+    "editorCursor.foreground": "#58a6ff",
+    "editorLineNumber.foreground": "#6e7681",
+    "editorLineNumber.activeForeground": "#c9d1d9"
+  },
+  "tokenColors": [
+    {
+      "name": "Comments",
+      "scope": [
+        "comment",
+        "comment.line",
+        "comment.block"
+      ],
+      "settings": {
+        "foreground": "#8b949e",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "Documentation comments",
+      "scope": "comment.block.documentation",
+      "settings": {
+        "foreground": "#8b949e",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "Documentation tags",
+      "scope": "keyword.other.documentation",
+      "settings": {
+        "foreground": "#d2a8ff",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "Strings",
+      "scope": [
+        "string",
+        "string.quoted"
+      ],
+      "settings": {
+        "foreground": "#a5d6ff"
+      }
+    },
+    {
+      "name": "String punctuation",
+      "scope": "punctuation.definition.string",
+      "settings": {
+        "foreground": "#79c0ff"
+      }
+    },
+    {
+      "name": "Numbers",
+      "scope": [
+        "constant.numeric",
+        "constant.numeric.integer",
+        "constant.numeric.float"
+      ],
+      "settings": {
+        "foreground": "#79c0ff"
+      }
+    },
+    {
+      "name": "Boolean and null",
+      "scope": [
+        "constant.language.boolean",
+        "constant.language.null"
+      ],
+      "settings": {
+        "foreground": "#79c0ff",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "IceType Directives ($type, $partitionBy)",
+      "scope": "keyword.control.directive.icetype",
+      "settings": {
+        "foreground": "#d2a8ff",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "IceType Primitive Types",
+      "scope": "support.type.primitive.icetype",
+      "settings": {
+        "foreground": "#79c0ff"
+      }
+    },
+    {
+      "name": "IceType Entity Types",
+      "scope": "entity.name.type.icetype",
+      "settings": {
+        "foreground": "#7ee787"
+      }
+    },
+    {
+      "name": "IceType Required Modifier (!)",
+      "scope": "keyword.operator.required.icetype",
+      "settings": {
+        "foreground": "#ff7b72",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "IceType Optional Modifier (?)",
+      "scope": "keyword.operator.optional.icetype",
+      "settings": {
+        "foreground": "#7ee787"
+      }
+    },
+    {
+      "name": "IceType Index Modifier (#)",
+      "scope": "keyword.operator.index.icetype",
+      "settings": {
+        "foreground": "#ffa657",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "IceType Index storage modifier",
+      "scope": "storage.modifier.index.icetype",
+      "settings": {
+        "foreground": "#ffa657"
+      }
+    },
+    {
+      "name": "IceType Forward Relation (->)",
+      "scope": "keyword.operator.relation.forward.icetype",
+      "settings": {
+        "foreground": "#56d4dd",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "IceType Backward Relation (<-)",
+      "scope": "keyword.operator.relation.backward.icetype",
+      "settings": {
+        "foreground": "#56d4dd",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "IceType Bidirectional Relation (<->)",
+      "scope": "keyword.operator.relation.bidirectional.icetype",
+      "settings": {
+        "foreground": "#56d4dd",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "IceType Fuzzy Relation (~>)",
+      "scope": [
+        "keyword.operator.relation.fuzzy.forward.icetype",
+        "keyword.operator.relation.fuzzy.backward.icetype"
+      ],
+      "settings": {
+        "foreground": "#f778ba",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "IceType Generation Operator (~>)",
+      "scope": "keyword.operator.generation.icetype",
+      "settings": {
+        "foreground": "#f778ba",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "IceType Source Field for Generation",
+      "scope": "variable.other.source.icetype",
+      "settings": {
+        "foreground": "#ffa657",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "IceType Field Names",
+      "scope": "variable.other.property.icetype",
+      "settings": {
+        "foreground": "#c9d1d9"
+      }
+    },
+    {
+      "name": "IceType Function Names",
+      "scope": [
+        "entity.name.function.icetype",
+        "support.function.icetype"
+      ],
+      "settings": {
+        "foreground": "#d2a8ff"
+      }
+    },
+    {
+      "name": "Keywords",
+      "scope": "keyword.control.icetype",
+      "settings": {
+        "foreground": "#ff7b72"
+      }
+    },
+    {
+      "name": "Punctuation",
+      "scope": [
+        "punctuation.definition.block.icetype",
+        "punctuation.definition.array.icetype",
+        "punctuation.definition.parameters.icetype",
+        "punctuation.separator.comma.icetype",
+        "punctuation.separator.colon.icetype"
+      ],
+      "settings": {
+        "foreground": "#8b949e"
+      }
+    },
+    {
+      "name": "Escape Characters",
+      "scope": "constant.character.escape.icetype",
+      "settings": {
+        "foreground": "#79c0ff"
+      }
+    },
+    {
+      "name": "Entity name tags",
+      "scope": "entity.name.tag.icetype",
+      "settings": {
+        "foreground": "#7ee787"
+      }
+    },
+    {
+      "name": "Language variables",
+      "scope": "variable.language.icetype",
+      "settings": {
+        "foreground": "#ff7b72",
+        "fontStyle": "italic"
+      }
+    }
+  ]
+}

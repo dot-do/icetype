@@ -1,0 +1,229 @@
+{
+  "IceType Schema": {
+    "prefix": ["ice-schema", "icetype-schema", "schema"],
+    "body": [
+      "const ${1:db} = DB({",
+      "  ${2:EntityName}: {",
+      "    \\$type: '${2:EntityName}',",
+      "    ${3:\\$partitionBy: ['${4:tenantId}'],}",
+      "",
+      "    id: 'uuid!',",
+      "    ${5:name}: '${6:string!}',",
+      "    ${7:createdAt}: 'datetime!',",
+      "    ${8:updatedAt}: 'datetime?',",
+      "    $0",
+      "  },",
+      "})"
+    ],
+    "description": "Create a new IceType schema with DB()"
+  },
+  "IceType Entity": {
+    "prefix": ["ice-entity", "entity"],
+    "body": [
+      "${1:EntityName}: {",
+      "  \\$type: '${1:EntityName}',",
+      "  ${2:\\$partitionBy: ['${3:field}'],}",
+      "",
+      "  id: 'uuid!',",
+      "  ${4:field}: '${5:string!}',",
+      "  $0",
+      "},"
+    ],
+    "description": "Create a new IceType entity definition"
+  },
+  "IceType Field - String": {
+    "prefix": ["ice-field", "ice-string", "field-string"],
+    "body": [
+      "${1:fieldName}: '${2|string,text|}${3|!,?,|}${4| ,#index,#unique|}'"
+    ],
+    "description": "Add a string field with optional modifiers"
+  },
+  "IceType Field - Number": {
+    "prefix": ["ice-number", "field-number", "field-int"],
+    "body": [
+      "${1:fieldName}: '${2|int,integer,bigint,float,double,decimal|}${3|!,?,|}'"
+    ],
+    "description": "Add a numeric field"
+  },
+  "IceType Field - Boolean": {
+    "prefix": ["ice-boolean", "field-boolean", "field-bool"],
+    "body": [
+      "${1:fieldName}: '${2|boolean,bool|}${3|!,?,|}'"
+    ],
+    "description": "Add a boolean field"
+  },
+  "IceType Field - Date": {
+    "prefix": ["ice-date", "field-date", "field-datetime"],
+    "body": [
+      "${1:fieldName}: '${2|date,datetime,timestamp,time|}${3|!,?,|}'"
+    ],
+    "description": "Add a date/time field"
+  },
+  "IceType Field - UUID": {
+    "prefix": ["ice-uuid", "field-uuid", "field-id"],
+    "body": [
+      "${1:id}: 'uuid${2|!,?,|}'"
+    ],
+    "description": "Add a UUID field"
+  },
+  "IceType Field - JSON": {
+    "prefix": ["ice-json", "field-json"],
+    "body": [
+      "${1:fieldName}: '${2|json,jsonb|}${3|!,?,|}'"
+    ],
+    "description": "Add a JSON field"
+  },
+  "IceType Relation - Forward": {
+    "prefix": ["ice-relation", "ice-belongs-to", "rel-forward"],
+    "body": [
+      "${1:fieldName}: '-> ${2:Entity}${3|!,?,|}'"
+    ],
+    "description": "Add a forward relation (belongs to)"
+  },
+  "IceType Relation - Backward": {
+    "prefix": ["ice-has-many", "rel-backward"],
+    "body": [
+      "${1:fieldName}: '<- ${2:Entity}.${3:backRef}[]'"
+    ],
+    "description": "Add a backward relation (has many)"
+  },
+  "IceType Relation - Has Many Forward": {
+    "prefix": ["ice-has-many-forward", "rel-has-many"],
+    "body": [
+      "${1:fieldName}: '[${2:Entity}] -> ${3:backRef}'"
+    ],
+    "description": "Add a has many relation with back reference"
+  },
+  "IceType Relation - Fuzzy": {
+    "prefix": ["ice-fuzzy", "ice-semantic", "rel-fuzzy"],
+    "body": [
+      "${1:fieldName}: '~> ${2:Entity}${3|[],|}'"
+    ],
+    "description": "Add a fuzzy/semantic relation"
+  },
+  "IceType Vector Field": {
+    "prefix": ["ice-vector", "field-vector", "embedding"],
+    "body": [
+      "${1:embedding}: 'vector[${2:1536}]${3| ~> ${4:sourceField},|}'"
+    ],
+    "description": "Add a vector embedding field with optional auto-generation"
+  },
+  "IceType Generation Field": {
+    "prefix": ["ice-generate", "ice-ai", "ai-field"],
+    "body": [
+      "${1:generated}: '${2|text,string|} ~> ${3:sourceField}'"
+    ],
+    "description": "Add an AI-generated field from source"
+  },
+  "IceType Code Field": {
+    "prefix": ["ice-code", "ice-esm", "field-code"],
+    "body": [
+      "${1:code}: 'esm${2|!,?,|}'"
+    ],
+    "description": "Add an ESM code field"
+  },
+  "IceType Directive - Partition": {
+    "prefix": ["ice-partition", "$partitionBy"],
+    "body": [
+      "\\$partitionBy: ['${1:field}']"
+    ],
+    "description": "Add a partition directive"
+  },
+  "IceType Directive - Index": {
+    "prefix": ["ice-index", "$index"],
+    "body": [
+      "\\$index: [['${1:field1}'], ['${2:field2}']]"
+    ],
+    "description": "Add index directive for secondary indexes"
+  },
+  "IceType Directive - FTS": {
+    "prefix": ["ice-fts", "$fts", "full-text-search"],
+    "body": [
+      "\\$fts: ['${1:field1}', '${2:field2}']"
+    ],
+    "description": "Add full-text search directive"
+  },
+  "IceType Directive - Vector": {
+    "prefix": ["ice-$vector", "$vector"],
+    "body": [
+      "\\$vector: '${1:embeddingField}'"
+    ],
+    "description": "Add vector search directive"
+  },
+  "IceType Directive - Unique": {
+    "prefix": ["ice-unique", "$unique"],
+    "body": [
+      "\\$unique: [['${1:field1}', '${2:field2}']]"
+    ],
+    "description": "Add unique constraint directive"
+  },
+  "IceType Directive - Primary Key": {
+    "prefix": ["ice-pk", "$primaryKey"],
+    "body": [
+      "\\$primaryKey: ['${1:id}']"
+    ],
+    "description": "Add primary key directive"
+  },
+  "IceType Directive - Sort": {
+    "prefix": ["ice-sort", "$sortBy"],
+    "body": [
+      "\\$sortBy: ['${1:createdAt}']"
+    ],
+    "description": "Add sort order directive"
+  },
+  "IceType User Entity": {
+    "prefix": ["ice-user", "user-schema"],
+    "body": [
+      "User: {",
+      "  \\$type: 'User',",
+      "  \\$partitionBy: ['${1:tenantId}'],",
+      "  \\$index: [['email'], ['createdAt']],",
+      "",
+      "  id: 'uuid!',",
+      "  email: 'string! #unique',",
+      "  name: 'string!',",
+      "  avatar: 'string?',",
+      "  role: 'string!',",
+      "  createdAt: 'datetime!',",
+      "  updatedAt: 'datetime?',",
+      "  $0",
+      "},"
+    ],
+    "description": "Create a User entity template"
+  },
+  "IceType Post Entity": {
+    "prefix": ["ice-post", "post-schema"],
+    "body": [
+      "Post: {",
+      "  \\$type: 'Post',",
+      "  \\$fts: ['title', 'content'],",
+      "",
+      "  id: 'uuid!',",
+      "  title: 'string!',",
+      "  content: 'text!',",
+      "  published: 'boolean!',",
+      "  author: '-> User!',",
+      "  createdAt: 'datetime!',",
+      "  updatedAt: 'datetime?',",
+      "  $0",
+      "},"
+    ],
+    "description": "Create a Post entity template"
+  },
+  "IceType Organization Entity": {
+    "prefix": ["ice-org", "organization-schema"],
+    "body": [
+      "Organization: {",
+      "  \\$type: 'Organization',",
+      "",
+      "  id: 'uuid!',",
+      "  name: 'string!',",
+      "  slug: 'string! #unique',",
+      "  members: '<- User.organization[]',",
+      "  createdAt: 'datetime!',",
+      "  $0",
+      "},"
+    ],
+    "description": "Create an Organization entity template"
+  }
+}
