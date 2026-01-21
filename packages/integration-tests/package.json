@@ -1,0 +1,45 @@
+{
+  "name": "@icetype/integration-tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Integration tests for IceType database adapters using testcontainers",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:postgres": "vitest run postgres",
+    "test:mysql": "vitest run mysql"
+  },
+  "keywords": [
+    "icetype",
+    "integration-tests",
+    "testcontainers",
+    "postgresql",
+    "mysql"
+  ],
+  "author": "Nathan Clevenger",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dot-do/icetype.git"
+  },
+  "homepage": "https://github.com/dot-do/icetype",
+  "bugs": {
+    "url": "https://github.com/dot-do/icetype/issues"
+  },
+  "dependencies": {
+    "@icetype/core": "workspace:*",
+    "@icetype/postgres": "workspace:*",
+    "@icetype/mysql": "workspace:*",
+    "@icetype/test-utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@testcontainers/postgresql": "^10.18.0",
+    "@testcontainers/mysql": "^10.18.0",
+    "@types/pg": "^8.11.0",
+    "pg": "^8.13.0",
+    "mysql2": "^3.11.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}
