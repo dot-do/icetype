@@ -1,0 +1,375 @@
+---
+title: Document Formats
+description: Understanding compact and expanded document forms - the mdxld convention for YAML-LD compatibility and API clarity.
+---
+
+# Document Formats
+
+IceType uses two document formats following the **mdxld convention**: a **compact form** for storage and an **expanded form** for APIs. This convention ensures YAML-LD compatibility while providing clear API structures.
+
+## Overview
+
+| Form | Structure | Use Case | Example |
+|------|-----------|----------|---------|
+| **Compact** | `{$id, $type, ...data}` | Storage, CDC, YAML-LD | SQLite, Parquet, streaming |
+| **Expanded** | `{id, type, data}` | API responses, SDKs | REST endpoints, client code |
+
+## Compact Form
+
+The compact form uses `$`-prefixed metadata fields inline with document data:
+
+```typescript
+// CompactDocument
+const user = {
+  $id: 'user-123',
+  $type: 'User',
+  name: 'Alice',
+  email: 'alice@example.com',
+};
+
+// CompactStoredDocument (with full metadata)
+const storedUser = {
+  $id: 'user-123',
+  $type: 'User',
+  $version: 3,
+  $createdAt: 1705836000000,
+  $updatedAt: 1705840000000,
+  name: 'Alice',
+  email: 'alice@example.com',
+};
+```
+
+### Why the `$` Prefix?
+
+The `$` prefix serves two critical purposes:
+
+1. **YAML-LD Compatibility**: In YAML, keys starting with `@` (standard JSON-LD) require quoting. The `$` prefix allows clean YAML syntax without quotes:
+
+   ```yaml
+   # With $ prefix (clean, no quotes needed)
+   $id: user-123
+   $type: User
+   name: Alice
+
+   # With @ prefix (requires quotes)
+   "@id": user-123
+   "@type": User
+   name: Alice
+   ```
+
+2. **Namespace Separation**: The `$` prefix clearly distinguishes system metadata from user data, preventing accidental collisions with field names like `id` or `type` in your domain model.
+
+### Compact Form Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `$id` | `string` | Document identifier (required) |
+| `$type` | `string` | Collection/entity name (required) |
+| `$version` | `number` | Document version, incremented on updates |
+| `$createdAt` | `number` | Creation timestamp (ms since epoch) |
+| `$updatedAt` | `number` | Last update timestamp (ms since epoch) |
+
+### When to Use Compact Form
+
+- **Storage layers**: SQLite, Parquet files, Iceberg tables
+- **CDC events**: Change data capture log entries
+- **Internal APIs**: Service-to-service communication
+- **YAML/MDX files**: Configuration and content files
+- **Streaming**: Real-time data pipelines
+
+## Expanded Form
+
+The expanded form separates metadata from data with a clear structure:
+
+```typescript
+// ExpandedDocument
+const user = {
+  id: 'user-123',
+  type: 'User',
+  data: {
+    name: 'Alice',
+    email: 'alice@example.com',
+  },
+};
+
+// ExpandedStoredDocument (with full metadata)
+const storedUser = {
+  id: 'user-123',
+  type: 'User',
+  version: 3,
+  createdAt: 1705836000000,
+  updatedAt: 1705840000000,
+  data: {
+    name: 'Alice',
+    email: 'alice@example.com',
+  },
+};
+```
+
+### Expanded Form Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Document identifier |
+| `type` | `string` | Collection/entity name |
+| `version` | `number` | Document version |
+| `createdAt` | `number` | Creation timestamp |
+| `updatedAt` | `number` | Last update timestamp |
+| `data` | `object` | All user data fields |
+
+### When to Use Expanded Form
+
+- **REST API responses**: Clear structure for clients
+- **SDK return values**: Type-safe access to metadata
+- **GraphQL**: Matches GraphQL's structured response pattern
+- **Documentation**: Easier to understand for API consumers
+- **JSON-LD contexts**: Standard linked data patterns
+
+## Conversion Functions
+
+IceType provides functions to convert between formats:
+
+### `compactToExpanded`
+
+Converts a compact document to expanded form:
+
+```typescript
+import { compactToExpanded } from '@icetype/core';
+
+const compact = {
+  $id: 'user-123',
+  $type: 'User',
+  $version: 1,
+  $createdAt: 1705836000000,
+  $updatedAt: 1705836000000,
+  name: 'Alice',
+  email: 'alice@example.com',
+};
+
+const expanded = compactToExpanded(compact);
+// Result:
+// {
+//   id: 'user-123',
+//   type: 'User',
+//   version: 1,
+//   createdAt: 1705836000000,
+//   updatedAt: 1705836000000,
+//   data: {
+//     name: 'Alice',
+//     email: 'alice@example.com',
+//   },
+// }
+```
+
+### `expandedToCompact`
+
+Converts an expanded document to compact form:
+
+```typescript
+import { expandedToCompact } from '@icetype/core';
+
+const expanded = {
+  id: 'user-123',
+  type: 'User',
+  version: 1,
+  createdAt: 1705836000000,
+  updatedAt: 1705836000000,
+  data: {
+    name: 'Alice',
+    email: 'alice@example.com',
+  },
+};
+
+const compact = expandedToCompact(expanded);
+// Result:
+// {
+//   $id: 'user-123',
+//   $type: 'User',
+//   $version: 1,
+//   $createdAt: 1705836000000,
+//   $updatedAt: 1705836000000,
+//   name: 'Alice',
+//   email: 'alice@example.com',
+// }
+```
+
+### Roundtrip Safety
+
+Both conversion functions preserve all data through roundtrips:
+
+```typescript
+const original = { $id: 'u1', $type: 'User', name: 'Alice' };
+const roundtripped = expandedToCompact(compactToExpanded(original));
+// roundtripped === original (deep equality)
+```
+
+## Type Guards
+
+Use type guards to check document formats at runtime:
+
+```typescript
+import {
+  isCompactDocument,
+  isCompactStoredDocument,
+  isExpandedDocument,
+  isExpandedStoredDocument,
+} from '@icetype/core';
+
+// Check if value is a compact document
+if (isCompactDocument(value)) {
+  console.log(value.$id, value.$type);
+}
+
+// Check if value is a stored document with metadata
+if (isCompactStoredDocument(value)) {
+  console.log(`Version: ${value.$version}`);
+}
+
+// Check if value is an expanded document
+if (isExpandedDocument(value)) {
+  console.log(value.id, value.data);
+}
+```
+
+## Utility Functions
+
+### `extractData`
+
+Extract only the data fields from a compact document:
+
+```typescript
+import { extractData } from '@icetype/core';
+
+const compact = {
+  $id: 'user-123',
+  $type: 'User',
+  $version: 1,
+  $createdAt: 1705836000000,
+  $updatedAt: 1705836000000,
+  name: 'Alice',
+  email: 'alice@example.com',
+};
+
+const data = extractData(compact);
+// { name: 'Alice', email: 'alice@example.com' }
+```
+
+### `isSystemField`
+
+Check if a field name is a system field:
+
+```typescript
+import { isSystemField } from '@icetype/core';
+
+isSystemField('$id');      // true
+isSystemField('$type');    // true
+isSystemField('$version'); // true
+isSystemField('name');     // false
+isSystemField('email');    // false
+```
+
+## Integration with IceType Schemas
+
+When defining schemas, IceType automatically handles the `$id` and `$type` fields:
+
+```typescript
+import { parseSchema } from '@icetype/core';
+
+const userSchema = parseSchema({
+  $type: 'User',
+  $partitionBy: ['tenantId'],
+
+  // Fields - $id is auto-generated if not specified
+  id: 'uuid!',
+  email: 'string#',
+  name: 'string!',
+});
+```
+
+Documents created from this schema will have:
+- `$id` populated from the `id` field
+- `$type` set to `'User'`
+- All other fields stored inline in compact form
+
+## Best Practices
+
+### API Layer Conversion
+
+Convert at API boundaries - store compact, serve expanded:
+
+```typescript
+// In your API handler
+async function getUser(id: string) {
+  // Storage returns compact form
+  const compact = await store.get('User', id);
+
+  // Convert to expanded for API response
+  return compactToExpanded(compact);
+}
+
+// In your write handler
+async function createUser(input: UserInput) {
+  // Convert API input to compact for storage
+  const compact = {
+    $id: generateId(),
+    $type: 'User',
+    ...input,
+  };
+
+  await store.insert(compact);
+  return compactToExpanded(compact);
+}
+```
+
+### Iceberg Integration
+
+When streaming to Iceberg, use compact form for efficient columnar storage:
+
+```typescript
+const cdcEntry = {
+  sequenceId: 1,
+  operation: 'INSERT',
+  collection: 'User',
+  documentId: 'user-123',
+  timestamp: Date.now(),
+  shardId: 'shard-1',
+  afterState: compact,  // Compact form for efficient storage
+  synced: false,
+};
+```
+
+## TypeScript Types
+
+The full type definitions:
+
+```typescript
+interface CompactDocument {
+  $id: string;
+  $type: string;
+  [key: string]: unknown;
+}
+
+interface CompactStoredDocument extends CompactDocument {
+  $version: number;
+  $createdAt: number;
+  $updatedAt: number;
+}
+
+interface ExpandedDocument {
+  id: string;
+  type: string;
+  data: Record<string, unknown>;
+}
+
+interface ExpandedStoredDocument extends ExpandedDocument {
+  version: number;
+  createdAt: number;
+  updatedAt: number;
+}
+```
+
+## Related Documentation
+
+- [Schema Language](/schema-language) - IceType schema syntax
+- [Adapters](/adapters) - Database adapter implementations
+- [Iceberg Integration](/tutorials/iceberg-analytics) - Streaming to Iceberg
