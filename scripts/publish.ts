@@ -59,13 +59,59 @@ function writePackageJson(pkgDir: string, pkg: PackageJson): void {
   writeFileSync(join(pkgDir, 'package.json'), JSON.stringify(pkg, null, 2) + '\n')
 }
 
-function isPublished(name: string, version: string): boolean {
+function getLatestVersion(name: string): string | null {
   try {
-    execSync(`npm view "${name}@${version}" version`, { stdio: 'pipe' })
-    return true
+    return execSync(`npm view "${name}" version`, { stdio: 'pipe' }).toString().trim()
   } catch {
-    return false
+    return null
   }
+}
+
+function compareVersions(a: string, b: string): number {
+  const parseVersion = (v: string) => {
+    const [main, pre] = v.split('-')
+    const parts = main.split('.').map(Number)
+    return { parts, pre: pre || '' }
+  }
+  const va = parseVersion(a)
+  const vb = parseVersion(b)
+
+  for (let i = 0; i < 3; i++) {
+    if ((va.parts[i] || 0) > (vb.parts[i] || 0)) return 1
+    if ((va.parts[i] || 0) < (vb.parts[i] || 0)) return -1
+  }
+
+  // Same main version, check prerelease
+  if (!va.pre && vb.pre) return 1  // 1.0.0 > 1.0.0-alpha
+  if (va.pre && !vb.pre) return -1 // 1.0.0-alpha < 1.0.0
+  if (va.pre < vb.pre) return -1
+  if (va.pre > vb.pre) return 1
+  return 0
+}
+
+type PublishStatus =
+  | { canPublish: false; reason: 'already_published' | 'version_too_low'; latestVersion?: string }
+  | { canPublish: true; isNew: boolean; latestVersion?: string }
+
+function checkPublishStatus(name: string, version: string): PublishStatus {
+  const latestVersion = getLatestVersion(name)
+
+  if (!latestVersion) {
+    // Package doesn't exist on npm yet
+    return { canPublish: true, isNew: true }
+  }
+
+  const cmp = compareVersions(version, latestVersion)
+
+  if (cmp === 0) {
+    return { canPublish: false, reason: 'already_published', latestVersion }
+  }
+
+  if (cmp < 0) {
+    return { canPublish: false, reason: 'version_too_low', latestVersion }
+  }
+
+  return { canPublish: true, isNew: false, latestVersion }
 }
 
 function replaceWorkspaceProtocol(
@@ -123,10 +169,20 @@ async function main() {
       continue
     }
 
-    if (isPublished(pkg.name, pkg.version)) {
-      console.log(`✅ ${pkg.name}@${pkg.version} (already published)`)
+    const status = checkPublishStatus(pkg.name, pkg.version)
+
+    if (!status.canPublish) {
+      if (status.reason === 'already_published') {
+        console.log(`✅ ${pkg.name}@${pkg.version} (already published)`)
+      } else {
+        console.log(`❌ ${pkg.name}@${pkg.version} (version too low - npm has ${status.latestVersion})`)
+      }
     } else {
-      console.log(`📦 ${pkg.name}@${pkg.version} (needs publish)`)
+      if (status.isNew) {
+        console.log(`📦 ${pkg.name}@${pkg.version} (new package)`)
+      } else {
+        console.log(`📦 ${pkg.name}@${pkg.version} (upgrade from ${status.latestVersion})`)
+      }
       toPublish.push({ dir, name: pkg.name, version: pkg.version })
     }
   }
