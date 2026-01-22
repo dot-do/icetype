@@ -13,7 +13,9 @@
     "bench": "pnpm --filter @icetype/benchmarks bench",
     "bench:json": "pnpm --filter @icetype/benchmarks bench:json",
     "lint": "turbo run lint",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "publish-packages": "tsx scripts/publish.ts",
+    "publish-packages:dry": "tsx scripts/publish.ts --dry-run"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^2.1.0",
