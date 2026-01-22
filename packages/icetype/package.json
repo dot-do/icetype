@@ -1,6 +1,6 @@
 {
   "name": "icetype",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "IceType - Type-safe schema language for data lakes and databases",
   "type": "module",
   "main": "./dist/index.js",
