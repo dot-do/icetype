@@ -14,7 +14,7 @@ import {
   extractForeignKeys,
   serializeForeignKey,
   type ForeignKeyDefinition,
-} from '../index.js';
+} from '../src/index.js';
 
 // =============================================================================
 // Test Schemas

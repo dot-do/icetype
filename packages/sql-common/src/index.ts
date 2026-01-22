@@ -558,7 +558,7 @@ export function generateSystemColumns(dialect: SqlDialect): SqlColumn[] {
       name: SYSTEM_COLUMNS.$id.name,
       type: types.stringType,
       nullable: SYSTEM_COLUMNS.$id.nullable,
-      primaryKey: SYSTEM_COLUMNS.$id.primaryKey,
+      ...(SYSTEM_COLUMNS.$id.primaryKey ? { primaryKey: true } : {}),
     },
     {
       name: SYSTEM_COLUMNS.$type.name,

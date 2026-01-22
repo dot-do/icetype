@@ -19,7 +19,7 @@ import {
   InvalidSchemaNameError,
   type SqlDialect,
   type SqlColumn,
-} from '../index.js';
+} from '../src/index.js';
 
 // =============================================================================
 // escapeIdentifier() Tests

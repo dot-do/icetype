@@ -17,7 +17,7 @@ import {
   serializeDDL,
   type DDLStructure,
   type SqlDialect,
-} from '../serialize.js';
+} from '../src/serialize.js';
 
 // =============================================================================
 // DDLStructure Type Tests (Compile-time verification)

@@ -21,7 +21,7 @@ import {
   validateSchemaName,
   InvalidSchemaNameError,
   type SqlDialect,
-} from '../index.js';
+} from '../src/index.js';
 
 // =============================================================================
 // SQL Reserved Keywords Tests
