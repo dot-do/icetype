@@ -94,19 +94,32 @@ export class ExpandError extends IceTypeError {
       fullMessage = `Expansion path '${path}': ${message}`;
     }
 
-    super(fullMessage, {
+    const superOptions: {
+      code: ExpandErrorCode;
+      cause?: Error;
+      context: Record<string, unknown>;
+    } = {
       code: code ?? ExpandErrorCodes.EXPAND_UNKNOWN_PATH,
-      cause,
-      context: {
-        ...context,
-        path,
-        schemaName,
-      },
-    });
+      context: { ...context },
+    };
+    if (cause !== undefined) {
+      superOptions.cause = cause;
+    }
+    if (path !== undefined) {
+      superOptions.context.path = path;
+    }
+    if (schemaName !== undefined) {
+      superOptions.context.schemaName = schemaName;
+    }
+    super(fullMessage, superOptions);
 
     this.name = 'ExpandError';
-    this.path = path;
-    this.schemaName = schemaName;
+    if (path !== undefined) {
+      this.path = path;
+    }
+    if (schemaName !== undefined) {
+      this.schemaName = schemaName;
+    }
 
     Object.setPrototypeOf(this, ExpandError.prototype);
   }
@@ -447,11 +460,21 @@ function expandTargetSchema(
       isOptional: isOptional,
       isUnique: false, // Expanded fields lose uniqueness constraints
       isIndexed: false, // Indexes don't carry over to expanded views
-      defaultValue: field.defaultValue,
-      precision: field.precision,
-      scale: field.scale,
-      length: field.length,
     };
+
+    // Only assign optional properties if they are defined
+    if (field.defaultValue !== undefined) {
+      expandedField.defaultValue = field.defaultValue;
+    }
+    if (field.precision !== undefined) {
+      expandedField.precision = field.precision;
+    }
+    if (field.scale !== undefined) {
+      expandedField.scale = field.scale;
+    }
+    if (field.length !== undefined) {
+      expandedField.length = field.length;
+    }
 
     expandedFields.set(expandedFieldName, expandedField);
   }

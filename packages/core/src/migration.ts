@@ -703,15 +703,18 @@ export function mergeMigrations(migrations: Migration[]): Migration {
 
   if (migrations.length === 1) {
     const m = migrations[0]!;
-    return {
+    const result: Migration = {
       id: generateMigrationId(),
       fromVersion: { ...m.fromVersion },
       toVersion: { ...m.toVersion },
       timestamp: new Date(m.timestamp),
-      description: m.description,
       operations: [...m.operations],
       isBreaking: m.isBreaking,
     };
+    if (m.description !== undefined) {
+      result.description = m.description;
+    }
+    return result;
   }
 
   // Validate sequential order

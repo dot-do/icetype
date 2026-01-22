@@ -105,7 +105,9 @@ export class IceTypeError extends Error {
     super(message, { cause: options.cause });
     this.name = 'IceTypeError';
     this.code = options.code ?? 'ICETYPE_0000';
-    this.context = options.context;
+    if (options.context !== undefined) {
+      this.context = options.context;
+    }
 
     // Maintain proper prototype chain for instanceof checks
     Object.setPrototypeOf(this, IceTypeError.prototype);
@@ -186,7 +188,9 @@ export class SchemaValidationError extends IceTypeError {
       code: options.code ?? ErrorCodes.SCHEMA_VALIDATION_ERROR,
     });
     this.name = 'SchemaValidationError';
-    this.path = options.path;
+    if (options.path !== undefined) {
+      this.path = options.path;
+    }
     this.value = options.value;
 
     Object.setPrototypeOf(this, SchemaValidationError.prototype);
@@ -242,20 +246,25 @@ export class ParseError extends IceTypeError {
     }
     fullMessage = `Parse error at line ${line}, column ${column}: ${fullMessage}`;
 
+    const context: Record<string, unknown> = {
+      ...options.context,
+      line,
+      column,
+    };
+    if (path !== undefined) {
+      context.path = path;
+    }
     super(fullMessage, {
       ...options,
       code: options.code ?? ErrorCodes.PARSE_ERROR,
-      context: {
-        ...options.context,
-        line,
-        column,
-        path,
-      },
+      context,
     });
     this.name = 'ParseError';
     this.line = line;
     this.column = column;
-    this.path = path;
+    if (path !== undefined) {
+      this.path = path;
+    }
 
     Object.setPrototypeOf(this, ParseError.prototype);
   }
@@ -329,18 +338,27 @@ export class AdapterError extends IceTypeError {
         : `Adapter '${adapterName}': `;
     }
 
+    const context: Record<string, unknown> = {
+      ...options.context,
+    };
+    if (adapterName !== undefined) {
+      context.adapterName = adapterName;
+    }
+    if (operation !== undefined) {
+      context.operation = operation;
+    }
     super(`${prefix}${message}`, {
       ...options,
       code: options.code ?? ErrorCodes.ADAPTER_ERROR,
-      context: {
-        ...options.context,
-        adapterName,
-        operation,
-      },
+      context,
     });
     this.name = 'AdapterError';
-    this.adapterName = adapterName;
-    this.operation = operation;
+    if (adapterName !== undefined) {
+      this.adapterName = adapterName;
+    }
+    if (operation !== undefined) {
+      this.operation = operation;
+    }
 
     Object.setPrototypeOf(this, AdapterError.prototype);
   }
@@ -479,9 +497,15 @@ export class SchemaLoadError extends IceTypeError {
       },
     });
     this.name = 'SchemaLoadError';
-    this.filePath = filePath;
-    this.extension = extension;
-    this.errorContext = errorContext;
+    if (filePath !== undefined) {
+      this.filePath = filePath;
+    }
+    if (extension !== undefined) {
+      this.extension = extension;
+    }
+    if (errorContext !== undefined) {
+      this.errorContext = errorContext;
+    }
 
     Object.setPrototypeOf(this, SchemaLoadError.prototype);
   }

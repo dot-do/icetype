@@ -32,17 +32,27 @@ export class ConfigLoadError extends IceTypeError {
       cause?: Error;
     } = {}
   ) {
-    super(message, {
+    const superOptions: { code: string; cause?: Error; context: Record<string, unknown> } = {
       code: 'ICETYPE_6000',
-      cause: options.cause,
-      context: {
-        configPath: options.configPath,
-        searchedPaths: options.searchedPaths,
-      },
-    });
+      context: {},
+    };
+    if (options.cause !== undefined) {
+      superOptions.cause = options.cause;
+    }
+    if (options.configPath !== undefined) {
+      superOptions.context.configPath = options.configPath;
+    }
+    if (options.searchedPaths !== undefined) {
+      superOptions.context.searchedPaths = options.searchedPaths;
+    }
+    super(message, superOptions);
     this.name = 'ConfigLoadError';
-    this.configPath = options.configPath;
-    this.searchedPaths = options.searchedPaths;
+    if (options.configPath !== undefined) {
+      this.configPath = options.configPath;
+    }
+    if (options.searchedPaths !== undefined) {
+      this.searchedPaths = options.searchedPaths;
+    }
     Object.setPrototypeOf(this, ConfigLoadError.prototype);
   }
 }
@@ -60,15 +70,21 @@ export class ConfigValidationError extends IceTypeError {
       cause?: Error;
     } = {}
   ) {
-    super(message, {
+    const superOptions: { code: string; cause?: Error; context: Record<string, unknown> } = {
       code: 'ICETYPE_6001',
-      cause: options.cause,
-      context: {
-        validationErrors: options.validationErrors,
-      },
-    });
+      context: {},
+    };
+    if (options.cause !== undefined) {
+      superOptions.cause = options.cause;
+    }
+    if (options.validationErrors !== undefined) {
+      superOptions.context.validationErrors = options.validationErrors;
+    }
+    super(message, superOptions);
     this.name = 'ConfigValidationError';
-    this.validationErrors = options.validationErrors;
+    if (options.validationErrors !== undefined) {
+      this.validationErrors = options.validationErrors;
+    }
     Object.setPrototypeOf(this, ConfigValidationError.prototype);
   }
 }
@@ -351,16 +367,21 @@ export function resolveConfig(
     normalizePluginEntry(entry, globalOptions)
   );
 
-  return {
+  const result: ResolvedConfig = {
     plugins,
     autoDiscover: config.autoDiscover ?? DEFAULT_CONFIG.autoDiscover,
     discoverPatterns: config.discoverPatterns ?? DEFAULT_CONFIG.discoverPatterns,
     strictMode: config.strictMode ?? DEFAULT_CONFIG.strictMode,
     cacheEnabled: config.cacheEnabled ?? DEFAULT_CONFIG.cacheEnabled,
     pluginSearchPaths: config.pluginSearchPaths ?? DEFAULT_CONFIG.pluginSearchPaths,
-    configPath,
     configSource,
   };
+
+  if (configPath !== undefined) {
+    result.configPath = configPath;
+  }
+
+  return result;
 }
 
 /**

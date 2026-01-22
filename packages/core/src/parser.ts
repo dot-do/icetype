@@ -531,22 +531,21 @@ export function parseTypeString(input: string, options: ParseTypeOptions = {}): 
   const { throwOnUnknownType = true, fieldName, line = 1, column = 1 } = options;
   let str = input.trim();
 
+  // Helper to build parse error options with optional path
+  const makeErrorOpts = (code: string): { line: number; column: number; code: string; path?: string } => {
+    const opts: { line: number; column: number; code: string; path?: string } = { line, column, code };
+    if (fieldName !== undefined) {
+      opts.path = fieldName;
+    }
+    return opts;
+  };
+
   if (!str) {
-    throw new ParseError('Empty type string', {
-      path: fieldName,
-      line,
-      column,
-      code: 'EMPTY_TYPE',
-    });
+    throw new ParseError('Empty type string', makeErrorOpts('EMPTY_TYPE'));
   }
 
   if (/^[?!#]/.test(str)) {
-    throw new ParseError('Invalid modifier position: modifiers must come after the type name', {
-      path: fieldName,
-      line,
-      column,
-      code: 'INVALID_MODIFIER_POSITION',
-    });
+    throw new ParseError('Invalid modifier position: modifiers must come after the type name', makeErrorOpts('INVALID_MODIFIER_POSITION'));
   }
 
   // 1. Extract default value (after ' = ')
@@ -595,12 +594,7 @@ export function parseTypeString(input: string, options: ParseTypeOptions = {}): 
     const innerContent = genericMatch[2].trim();
 
     if (!GENERIC_TYPES.has(genericType)) {
-      throw new ParseError(`Unknown generic type: ${genericType}`, {
-        path: fieldName,
-        line,
-        column,
-        code: 'UNKNOWN_GENERIC_TYPE',
-      });
+      throw new ParseError(`Unknown generic type: ${genericType}`, makeErrorOpts('UNKNOWN_GENERIC_TYPE'));
     }
 
     const result: ParsedType = {
@@ -616,12 +610,7 @@ export function parseTypeString(input: string, options: ParseTypeOptions = {}): 
     if (genericType === 'map') {
       const parts = splitGenericParams(innerContent);
       if (parts.length !== 2 || !parts[0] || !parts[1]) {
-        throw new ParseError(`Map type requires exactly 2 type parameters (got ${parts.length})`, {
-          path: fieldName,
-          line,
-          column,
-          code: 'INVALID_MAP_PARAMS',
-        });
+        throw new ParseError(`Map type requires exactly 2 type parameters (got ${parts.length})`, makeErrorOpts('INVALID_MAP_PARAMS'));
       }
       result.keyType = parts[0].trim().toLowerCase();
       result.valueType = parts[1].trim().toLowerCase();
@@ -647,24 +636,14 @@ export function parseTypeString(input: string, options: ParseTypeOptions = {}): 
     const paramsStr = parametricMatch[2].trim();
 
     if (!PARAMETRIC_TYPES.has(typeName)) {
-      throw new ParseError(`Unknown parametric type: ${typeName}`, {
-        path: fieldName,
-        line,
-        column,
-        code: 'UNKNOWN_PARAMETRIC_TYPE',
-      });
+      throw new ParseError(`Unknown parametric type: ${typeName}`, makeErrorOpts('UNKNOWN_PARAMETRIC_TYPE'));
     }
 
     const params = paramsStr.split(',').map((p) => {
       const trimmed = p.trim();
       const num = parseInt(trimmed, 10);
       if (isNaN(num)) {
-        throw new ParseError(`Invalid parameter value: '${trimmed}' (expected a number)`, {
-          path: fieldName,
-          line,
-          column,
-          code: 'INVALID_PARAM_VALUE',
-        });
+        throw new ParseError(`Invalid parameter value: '${trimmed}' (expected a number)`, makeErrorOpts('INVALID_PARAM_VALUE'));
       }
       return num;
     });
@@ -680,10 +659,14 @@ export function parseTypeString(input: string, options: ParseTypeOptions = {}): 
     if (isArray) result.array = true;
 
     if (typeName === 'decimal') {
-      result.precision = params[0];
-      result.scale = params.length > 1 ? params[1] : 0;
+      if (params[0] !== undefined) {
+        result.precision = params[0];
+      }
+      result.scale = params.length > 1 && params[1] !== undefined ? params[1] : 0;
     } else if (typeName === 'varchar' || typeName === 'char' || typeName === 'fixed') {
-      result.length = params[0];
+      if (params[0] !== undefined) {
+        result.length = params[0];
+      }
     }
 
     if (defaultValue !== undefined) result.default = defaultValue;
@@ -700,12 +683,7 @@ export function parseTypeString(input: string, options: ParseTypeOptions = {}): 
   }
 
   if (throwOnUnknownType && !PRIMITIVE_TYPES.has(typeName) && !PARAMETRIC_TYPES.has(typeName)) {
-    throw new ParseError(`Unknown type: '${str}'`, {
-      path: fieldName,
-      line,
-      column,
-      code: 'UNKNOWN_TYPE',
-    });
+    throw new ParseError(`Unknown type: '${str}'`, makeErrorOpts('UNKNOWN_TYPE'));
   }
 
   const result: ParsedType = {
@@ -806,45 +784,34 @@ export function parseRelationString(
 ): RelationDefinition & { array?: boolean; optional?: boolean } {
   const { fieldName, line = 1, column = 1 } = options;
 
+  // Helper to build parse error options with optional path
+  const makeErrorOpts = (code: string): { line: number; column: number; code: string; path?: string } => {
+    const opts: { line: number; column: number; code: string; path?: string } = { line, column, code };
+    if (fieldName !== undefined) {
+      opts.path = fieldName;
+    }
+    return opts;
+  };
+
   if (!input || typeof input !== 'string') {
-    throw new ParseError('Relation definition must be a non-empty string', {
-      path: fieldName,
-      line,
-      column,
-      code: 'EMPTY_RELATION',
-    });
+    throw new ParseError('Relation definition must be a non-empty string', makeErrorOpts('EMPTY_RELATION'));
   }
 
   const trimmed = input.trim();
   if (!trimmed) {
-    throw new ParseError('Relation definition must be a non-empty string', {
-      path: fieldName,
-      line,
-      column,
-      code: 'EMPTY_RELATION',
-    });
+    throw new ParseError('Relation definition must be a non-empty string', makeErrorOpts('EMPTY_RELATION'));
   }
 
   const opMatch = findOperator(trimmed);
   if (!opMatch) {
-    throw new ParseError(`No valid relation operator found. Use ->, ~>, <-, or <~`, {
-      path: fieldName,
-      line,
-      column,
-      code: 'MISSING_RELATION_OPERATOR',
-    });
+    throw new ParseError(`No valid relation operator found. Use ->, ~>, <-, or <~`, makeErrorOpts('MISSING_RELATION_OPERATOR'));
   }
 
   const { operator, index } = opMatch;
   let targetPart = trimmed.slice(index + operator.length).trim();
 
   if (!targetPart) {
-    throw new ParseError(`Relation operator '${operator}' requires a target type (e.g., '${operator} User')`, {
-      path: fieldName,
-      line,
-      column,
-      code: 'MISSING_TARGET_TYPE',
-    });
+    throw new ParseError(`Relation operator '${operator}' requires a target type (e.g., '${operator} User')`, makeErrorOpts('MISSING_TARGET_TYPE'));
   }
 
   let isArray = false;
@@ -1007,7 +974,17 @@ export class IceTypeParser {
     const { fieldName, line, column } = options;
 
     if (isRelationString(trimmed)) {
-      const relation = parseRelationString(trimmed, { fieldName, line, column });
+      const relOpts: ParseRelationOptions = {};
+      if (fieldName !== undefined) {
+        relOpts.fieldName = fieldName;
+      }
+      if (line !== undefined) {
+        relOpts.line = line;
+      }
+      if (column !== undefined) {
+        relOpts.column = column;
+      }
+      const relation = parseRelationString(trimmed, relOpts);
       return {
         name: '',
         type: relation.targetType,
@@ -1031,7 +1008,7 @@ export class IceTypeParser {
       modifier = '?';
     }
 
-    return {
+    const result: FieldDefinition = {
       name: '',
       type: parsed.type,
       modifier,
@@ -1039,11 +1016,22 @@ export class IceTypeParser {
       isOptional: parsed.optional,
       isUnique: parsed.unique,
       isIndexed: parsed.indexed,
-      defaultValue: parsed.default,
-      precision: parsed.precision,
-      scale: parsed.scale,
-      length: parsed.length,
     };
+
+    if (parsed.default !== undefined) {
+      result.defaultValue = parsed.default;
+    }
+    if (parsed.precision !== undefined) {
+      result.precision = parsed.precision;
+    }
+    if (parsed.scale !== undefined) {
+      result.scale = parsed.scale;
+    }
+    if (parsed.length !== undefined) {
+      result.length = parsed.length;
+    }
+
+    return result;
   }
 
   /**
@@ -1054,12 +1042,17 @@ export class IceTypeParser {
    */
   parseRelation(relDef: string): RelationDefinition {
     const result = parseRelationString(relDef);
-    return {
+    const relation: RelationDefinition = {
       operator: result.operator,
       targetType: result.targetType,
-      inverse: result.inverse,
-      onDelete: result.onDelete,
     };
+    if (result.inverse !== undefined) {
+      relation.inverse = result.inverse;
+    }
+    if (result.onDelete !== undefined) {
+      relation.onDelete = result.onDelete;
+    }
+    return relation;
   }
 
   /**

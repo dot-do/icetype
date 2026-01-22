@@ -77,17 +77,27 @@ export class PluginDiscoveryError extends IceTypeError {
       cause?: Error;
     } = {}
   ) {
-    super(message, {
+    const superOptions: { code: string; cause?: Error; context: Record<string, unknown> } = {
       code: 'ICETYPE_5000',
-      cause: options.cause,
-      context: {
-        searchPaths: options.searchPaths,
-        pattern: options.pattern,
-      },
-    });
+      context: {},
+    };
+    if (options.cause !== undefined) {
+      superOptions.cause = options.cause;
+    }
+    if (options.searchPaths !== undefined) {
+      superOptions.context.searchPaths = options.searchPaths;
+    }
+    if (options.pattern !== undefined) {
+      superOptions.context.pattern = options.pattern;
+    }
+    super(message, superOptions);
     this.name = 'PluginDiscoveryError';
-    this.searchPaths = options.searchPaths;
-    this.pattern = options.pattern;
+    if (options.searchPaths !== undefined) {
+      this.searchPaths = options.searchPaths;
+    }
+    if (options.pattern !== undefined) {
+      this.pattern = options.pattern;
+    }
     Object.setPrototypeOf(this, PluginDiscoveryError.prototype);
   }
 }
@@ -105,15 +115,21 @@ export class PluginLoadError extends IceTypeError {
       cause?: Error;
     } = {}
   ) {
-    super(message, {
+    const superOptions: { code: string; cause?: Error; context: Record<string, unknown> } = {
       code: 'ICETYPE_5001',
-      cause: options.cause,
-      context: {
-        pluginName: options.pluginName,
-      },
-    });
+      context: {},
+    };
+    if (options.cause !== undefined) {
+      superOptions.cause = options.cause;
+    }
+    if (options.pluginName !== undefined) {
+      superOptions.context.pluginName = options.pluginName;
+    }
+    super(message, superOptions);
     this.name = 'PluginLoadError';
-    this.pluginName = options.pluginName;
+    if (options.pluginName !== undefined) {
+      this.pluginName = options.pluginName;
+    }
     Object.setPrototypeOf(this, PluginLoadError.prototype);
   }
 }
@@ -137,21 +153,39 @@ export class PluginDependencyError extends IceTypeError {
       cause?: Error;
     } = {}
   ) {
-    super(message, {
+    const superOptions: { code: string; cause?: Error; context: Record<string, unknown> } = {
       code: 'ICETYPE_5002',
-      cause: options.cause,
-      context: {
-        pluginName: options.pluginName,
-        dependencyName: options.dependencyName,
-        requiredVersion: options.requiredVersion,
-        availableVersion: options.availableVersion,
-      },
-    });
+      context: {},
+    };
+    if (options.cause !== undefined) {
+      superOptions.cause = options.cause;
+    }
+    if (options.pluginName !== undefined) {
+      superOptions.context.pluginName = options.pluginName;
+    }
+    if (options.dependencyName !== undefined) {
+      superOptions.context.dependencyName = options.dependencyName;
+    }
+    if (options.requiredVersion !== undefined) {
+      superOptions.context.requiredVersion = options.requiredVersion;
+    }
+    if (options.availableVersion !== undefined) {
+      superOptions.context.availableVersion = options.availableVersion;
+    }
+    super(message, superOptions);
     this.name = 'PluginDependencyError';
-    this.pluginName = options.pluginName;
-    this.dependencyName = options.dependencyName;
-    this.requiredVersion = options.requiredVersion;
-    this.availableVersion = options.availableVersion;
+    if (options.pluginName !== undefined) {
+      this.pluginName = options.pluginName;
+    }
+    if (options.dependencyName !== undefined) {
+      this.dependencyName = options.dependencyName;
+    }
+    if (options.requiredVersion !== undefined) {
+      this.requiredVersion = options.requiredVersion;
+    }
+    if (options.availableVersion !== undefined) {
+      this.availableVersion = options.availableVersion;
+    }
     Object.setPrototypeOf(this, PluginDependencyError.prototype);
   }
 }
@@ -173,19 +207,33 @@ export class PluginLifecycleError extends IceTypeError {
       cause?: Error;
     } = {}
   ) {
-    super(message, {
+    const superOptions: { code: string; cause?: Error; context: Record<string, unknown> } = {
       code: 'ICETYPE_5003',
-      cause: options.cause,
-      context: {
-        pluginName: options.pluginName,
-        hook: options.hook,
-        phase: options.phase,
-      },
-    });
+      context: {},
+    };
+    if (options.cause !== undefined) {
+      superOptions.cause = options.cause;
+    }
+    if (options.pluginName !== undefined) {
+      superOptions.context.pluginName = options.pluginName;
+    }
+    if (options.hook !== undefined) {
+      superOptions.context.hook = options.hook;
+    }
+    if (options.phase !== undefined) {
+      superOptions.context.phase = options.phase;
+    }
+    super(message, superOptions);
     this.name = 'PluginLifecycleError';
-    this.pluginName = options.pluginName;
-    this.hook = options.hook;
-    this.phase = options.phase;
+    if (options.pluginName !== undefined) {
+      this.pluginName = options.pluginName;
+    }
+    if (options.hook !== undefined) {
+      this.hook = options.hook;
+    }
+    if (options.phase !== undefined) {
+      this.phase = options.phase;
+    }
     Object.setPrototypeOf(this, PluginLifecycleError.prototype);
   }
 }
@@ -745,9 +793,11 @@ export function createPluginManager(options: PluginManagerConfig = {}): PluginMa
   if (config.autoDiscover) {
     discoveryPromise = (async () => {
       try {
-        const discoveredAdapters = await discoverAdapters({
-          patterns: config.discoverPatterns,
-        });
+        const discoverOpts: DiscoverOptions = {};
+        if (config.discoverPatterns !== undefined) {
+          discoverOpts.patterns = config.discoverPatterns;
+        }
+        const discoveredAdapters = await discoverAdapters(discoverOpts);
         for (const adapter of discoveredAdapters) {
           // Register lazy loaders for discovered adapters
           lazyLoaders.set(adapter.name, async () => {
@@ -808,35 +858,46 @@ export function createPluginManager(options: PluginManagerConfig = {}): PluginMa
       adapterNames.add(adapter.name);
 
       // Create a plugin wrapper for the adapter
+      const hooks: PluginHooks = {
+        // Wrap the sync transform as async
+        transform: async (schema: unknown, options?: unknown) => {
+          return adapter.transform(schema, options);
+        },
+        // Map serialize as generate hook
+        generate: async (transformedOutput: unknown) => {
+          return adapter.serialize(transformedOutput);
+        },
+      };
+
+      // Map init if available
+      if (adapter.init) {
+        hooks.init = async (context: unknown) => {
+          await adapter.init!(context);
+        };
+      }
+
+      // Map dispose if available
+      if (adapter.dispose) {
+        hooks.dispose = async () => {
+          await adapter.dispose!();
+        };
+      }
+
+      // Map validate if available (convert sync to async)
+      if (adapter.validate) {
+        hooks.validate = async (schema: unknown) => {
+          const result = adapter.validate!(schema);
+          return {
+            valid: result.valid,
+            errors: result.errors,
+          };
+        };
+      }
+
       const wrappedPlugin: Plugin = {
         name: adapter.name,
         version: adapter.version,
-        hooks: {
-          // Wrap the sync transform as async
-          transform: async (schema: unknown, options?: unknown) => {
-            return adapter.transform(schema, options);
-          },
-          // Map init if available
-          init: adapter.init ? async (context: unknown) => {
-            await adapter.init!(context);
-          } : undefined,
-          // Map dispose if available
-          dispose: adapter.dispose ? async () => {
-            await adapter.dispose!();
-          } : undefined,
-          // Map validate if available (convert sync to async)
-          validate: adapter.validate ? async (schema: unknown) => {
-            const result = adapter.validate!(schema);
-            return {
-              valid: result.valid,
-              errors: result.errors,
-            };
-          } : undefined,
-          // Map serialize as generate hook
-          generate: async (transformedOutput: unknown) => {
-            return adapter.serialize(transformedOutput);
-          },
-        },
+        hooks,
       };
 
       plugins.set(adapter.name, wrappedPlugin);

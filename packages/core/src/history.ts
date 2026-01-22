@@ -280,15 +280,18 @@ function parseHistoryEntry(entry: SerializedHistoryEntry): SchemaHistoryEntry {
  * Parse a migration from serialized format.
  */
 function parseMigration(serialized: SerializedMigration): Migration {
-  return {
+  const migration: Migration = {
     id: serialized.id,
     fromVersion: parseSchemaVersion(serialized.fromVersion),
     toVersion: parseSchemaVersion(serialized.toVersion),
     timestamp: new Date(serialized.timestamp),
-    description: serialized.description,
     operations: serialized.operations as Migration['operations'],
     isBreaking: serialized.isBreaking,
   };
+  if (serialized.description !== undefined) {
+    migration.description = serialized.description;
+  }
+  return migration;
 }
 
 // =============================================================================
