@@ -19,13 +19,21 @@ A type-safe, concise schema language with Apache Iceberg and Parquet schema gene
 - Apache Iceberg metadata generation
 - Parquet schema generation
 - CLI tools (`ice init`, `ice generate`, `ice validate`, `ice iceberg export`)
+- Multi-backend adapters with DDL generation:
+  - ClickHouse (`@icetype/clickhouse`)
+  - DuckDB (`@icetype/duckdb`)
+  - PostgreSQL (`@icetype/postgres`)
+  - MySQL (`@icetype/mysql`)
+  - SQLite (`@icetype/sqlite`)
+  - Drizzle ORM (`@icetype/drizzle`)
+  - Prisma (`@icetype/prisma`)
+- Fuzzy relation syntax (`~>`, `<~`) - parsing and schema validation
 
 ### Planned (Not Yet Implemented)
 
-- Multi-backend adapters (ClickHouse, DuckDB, etc.)
-- Database runtime/query engine
+- Database runtime/query engine (adapters generate DDL, but don't execute queries)
 - Full-text search and vector index execution
-- AI-powered fuzzy relations (`~>`, `<~`)
+- AI-powered fuzzy relation runtime (semantic matching)
 
 ## Installation
 
