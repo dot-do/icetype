@@ -224,6 +224,19 @@ export interface PluginDependency {
 }
 
 /**
+ * Valid hook names for plugins.
+ *
+ * This type defines the string literal union of all valid hook names
+ * that can be used with the plugin system.
+ */
+export type HookName = 'init' | 'validate' | 'transform' | 'generate' | 'dispose';
+
+/**
+ * Array of valid hook names for runtime validation.
+ */
+const VALID_HOOK_NAMES: readonly HookName[] = ['init', 'validate', 'transform', 'generate', 'dispose'] as const;
+
+/**
  * Plugin lifecycle hooks (non-generic version).
  *
  * Defines the hook functions that plugins can implement. The `transform` hook is required;
@@ -1066,8 +1079,16 @@ export function createPluginManager(options: PluginManagerConfig = {}): PluginMa
         });
       }
 
-      const hookFn = (plugin.hooks as unknown as Record<string, unknown>)[hook];
-      if (typeof hookFn !== 'function') {
+      // Validate hook name and get hook function using type-safe access
+      if (!isValidHookName(hook)) {
+        throw new PluginLifecycleError(`Hook '${hook}' not found on plugin: ${name}`, {
+          pluginName: name,
+          hook,
+          phase: 'lookup',
+        });
+      }
+
+      if (!hasHook(plugin, hook)) {
         throw new PluginLifecycleError(`Hook '${hook}' not found on plugin: ${name}`, {
           pluginName: name,
           hook,
@@ -1076,7 +1097,19 @@ export function createPluginManager(options: PluginManagerConfig = {}): PluginMa
       }
 
       try {
-        return await hookFn(...args);
+        // Call hooks by name with proper type-safe arguments
+        switch (hook) {
+          case 'init':
+            return await plugin.hooks.init!(args[0]);
+          case 'validate':
+            return await plugin.hooks.validate!(args[0]);
+          case 'transform':
+            return await plugin.hooks.transform(args[0], args[1], args[2] as Map<string, Plugin> | undefined);
+          case 'generate':
+            return await plugin.hooks.generate!(args[0], args[1]);
+          case 'dispose':
+            return await plugin.hooks.dispose!();
+        }
       } catch (error) {
         throw new PluginLifecycleError(`Hook '${hook}' failed for plugin: ${name}`, {
           pluginName: name,
@@ -1191,18 +1224,18 @@ export function createPluginManager(options: PluginManagerConfig = {}): PluginMa
       }
 
       // Build dependency map
-      const deps = new Map<string, Plugin>();
+      const depMap = new Map<string, Plugin>();
       if (plugin.dependencies) {
         for (const dep of plugin.dependencies) {
           const depPlugin = plugins.get(dep.name);
           if (depPlugin) {
-            deps.set(dep.name, depPlugin);
+            depMap.set(dep.name, depPlugin);
           }
         }
       }
 
-      const hookFn = (plugin.hooks as unknown as Record<string, unknown>)[hook];
-      if (typeof hookFn !== 'function') {
+      // Validate hook name using type-safe access
+      if (!isValidHookName(hook)) {
         throw new PluginLifecycleError(`Hook '${hook}' not found on plugin: ${name}`, {
           pluginName: name,
           hook,
@@ -1210,12 +1243,28 @@ export function createPluginManager(options: PluginManagerConfig = {}): PluginMa
         });
       }
 
-      // For transform hook, pass deps as third argument
-      if (hook === 'transform') {
-        return await (hookFn as (schema: unknown, options: unknown, deps: Map<string, Plugin>) => Promise<unknown>)(args[0], args[1], deps);
+      if (!hasHook(plugin, hook)) {
+        throw new PluginLifecycleError(`Hook '${hook}' not found on plugin: ${name}`, {
+          pluginName: name,
+          hook,
+          phase: 'lookup',
+        });
       }
 
-      return await hookFn(...args);
+      // Call hooks by name with proper type-safe arguments
+      // For transform hook, pass deps as third argument
+      switch (hook) {
+        case 'init':
+          return await plugin.hooks.init!(args[0]);
+        case 'validate':
+          return await plugin.hooks.validate!(args[0]);
+        case 'transform':
+          return await plugin.hooks.transform(args[0], args[1], depMap);
+        case 'generate':
+          return await plugin.hooks.generate!(args[0], args[1]);
+        case 'dispose':
+          return await plugin.hooks.dispose!();
+      }
     },
 
     validateManifest(manifest: PluginManifest): void {
@@ -1525,4 +1574,77 @@ export function isPluginDependencyError(error: unknown): error is PluginDependen
  */
 export function isPluginLifecycleError(error: unknown): error is PluginLifecycleError {
   return error instanceof PluginLifecycleError;
+}
+
+/**
+ * Type guard to check if a string is a valid hook name.
+ *
+ * @param name - The string to check
+ * @returns True if the name is a valid HookName
+ *
+ * @example
+ * ```typescript
+ * const hookName: string = 'transform';
+ * if (isValidHookName(hookName)) {
+ *   // hookName is now typed as HookName
+ *   console.log(`Valid hook: ${hookName}`);
+ * }
+ * ```
+ */
+export function isValidHookName(name: string): name is HookName {
+  return VALID_HOOK_NAMES.includes(name as HookName);
+}
+
+/**
+ * Type guard to check if a plugin has a specific hook defined.
+ *
+ * This provides type-safe access to plugin hooks without requiring unsafe casts.
+ *
+ * @param plugin - The plugin to check
+ * @param hookName - The name of the hook to check for
+ * @returns True if the plugin has the specified hook as a function
+ *
+ * @example
+ * ```typescript
+ * const plugin: Plugin = { ... };
+ * if (hasHook(plugin, 'init')) {
+ *   // TypeScript knows plugin.hooks.init exists and is a function
+ *   await plugin.hooks.init(context);
+ * }
+ * ```
+ */
+export function hasHook<K extends HookName>(
+  plugin: Plugin,
+  hookName: K
+): plugin is Plugin & { hooks: PluginHooks & Required<Pick<PluginHooks, K>> } {
+  return hookName in plugin.hooks && typeof plugin.hooks[hookName] === 'function';
+}
+
+/**
+ * Get a hook function from a plugin if it exists.
+ *
+ * This provides a type-safe way to access plugin hooks without requiring unsafe casts.
+ * Returns undefined if the hook doesn't exist.
+ *
+ * @param plugin - The plugin to get the hook from
+ * @param hookName - The name of the hook to get
+ * @returns The hook function if it exists, undefined otherwise
+ *
+ * @example
+ * ```typescript
+ * const plugin: Plugin = { ... };
+ * const initHook = getHook(plugin, 'init');
+ * if (initHook) {
+ *   await initHook(context);
+ * }
+ * ```
+ */
+export function getHook<K extends HookName>(
+  plugin: Plugin,
+  hookName: K
+): PluginHooks[K] | undefined {
+  if (hasHook(plugin, hookName)) {
+    return plugin.hooks[hookName];
+  }
+  return undefined;
 }

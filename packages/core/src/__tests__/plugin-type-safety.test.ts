@@ -1011,6 +1011,139 @@ describe('Plugin Type Safety - Dependencies', () => {
 });
 
 // =============================================================================
+// Tests for hasHook Type Guard
+// =============================================================================
+
+import { hasHook, isValidHookName, type HookName } from '../plugin-system.js';
+
+describe('Plugin Type Safety - hasHook Type Guard', () => {
+  describe('isValidHookName', () => {
+    it('should return true for valid hook names', () => {
+      expect(isValidHookName('init')).toBe(true);
+      expect(isValidHookName('validate')).toBe(true);
+      expect(isValidHookName('transform')).toBe(true);
+      expect(isValidHookName('generate')).toBe(true);
+      expect(isValidHookName('dispose')).toBe(true);
+    });
+
+    it('should return false for invalid hook names', () => {
+      expect(isValidHookName('invalidHook')).toBe(false);
+      expect(isValidHookName('')).toBe(false);
+      expect(isValidHookName('foo')).toBe(false);
+      expect(isValidHookName('bar')).toBe(false);
+    });
+
+    it('should narrow type to HookName', () => {
+      const hookName: string = 'transform';
+      if (isValidHookName(hookName)) {
+        // TypeScript should know hookName is HookName here
+        const validHook: HookName = hookName;
+        expect(validHook).toBe('transform');
+      }
+    });
+  });
+
+  describe('hasHook', () => {
+    it('should return true when plugin has the specified hook', () => {
+      const plugin: Plugin = {
+        name: 'test-plugin',
+        version: '1.0.0',
+        hooks: {
+          init: async () => {},
+          transform: async (s) => s,
+          validate: async () => ({ valid: true, errors: [] }),
+        },
+      };
+
+      expect(hasHook(plugin, 'init')).toBe(true);
+      expect(hasHook(plugin, 'transform')).toBe(true);
+      expect(hasHook(plugin, 'validate')).toBe(true);
+    });
+
+    it('should return false when plugin does not have the specified hook', () => {
+      const plugin: Plugin = {
+        name: 'minimal-plugin',
+        version: '1.0.0',
+        hooks: {
+          transform: async (s) => s,
+        },
+      };
+
+      expect(hasHook(plugin, 'init')).toBe(false);
+      expect(hasHook(plugin, 'validate')).toBe(false);
+      expect(hasHook(plugin, 'generate')).toBe(false);
+      expect(hasHook(plugin, 'dispose')).toBe(false);
+    });
+
+    it('should return false for invalid hook names', () => {
+      const plugin: Plugin = {
+        name: 'test-plugin',
+        version: '1.0.0',
+        hooks: {
+          transform: async (s) => s,
+        },
+      };
+
+      // hasHook should handle invalid hook names gracefully
+      expect(hasHook(plugin, 'invalidHook' as HookName)).toBe(false);
+    });
+
+    it('should allow type-safe hook access after guard check', () => {
+      const plugin: Plugin = {
+        name: 'test-plugin',
+        version: '1.0.0',
+        hooks: {
+          init: async () => {},
+          transform: async (s) => s,
+        },
+      };
+
+      if (hasHook(plugin, 'init')) {
+        // After the type guard, we should be able to access the hook safely
+        const initHook = plugin.hooks.init;
+        expect(typeof initHook).toBe('function');
+      }
+    });
+
+    it('should work with all valid hook names', () => {
+      const fullPlugin: Plugin = {
+        name: 'full-plugin',
+        version: '1.0.0',
+        hooks: {
+          init: async () => {},
+          validate: async () => ({ valid: true, errors: [] }),
+          transform: async (s) => s,
+          generate: async () => 'output',
+          dispose: async () => {},
+        },
+      };
+
+      const hookNames: HookName[] = ['init', 'validate', 'transform', 'generate', 'dispose'];
+      for (const hookName of hookNames) {
+        expect(hasHook(fullPlugin, hookName)).toBe(true);
+      }
+    });
+  });
+
+  describe('getHook helper function', () => {
+    it('should return the hook function if it exists', async () => {
+      const plugin: Plugin = {
+        name: 'test-plugin',
+        version: '1.0.0',
+        hooks: {
+          transform: async (s) => ({ transformed: s }),
+        },
+      };
+
+      if (hasHook(plugin, 'transform')) {
+        const result = await plugin.hooks.transform({ test: true });
+        expect(result).toEqual({ transformed: { test: true } });
+      }
+    });
+  });
+});
+
+// =============================================================================
 // Document Current Limitations
 // =============================================================================
 
