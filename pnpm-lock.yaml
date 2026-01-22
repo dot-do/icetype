@@ -28,7 +28,7 @@ importers:
         version: 16.4.7(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@3.25.76)
       fumadocs-mdx:
         specifier: ^14.2.6
-        version: 14.2.6(@types/react@19.2.9)(fumadocs-core@16.4.7(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@3.25.76))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)(vite@5.4.21(@types/node@25.0.10)(lightningcss@1.30.2))
+        version: 14.2.6(@types/react@19.2.9)(fumadocs-core@16.4.7(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@3.25.76))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
       fumadocs-ui:
         specifier: ^16.4.7
         version: 16.4.7(@types/react-dom@19.2.3(@types/react@19.2.9))(@types/react@19.2.9)(fumadocs-core@16.4.7(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@3.25.76))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)
@@ -39,7 +39,7 @@ importers:
         specifier: ^16.1.4
         version: 16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react:
-        specifier: ^19.2.0
+        specifier: ^19.2.3
         version: 19.2.3
       react-dom:
         specifier: ^19.2.0
@@ -58,7 +58,7 @@ importers:
         specifier: ^24.9.1
         version: 24.10.9
       '@types/react':
-        specifier: ^19.2.2
+        specifier: ^19.2.9
         version: 19.2.9
       '@types/react-dom':
         specifier: ^19.2.2
@@ -80,26 +80,26 @@ importers:
         version: link:../../packages/core
       '@monaco-editor/react':
         specifier: ^4.6.0
-        version: 4.7.0(monaco-editor@0.55.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 4.7.0(monaco-editor@0.55.1)(react-dom@18.3.1(react@19.2.3))(react@19.2.3)
       lz-string:
         specifier: ^1.5.0
         version: 1.5.0
       next:
         specifier: ^14.2.0
-        version: 14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@19.2.3))(react@19.2.3)
       react:
-        specifier: ^18.3.0
-        version: 18.3.1
+        specifier: ^19.2.3
+        version: 19.2.3
       react-dom:
         specifier: ^18.3.0
-        version: 18.3.1(react@18.3.1)
+        version: 18.3.1(react@19.2.3)
     devDependencies:
       '@testing-library/jest-dom':
         specifier: ^6.4.0
         version: 6.9.1
       '@testing-library/react':
         specifier: ^15.0.0
-        version: 15.0.7(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 15.0.7(@types/react@19.2.9)(react-dom@18.3.1(react@19.2.3))(react@19.2.3)
       '@testing-library/user-event':
         specifier: ^14.5.0
         version: 14.6.1(@testing-library/dom@10.4.1)
@@ -110,11 +110,11 @@ importers:
         specifier: ^20.12.0
         version: 20.19.30
       '@types/react':
-        specifier: ^18.3.0
-        version: 18.3.27
+        specifier: ^19.2.9
+        version: 19.2.9
       '@types/react-dom':
         specifier: ^18.3.0
-        version: 18.3.7(@types/react@18.3.27)
+        version: 18.3.7(@types/react@19.2.9)
       '@vitejs/plugin-react':
         specifier: ^4.3.0
         version: 4.7.0(vite@5.4.21(@types/node@20.19.30)(lightningcss@1.30.2))
@@ -2387,9 +2387,6 @@ packages:
   '@types/pg@8.16.0':
     resolution: {integrity: sha512-RmhMd/wD+CF8Dfo+cVIy3RR5cl8CyfXQ0tGgW6XBL8L4LM/UTEbNXYRbLwU6w+CgrKBNbrQWt4FUtTfaU5jSYQ==}
 
-  '@types/prop-types@15.7.15':
-    resolution: {integrity: sha512-F6bEyamV9jKGAFBEmlQnesRPGOQqS2+Uwi0Em15xenOxHaf2hv6L8YCVn3rPdPJOiJfPiCnLIRyvwVaqMY3MIw==}
-
   '@types/react-dom@18.3.7':
     resolution: {integrity: sha512-MEe3UeoENYVFXzoXEWsvcpg6ZvlrFNlOQ7EOsvhI3CfAXwzPfO8Qwuxd40nepsYKqyyVQnTdEfv68q91yLcKrQ==}
     peerDependencies:
@@ -2399,9 +2396,6 @@ packages:
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
     peerDependencies:
       '@types/react': ^19.2.0
-
-  '@types/react@18.3.27':
-    resolution: {integrity: sha512-cisd7gxkzjBKU2GgdYrTdtQx1SORymWyaAFhaxQPK9bYO9ot3Y5OikQRvY0VYQtvwjeQnizCINJAenh/V7MK2w==}
 
   '@types/react@19.2.9':
     resolution: {integrity: sha512-Lpo8kgb/igvMIPeNV2rsYKTgaORYdO1XGVZ4Qz3akwOj0ySGYMPlQWa8BaLn0G63D1aSaAQ5ldR06wCpChQCjA==}
@@ -4409,10 +4403,6 @@ packages:
       '@types/react':
         optional: true
 
-  react@18.3.1:
-    resolution: {integrity: sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==}
-    engines: {node: '>=0.10.0'}
-
   react@19.2.3:
     resolution: {integrity: sha512-Ku/hhYbVjOQnXDZFv2+RibmLFGwFdeeKHFcOTlrt7xplBnya5OGn/hIRDsqDiSUcfORsDC7MPxwork8jBwsIWA==}
     engines: {node: '>=0.10.0'}
@@ -5859,12 +5849,12 @@ snapshots:
     dependencies:
       state-local: 1.0.7
 
-  '@monaco-editor/react@4.7.0(monaco-editor@0.55.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@monaco-editor/react@4.7.0(monaco-editor@0.55.1)(react-dom@18.3.1(react@19.2.3))(react@19.2.3)':
     dependencies:
       '@monaco-editor/loader': 1.7.0
       monaco-editor: 0.55.1
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      react: 19.2.3
+      react-dom: 18.3.1(react@19.2.3)
 
   '@next/env@14.2.35': {}
 
@@ -6606,15 +6596,15 @@ snapshots:
       '@testing-library/dom': 8.20.1
       preact: 10.28.2
 
-  '@testing-library/react@15.0.7(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@testing-library/react@15.0.7(@types/react@19.2.9)(react-dom@18.3.1(react@19.2.3))(react@19.2.3)':
     dependencies:
       '@babel/runtime': 7.28.6
       '@testing-library/dom': 10.4.1
-      '@types/react-dom': 18.3.7(@types/react@18.3.27)
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
+      '@types/react-dom': 18.3.7(@types/react@19.2.9)
+      react: 19.2.3
+      react-dom: 18.3.1(react@19.2.3)
     optionalDependencies:
-      '@types/react': 18.3.27
+      '@types/react': 19.2.9
 
   '@testing-library/user-event@14.6.1(@testing-library/dom@10.4.1)':
     dependencies:
@@ -6710,20 +6700,13 @@ snapshots:
       pg-protocol: 1.11.0
       pg-types: 2.2.0
 
-  '@types/prop-types@15.7.15': {}
-
-  '@types/react-dom@18.3.7(@types/react@18.3.27)':
+  '@types/react-dom@18.3.7(@types/react@19.2.9)':
     dependencies:
-      '@types/react': 18.3.27
+      '@types/react': 19.2.9
 
   '@types/react-dom@19.2.3(@types/react@19.2.9)':
     dependencies:
       '@types/react': 19.2.9
-
-  '@types/react@18.3.27':
-    dependencies:
-      '@types/prop-types': 15.7.15
-      csstype: 3.2.3
 
   '@types/react@19.2.9':
     dependencies:
@@ -6805,6 +6788,14 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       vite: 5.4.21(@types/node@20.19.30)(lightningcss@1.30.2)
+
+  '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@22.19.7)(lightningcss@1.30.2))':
+    dependencies:
+      '@vitest/spy': 2.1.9
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 5.4.21(@types/node@22.19.7)(lightningcss@1.30.2)
 
   '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@25.0.10)(lightningcss@1.30.2))':
     dependencies:
@@ -7697,7 +7688,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  fumadocs-mdx@14.2.6(@types/react@19.2.9)(fumadocs-core@16.4.7(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@3.25.76))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)(vite@5.4.21(@types/node@25.0.10)(lightningcss@1.30.2)):
+  fumadocs-mdx@14.2.6(@types/react@19.2.9)(fumadocs-core@16.4.7(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@3.25.76))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3):
     dependencies:
       '@mdx-js/mdx': 3.1.1
       '@standard-schema/spec': 1.1.0
@@ -7721,7 +7712,6 @@ snapshots:
       '@types/react': 19.2.9
       next: 16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react: 19.2.3
-      vite: 5.4.21(@types/node@25.0.10)(lightningcss@1.30.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -8827,7 +8817,7 @@ snapshots:
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
 
-  next@14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  next@14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@19.2.3))(react@19.2.3):
     dependencies:
       '@next/env': 14.2.35
       '@swc/helpers': 0.5.5
@@ -8835,9 +8825,9 @@ snapshots:
       caniuse-lite: 1.0.30001765
       graceful-fs: 4.2.11
       postcss: 8.4.31
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-      styled-jsx: 5.1.1(@babel/core@7.28.6)(react@18.3.1)
+      react: 19.2.3
+      react-dom: 18.3.1(react@19.2.3)
+      styled-jsx: 5.1.1(@babel/core@7.28.6)(react@19.2.3)
     optionalDependencies:
       '@next/swc-darwin-arm64': 14.2.33
       '@next/swc-darwin-x64': 14.2.33
@@ -9138,10 +9128,10 @@ snapshots:
       minimist: 1.2.8
       strip-json-comments: 2.0.1
 
-  react-dom@18.3.1(react@18.3.1):
+  react-dom@18.3.1(react@19.2.3):
     dependencies:
       loose-envify: 1.4.0
-      react: 18.3.1
+      react: 19.2.3
       scheduler: 0.23.2
 
   react-dom@19.2.3(react@19.2.3):
@@ -9184,10 +9174,6 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       '@types/react': 19.2.9
-
-  react@18.3.1:
-    dependencies:
-      loose-envify: 1.4.0
 
   react@19.2.3: {}
 
@@ -9624,10 +9610,10 @@ snapshots:
     dependencies:
       inline-style-parser: 0.2.7
 
-  styled-jsx@5.1.1(@babel/core@7.28.6)(react@18.3.1):
+  styled-jsx@5.1.1(@babel/core@7.28.6)(react@19.2.3):
     dependencies:
       client-only: 0.0.1
-      react: 18.3.1
+      react: 19.2.3
     optionalDependencies:
       '@babel/core': 7.28.6
 
@@ -10046,7 +10032,7 @@ snapshots:
   vitest@2.1.9(@types/node@22.19.7)(jsdom@24.1.3)(lightningcss@1.30.2):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@25.0.10)(lightningcss@1.30.2))
+      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@22.19.7)(lightningcss@1.30.2))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9
