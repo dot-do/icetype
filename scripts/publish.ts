@@ -67,6 +67,15 @@ function getLatestVersion(name: string): string | null {
   }
 }
 
+function isVersionPublished(name: string, version: string): boolean {
+  try {
+    execSync(`npm view "${name}@${version}" version`, { stdio: 'pipe' })
+    return true
+  } catch {
+    return false
+  }
+}
+
 function compareVersions(a: string, b: string): number {
   const parseVersion = (v: string) => {
     const [main, pre] = v.split('-')
@@ -94,6 +103,11 @@ type PublishStatus =
   | { canPublish: true; isNew: boolean; latestVersion?: string }
 
 function checkPublishStatus(name: string, version: string): PublishStatus {
+  // First check if this exact version is already published
+  if (isVersionPublished(name, version)) {
+    return { canPublish: false, reason: 'already_published', latestVersion: version }
+  }
+
   const latestVersion = getLatestVersion(name)
 
   if (!latestVersion) {
@@ -102,10 +116,6 @@ function checkPublishStatus(name: string, version: string): PublishStatus {
   }
 
   const cmp = compareVersions(version, latestVersion)
-
-  if (cmp === 0) {
-    return { canPublish: false, reason: 'already_published', latestVersion }
-  }
 
   if (cmp < 0) {
     return { canPublish: false, reason: 'version_too_low', latestVersion }
