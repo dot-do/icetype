@@ -108,10 +108,26 @@ function checkPublishStatus(name: string, version: string): PublishStatus {
     return { canPublish: false, reason: 'already_published', latestVersion: version }
   }
 
+  // Get latest version to check if we'd be publishing a lower version
   const latestVersion = getLatestVersion(name)
 
   if (!latestVersion) {
-    // Package doesn't exist on npm yet
+    // Package doesn't exist on npm yet (or npm view failed)
+    // Double-check by trying to get all versions
+    try {
+      const allVersions = execSync(`npm view "${name}" versions --json`, { stdio: 'pipe' }).toString().trim()
+      const versions = JSON.parse(allVersions)
+      if (Array.isArray(versions) && versions.length > 0) {
+        // Package exists, find highest version
+        const highest = versions.sort(compareVersions).pop()!
+        if (compareVersions(version, highest) <= 0) {
+          return { canPublish: false, reason: 'version_too_low', latestVersion: highest }
+        }
+        return { canPublish: true, isNew: false, latestVersion: highest }
+      }
+    } catch {
+      // npm view failed completely - package likely doesn't exist
+    }
     return { canPublish: true, isNew: true }
   }
 
