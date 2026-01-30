@@ -396,3 +396,33 @@ export type {
   IcebergAdapterOptions,
   ParquetAdapterOptions,
 } from './adapter-types.js';
+
+// =============================================================================
+// GraphDL Compiler
+// =============================================================================
+
+// Re-export compiler functions
+export {
+  compile,
+  compileEntity,
+  graphToIceType,
+  entityToIceType,
+  GRAPHDL_TYPE_ALIASES,
+} from './compiler.js';
+
+// Re-export compiler types
+export type {
+  CompileTarget,
+  CompileOptions,
+  CompileResult,
+  CompileEntityResult,
+} from './compiler.js';
+
+// Re-export GraphDL types for convenience
+export type {
+  ParsedGraph,
+  ParsedEntity,
+  ParsedField,
+  EntityDirectives,
+  GraphInput,
+} from '@graphdl/core';

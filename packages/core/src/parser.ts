@@ -1283,6 +1283,21 @@ export const parser = new IceTypeParser();
 /**
  * Parse an IceType schema definition.
  *
+ * @deprecated Use `Graph()` from `@graphdl/core` with `compile()` or `graphToIceType()` from `@icetype/core` instead.
+ *
+ * @example
+ * ```typescript
+ * // Before (deprecated):
+ * import { parseSchema } from '@icetype/core';
+ * const schema = parseSchema({ $type: 'User', name: 'string' });
+ *
+ * // After (recommended):
+ * import { Graph } from '@graphdl/core';
+ * import { compile, graphToIceType } from '@icetype/core';
+ * const graph = Graph({ User: { name: 'string' } });
+ * const schemas = graphToIceType(graph);
+ * ```
+ *
  * @param definition - The schema definition
  * @returns The parsed schema
  */

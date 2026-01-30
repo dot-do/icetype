@@ -36,6 +36,9 @@
   "bugs": {
     "url": "https://github.com/dot-do/icetype/issues"
   },
+  "dependencies": {
+    "@graphdl/core": "file:../../../primitives.org.ai/packages/graphdl"
+  },
   "devDependencies": {
     "@types/node": "^25.0.9",
     "fast-check": "^4.5.3",

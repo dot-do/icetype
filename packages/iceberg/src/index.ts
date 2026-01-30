@@ -111,3 +111,15 @@ export {
 
 // Re-export projection types
 export type { ProjectionDefinition } from './projection-generator.js';
+
+// Re-export GraphDL adapter functions
+export {
+  compileGraphToIceberg,
+  compileEntityToIceberg,
+} from './graphdl-adapter.js';
+
+// Re-export GraphDL adapter types
+export type {
+  CompileGraphOptions,
+  CompileEntityOptions,
+} from './graphdl-adapter.js';
