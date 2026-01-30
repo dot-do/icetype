@@ -1,7 +1,16 @@
 /**
  * IceType Schema Parser
  *
- * Parses IceType schema definitions with support for:
+ * This module provides the IceType schema parsing layer. The main schema
+ * parsing path (`parseSchema()` / `IceTypeParser.parse()`) delegates to
+ * GraphDL (`@graphdl/core`) for parsing and converts the result via the
+ * compiler bridge (`entityToIceType()`).
+ *
+ * Utility functions for field-level parsing, relation parsing, type
+ * inference, tokenization, and validation are retained as standalone
+ * helpers that do not depend on the GraphDL parser.
+ *
+ * Supports:
  * - Field modifiers: ! (required/unique), # (indexed), ? (optional), [] (array)
  * - Relation operators: -> (forward), ~> (fuzzy), <- (backward), <~ (fuzzy backward)
  * - Parametric types: decimal(10,2), varchar(255)
@@ -30,6 +39,9 @@ import {
   type ParametricType,
   type GenericType,
 } from './types.js';
+
+import { Graph } from '@graphdl/core';
+import { entityToIceType } from './compiler.js';
 
 // =============================================================================
 // Extended Types
@@ -870,96 +882,207 @@ export function parseRelationString(
 /**
  * IceType schema parser.
  *
- * Parses IceType schema definitions including field definitions,
- * relations, and directives.
+ * Delegates schema parsing to GraphDL (`@graphdl/core`) for the main parse
+ * path, while retaining IceType-specific utilities (field parsing, relation
+ * parsing, directive parsing, validation).
+ *
+ * @remarks
+ * As of this version the `parse()` method converts the legacy
+ * `SchemaDefinition` format into a `GraphInput`, calls `Graph()` from
+ * `@graphdl/core`, then converts the result to `IceTypeSchema` via
+ * `entityToIceType()` from the compiler bridge. Object-style field
+ * definitions and IceType-specific projection directives are handled as
+ * post-processing on top of the GraphDL output.
  */
 export class IceTypeParser {
   /**
    * Parse a complete IceType schema definition.
+   *
+   * Internally delegates to GraphDL's `Graph()` for schema parsing,
+   * then converts the result using the compiler bridge.
    *
    * @param definition - The schema definition object
    * @returns The parsed IceType schema
    */
   parse(definition: SchemaDefinition): IceTypeSchema {
     const name = typeof definition.$type === 'string' ? definition.$type : 'Unknown';
-    const fields = new Map<string, FieldDefinition>();
-    const relations = new Map<string, RelationDefinition>();
-    const directives = this.parseDirectives(definition);
+
+    // Build a GraphDL-compatible entity definition from the SchemaDefinition.
+    // GraphInput expects { EntityName: { field: 'type', ... } }.
+    // We need to:
+    //   1. Extract only $ directives and string/object field values
+    //   2. Convert object-style fields ({ type, default, optional, ... }) to
+    //      GraphDL string syntax where possible
+    const entityDef: Record<string, unknown> = {};
+
+    // Track object-style field overrides that need post-processing
+    const objectFieldOverrides = new Map<
+      string,
+      { default?: unknown; optional?: boolean; unique?: boolean; required?: boolean }
+    >();
+
+    // Track fields that are plain objects without a 'type' property (json fallback)
+    const jsonFallbackFields = new Set<string>();
 
     for (const [key, value] of Object.entries(definition)) {
-      if (key.startsWith('$')) continue;
+      if (key === '$type') {
+        // Skip $type -- it becomes the entity name in GraphInput
+        continue;
+      }
+
+      if (key.startsWith('$')) {
+        // Pass through directives
+        entityDef[key] = value;
+        continue;
+      }
 
       if (typeof value === 'string') {
-        const fieldDef = this.parseField(value, { throwOnUnknownType: false, fieldName: key });
-        fieldDef.name = key;
-
-        if (fieldDef.relation) {
-          relations.set(key, fieldDef.relation);
-        }
-
-        fields.set(key, fieldDef);
+        entityDef[key] = value;
       } else if (typeof value === 'object' && value !== null) {
-        // Check if this is an object-style field definition with 'type' property
         const objValue = value as Record<string, unknown>;
         if ('type' in objValue && typeof objValue.type === 'string') {
-          // Parse the type string to get the field definition
-          const fieldDef = this.parseField(objValue.type, { throwOnUnknownType: false, fieldName: key });
-          fieldDef.name = key;
-
-          // Apply default value if specified
+          // Convert object-style to string for GraphDL, record overrides
+          let typeStr = objValue.type;
+          // Append modifiers that GraphDL understands
+          if (objValue.required === true) {
+            typeStr += '!';
+          } else if (objValue.unique === true) {
+            typeStr += '#';
+          } else if (objValue.optional === true) {
+            typeStr += '?';
+          }
+          // Append default value
           if ('default' in objValue && objValue.default !== undefined) {
-            fieldDef.defaultValue = objValue.default;
+            const dv = objValue.default;
+            if (typeof dv === 'string') {
+              typeStr += ` = "${dv}"`;
+            } else if (typeof dv === 'number' || typeof dv === 'boolean') {
+              typeStr += ` = ${dv}`;
+            }
+            // For other types, store as override
           }
-
-          // Apply optional modifier if specified
-          if ('optional' in objValue && objValue.optional === true) {
-            fieldDef.isOptional = true;
-            fieldDef.modifier = '?';
-          }
-
-          // Apply unique modifier if specified
-          if ('unique' in objValue && objValue.unique === true) {
-            fieldDef.isUnique = true;
-            fieldDef.modifier = '#';
-          }
-
-          // Apply required modifier if specified
-          if ('required' in objValue && objValue.required === true) {
-            fieldDef.modifier = '!';
-          }
-
-          if (fieldDef.relation) {
-            relations.set(key, fieldDef.relation);
-          }
-
-          fields.set(key, fieldDef);
+          entityDef[key] = typeStr;
+          // Record overrides for post-processing
+          const overrides: { default?: unknown; optional?: boolean; unique?: boolean; required?: boolean } = {};
+          if (objValue.default !== undefined) overrides.default = objValue.default;
+          if (objValue.optional === true) overrides.optional = true;
+          if (objValue.unique === true) overrides.unique = true;
+          if (objValue.required === true) overrides.required = true;
+          objectFieldOverrides.set(key, overrides);
         } else {
           // Fallback: treat as json type
-          const fieldDef: FieldDefinition = {
-            name: key,
-            type: 'json',
-            modifier: '',
-            isArray: false,
-            isOptional: false,
-            isUnique: false,
-            isIndexed: false,
-          };
-          fields.set(key, fieldDef);
+          entityDef[key] = 'json';
+          jsonFallbackFields.add(key);
         }
       }
     }
 
-    const now = Date.now();
+    // Call GraphDL to parse the entity.
+    // We cast entityDef because it may contain directive values (arrays, objects)
+    // that don't match EntityDefinition's field types. GraphDL handles these
+    // as passthrough directives via its $ prefix convention.
+    const graph = Graph({ [name]: entityDef as Record<string, string | undefined> });
+    const entity = graph.entities.get(name);
 
-    return {
-      name,
-      fields,
-      directives,
-      relations,
-      version: 1,
-      createdAt: now,
-      updatedAt: now,
-    };
+    let schema: IceTypeSchema;
+
+    if (entity) {
+      schema = entityToIceType(entity);
+    } else {
+      // Fallback if GraphDL didn't produce the entity (shouldn't happen)
+      const now = Date.now();
+      schema = {
+        name,
+        fields: new Map(),
+        directives: {},
+        relations: new Map(),
+        version: 1,
+        createdAt: now,
+        updatedAt: now,
+      };
+    }
+
+    // Post-process: apply object-style field overrides that GraphDL may not
+    // have handled exactly as IceType expects
+    for (const [fieldName, overrides] of objectFieldOverrides) {
+      const field = schema.fields.get(fieldName);
+      if (!field) continue;
+
+      if (overrides.default !== undefined) {
+        field.defaultValue = overrides.default;
+      }
+      if (overrides.optional === true) {
+        field.isOptional = true;
+        field.modifier = '?';
+      }
+      if (overrides.unique === true) {
+        field.isUnique = true;
+        field.modifier = '#';
+      }
+      if (overrides.required === true) {
+        field.modifier = '!';
+      }
+    }
+
+    // Post-process: ensure json fallback fields are typed correctly
+    for (const fieldName of jsonFallbackFields) {
+      const field = schema.fields.get(fieldName);
+      if (field) {
+        field.type = 'json';
+      }
+    }
+
+    // Post-process: apply IceType-specific projection directives
+    // (these are not part of standard GraphDL directives)
+    this._applyProjectionDirectives(definition, schema.directives);
+
+    return schema;
+  }
+
+  /**
+   * Apply IceType-specific projection directives from a SchemaDefinition
+   * onto the parsed directives object. These directives ($projection, $from,
+   * $expand, $flatten) are not standard GraphDL and need special handling.
+   */
+  private _applyProjectionDirectives(definition: SchemaDefinition, directives: SchemaDirectives): void {
+    for (const [key, value] of Object.entries(definition)) {
+      if (!key.startsWith('$')) continue;
+
+      switch (key) {
+        case '$projection':
+          if (typeof value === 'string' && ['oltp', 'olap', 'both'].includes(value)) {
+            (directives as SchemaDirectivesExtended).projection = value as 'oltp' | 'olap' | 'both';
+          }
+          break;
+        case '$from':
+          if (typeof value === 'string') {
+            (directives as SchemaDirectivesExtended).from = value;
+          }
+          break;
+        case '$expand':
+          if (Array.isArray(value) && value.every((v): v is string => typeof v === 'string')) {
+            (directives as SchemaDirectivesExtended).expand = value;
+          }
+          break;
+        case '$flatten':
+          if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+            const flattenObj: Record<string, string> = {};
+            let valid = true;
+            for (const [k, v] of Object.entries(value)) {
+              if (typeof v === 'string') {
+                flattenObj[k] = v;
+              } else {
+                valid = false;
+                break;
+              }
+            }
+            if (valid) {
+              (directives as SchemaDirectivesExtended).flatten = flattenObj;
+            }
+          }
+          break;
+      }
+    }
   }
 
   /**
@@ -1283,19 +1406,20 @@ export const parser = new IceTypeParser();
 /**
  * Parse an IceType schema definition.
  *
- * @deprecated Use `Graph()` from `@graphdl/core` with `compile()` or `graphToIceType()` from `@icetype/core` instead.
+ * Internally delegates to GraphDL's `Graph()` for parsing and converts
+ * the result to an `IceTypeSchema` via `entityToIceType()`.
+ *
+ * For new code, prefer using `Graph()` from `@graphdl/core` directly
+ * with `graphToIceType()` from `@icetype/core` for multi-entity graphs.
  *
  * @example
  * ```typescript
- * // Before (deprecated):
  * import { parseSchema } from '@icetype/core';
- * const schema = parseSchema({ $type: 'User', name: 'string' });
- *
- * // After (recommended):
- * import { Graph } from '@graphdl/core';
- * import { compile, graphToIceType } from '@icetype/core';
- * const graph = Graph({ User: { name: 'string' } });
- * const schemas = graphToIceType(graph);
+ * const schema = parseSchema({
+ *   $type: 'User',
+ *   name: 'string',
+ *   email: 'string!',
+ * });
  * ```
  *
  * @param definition - The schema definition

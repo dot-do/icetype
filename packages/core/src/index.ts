@@ -1,42 +1,49 @@
 /**
  * @icetype/core
  *
- * IceType schema language - parser, types, and validation.
+ * IceType schema language - types, compilation, and validation.
+ *
+ * IceType uses GraphDL (`@graphdl/core`) as its schema definition layer.
+ * The `Graph()` function from GraphDL is the recommended entry point for
+ * defining schemas. The legacy `parseSchema()` function is still available
+ * and now delegates to GraphDL internally.
  *
  * IceType is a type-safe, concise schema language with:
  * - Field modifiers: `!` (required), `#` (indexed), `?` (optional), `[]` (array)
  * - Relation operators: `->` (forward), `~>` (fuzzy), `<-` (backward), `<~` (fuzzy backward)
- * - AI generation directives: `~>` for auto-generation from source fields
  * - Directives: `$partitionBy`, `$index`, `$fts`, `$vector`
  *
  * @example
  * ```typescript
- * import { parseSchema, validateSchema, inferType } from '@icetype/core';
+ * import { Graph, graphToIceType, validateSchema } from '@icetype/core';
  *
- * // Define a schema
- * const userSchema = parseSchema({
+ * // Define a schema using GraphDL (recommended)
+ * const graph = Graph({
+ *   User: {
+ *     $partitionBy: ['id'],
+ *     $index: [['email'], ['createdAt']],
+ *     id: 'uuid!',
+ *     email: 'string#',
+ *     name: 'string',
+ *     age: 'int?',
+ *     status: 'string = "active"',
+ *     posts: '<-Post.author[]',
+ *   },
+ * });
+ * const schemas = graphToIceType(graph);
+ * const userSchema = schemas.get('User')!;
+ *
+ * // Or use the legacy single-entity API
+ * import { parseSchema } from '@icetype/core';
+ * const schema = parseSchema({
  *   $type: 'User',
- *   $partitionBy: ['id'],
- *   $index: [['email'], ['createdAt']],
- *
- *   id: 'uuid!',           // Required UUID
- *   email: 'string#',      // Indexed string
- *   name: 'string',        // Regular string
- *   age: 'int?',           // Optional integer
- *   status: 'string = "active"',  // Default value
- *   posts: '<- Post.author[]',    // Backward relation
+ *   id: 'uuid!',
+ *   email: 'string#',
+ *   name: 'string',
  * });
  *
- * // Validate the schema
- * const result = validateSchema(userSchema);
- * if (!result.valid) {
- *   console.error('Schema errors:', result.errors);
- * }
- *
- * // Infer types from values
- * inferType('hello')                  // 'string'
- * inferType(42)                       // 'int'
- * inferType('2024-01-15T10:30:00Z')   // 'timestamp'
+ * // Validate
+ * const result = validateSchema(schema);
  * ```
  *
  * @packageDocumentation
@@ -417,6 +424,9 @@ export type {
   CompileResult,
   CompileEntityResult,
 } from './compiler.js';
+
+// Re-export GraphDL's Graph function so consumers can use it directly
+export { Graph, validateGraph } from '@graphdl/core';
 
 // Re-export GraphDL types for convenience
 export type {
