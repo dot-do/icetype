@@ -28,7 +28,7 @@ importers:
         version: 16.4.7(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@3.25.76)
       fumadocs-mdx:
         specifier: ^14.2.6
-        version: 14.2.6(@types/react@19.2.9)(fumadocs-core@16.4.7(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@3.25.76))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)(vite@5.4.21(@types/node@25.1.0)(lightningcss@1.30.2))
+        version: 14.2.6(@types/react@19.2.9)(fumadocs-core@16.4.7(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@3.25.76))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
       fumadocs-ui:
         specifier: ^16.4.7
         version: 16.4.7(@types/react-dom@19.2.3(@types/react@19.2.9))(@types/react@19.2.9)(fumadocs-core@16.4.7(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@3.25.76))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)
@@ -561,8 +561,8 @@ importers:
         version: link:../test-utils
     devDependencies:
       '@testcontainers/mysql':
-        specifier: ^10.18.0
-        version: 10.28.0
+        specifier: ^11.11.0
+        version: 11.11.0
       '@testcontainers/postgresql':
         specifier: ^10.18.0
         version: 10.28.0
@@ -2290,8 +2290,8 @@ packages:
   '@tailwindcss/postcss@4.1.18':
     resolution: {integrity: sha512-Ce0GFnzAOuPyfV5SxjXGn0CubwGcuDB0zcdaPuCSzAa/2vII24JTkH+I6jcbXLb1ctjZMZZI6OjDaLPJQL1S0g==}
 
-  '@testcontainers/mysql@10.28.0':
-    resolution: {integrity: sha512-yZKe86Esg8mPyr957aSwdkmDqXH17vab5aUcDqwR/E2fZpZxLetwfvmoVP+V6TpQQNTYrVTyP5T+HPMgaZeIkA==}
+  '@testcontainers/mysql@11.11.0':
+    resolution: {integrity: sha512-2EfFhUDEvEdwBwez+F/NhqP+h2rFzLzHYbRX0N/9/Lgdlq8TbsYWZ9SaWL9V0f1FWX89XnyZrT3i/j7m8MIESg==}
 
   '@testcontainers/postgresql@10.28.0':
     resolution: {integrity: sha512-NN25rruG5D4Q7pCNIJuHwB+G85OSeJ3xHZ2fWx0O6sPoPEfCYwvpj8mq99cyn68nxFkFYZeyrZJtSFO+FnydiA==}
@@ -3009,6 +3009,10 @@ packages:
 
   docker-compose@0.24.8:
     resolution: {integrity: sha512-plizRs/Vf15H+GCVxq2EUvyPK7ei9b/cVesHvjnX4xaXjM9spHe2Ytq0BitndFgvTJ3E3NljPNUEl7BAN43iZw==}
+    engines: {node: '>= 6.0.0'}
+
+  docker-compose@1.3.1:
+    resolution: {integrity: sha512-rF0wH69G3CCcmkN9J1RVMQBaKe8o77LT/3XmqcLIltWWVxcWAzp2TnO7wS3n/umZHN3/EVrlT3exSBMal+Ou1w==}
     engines: {node: '>= 6.0.0'}
 
   docker-modem@5.0.6:
@@ -4794,6 +4798,9 @@ packages:
   testcontainers@10.28.0:
     resolution: {integrity: sha512-1fKrRRCsgAQNkarjHCMKzBKXSJFmzNTiTbhb5E/j5hflRXChEtHvkefjaHlgkNUjfw92/Dq8LTgwQn6RDBFbMg==}
 
+  testcontainers@11.11.0:
+    resolution: {integrity: sha512-nKTJn3n/gkyGg/3SVkOwX+isPOGSHlfI+CWMobSmvQrsj7YW01aWvl2pYIfV4LMd+C8or783yYrzKSK2JlP+Qw==}
+
   text-decoder@1.2.3:
     resolution: {integrity: sha512-3/o9z3X0X0fTupwsYvR03pJ/DjWuqqrfwBgTQzdWDiQSm9KitAyz/9WqsT2JQW7KV2m+bC2ol/zqpW37NHxLaA==}
 
@@ -4922,6 +4929,10 @@ packages:
 
   undici@7.19.0:
     resolution: {integrity: sha512-Heho1hJD81YChi+uS2RkSjcVO+EQLmLSyUlHyp7Y/wFbxQaGb4WXVKD073JytrjXJVkSZVzoE2MCSOKugFGtOQ==}
+    engines: {node: '>=20.18.1'}
+
+  undici@7.19.2:
+    resolution: {integrity: sha512-4VQSpGEGsWzk0VYxyB/wVX/Q7qf9t5znLRgs0dzszr9w9Fej/8RVNQ+S20vdXSAyra/bJ7ZQfGv6ZMj7UEbzSg==}
     engines: {node: '>=20.18.1'}
 
   unified@11.0.5:
@@ -6565,9 +6576,9 @@ snapshots:
       postcss: 8.5.6
       tailwindcss: 4.1.18
 
-  '@testcontainers/mysql@10.28.0':
+  '@testcontainers/mysql@11.11.0':
     dependencies:
-      testcontainers: 10.28.0
+      testcontainers: 11.11.0
     transitivePeerDependencies:
       - bare-abort-controller
       - bare-buffer
@@ -6818,6 +6829,14 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       vite: 5.4.21(@types/node@20.19.30)(lightningcss@1.30.2)
+
+  '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@22.19.7)(lightningcss@1.30.2))':
+    dependencies:
+      '@vitest/spy': 2.1.9
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 5.4.21(@types/node@22.19.7)(lightningcss@1.30.2)
 
   '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@25.1.0)(lightningcss@1.30.2))':
     dependencies:
@@ -7395,6 +7414,10 @@ snapshots:
     dependencies:
       yaml: 2.8.2
 
+  docker-compose@1.3.1:
+    dependencies:
+      yaml: 2.8.2
+
   docker-modem@5.0.6:
     dependencies:
       debug: 4.4.3
@@ -7710,7 +7733,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  fumadocs-mdx@14.2.6(@types/react@19.2.9)(fumadocs-core@16.4.7(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@3.25.76))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)(vite@5.4.21(@types/node@25.1.0)(lightningcss@1.30.2)):
+  fumadocs-mdx@14.2.6(@types/react@19.2.9)(fumadocs-core@16.4.7(@types/react@19.2.9)(lucide-react@0.546.0(react@19.2.3))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod@3.25.76))(next@16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3):
     dependencies:
       '@mdx-js/mdx': 3.1.1
       '@standard-schema/spec': 1.1.0
@@ -7734,7 +7757,6 @@ snapshots:
       '@types/react': 19.2.9
       next: 16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react: 19.2.3
-      vite: 5.4.21(@types/node@25.1.0)(lightningcss@1.30.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -9730,6 +9752,29 @@ snapshots:
       - react-native-b4a
       - supports-color
 
+  testcontainers@11.11.0:
+    dependencies:
+      '@balena/dockerignore': 1.0.2
+      '@types/dockerode': 3.3.47
+      archiver: 7.0.1
+      async-lock: 1.4.1
+      byline: 5.0.0
+      debug: 4.4.3
+      docker-compose: 1.3.1
+      dockerode: 4.0.9
+      get-port: 7.1.0
+      proper-lockfile: 4.1.2
+      properties-reader: 2.3.0
+      ssh-remote-port-forward: 1.0.4
+      tar-fs: 3.1.1
+      tmp: 0.2.5
+      undici: 7.19.2
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - bare-buffer
+      - react-native-b4a
+      - supports-color
+
   text-decoder@1.2.3:
     dependencies:
       b4a: 1.7.3
@@ -9837,6 +9882,8 @@ snapshots:
       '@fastify/busboy': 2.1.1
 
   undici@7.19.0: {}
+
+  undici@7.19.2: {}
 
   unified@11.0.5:
     dependencies:
@@ -10059,7 +10106,7 @@ snapshots:
   vitest@2.1.9(@types/node@22.19.7)(jsdom@24.1.3)(lightningcss@1.30.2):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@25.1.0)(lightningcss@1.30.2))
+      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@22.19.7)(lightningcss@1.30.2))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9
