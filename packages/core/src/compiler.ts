@@ -216,41 +216,27 @@ function fieldToDefinition(field: ParsedField): FieldDefinition {
     isIndexed,
   };
 
-  // Extract parametric type fields (precision, scale, length)
-  const fieldAny = field as Record<string, unknown>;
-  if (fieldAny.precision != null) {
-    definition.precision = fieldAny.precision as number;
-  }
-  if (fieldAny.scale != null) {
-    definition.scale = fieldAny.scale as number;
-  }
-  if (fieldAny.length != null) {
-    definition.length = fieldAny.length as number;
-  }
+  // Extract extended fields from ParsedField.
+  // GraphDL may not yet declare these in its type definition, so we access
+  // them via a Record cast for forward-compatibility.
+  const ext = field as unknown as Record<string, unknown>;
 
-  // Extract generic type fields (keyType, valueType, structName, enumName, refTarget, elementType)
-  if (fieldAny.keyType != null) {
-    definition.keyType = fieldAny.keyType as string;
-  }
-  if (fieldAny.valueType != null) {
-    definition.valueType = fieldAny.valueType as string;
-  }
-  if (fieldAny.structName != null) {
-    definition.structName = fieldAny.structName as string;
-  }
-  if (fieldAny.enumName != null) {
-    definition.enumName = fieldAny.enumName as string;
-  }
-  if (fieldAny.refTarget != null) {
-    definition.refTarget = fieldAny.refTarget as string;
-  }
-  if (fieldAny.elementType != null) {
-    definition.elementType = fieldAny.elementType as string;
-  }
+  // Parametric type fields
+  if (ext.precision != null) definition.precision = ext.precision as number;
+  if (ext.scale != null) definition.scale = ext.scale as number;
+  if (ext.length != null) definition.length = ext.length as number;
 
-  // Extract default value
-  if ('default' in fieldAny && fieldAny.default !== undefined) {
-    definition.defaultValue = fieldAny.default;
+  // Generic type fields
+  if (ext.keyType != null) definition.keyType = ext.keyType as string;
+  if (ext.valueType != null) definition.valueType = ext.valueType as string;
+  if (ext.structName != null) definition.structName = ext.structName as string;
+  if (ext.enumName != null) definition.enumName = ext.enumName as string;
+  if (ext.refTarget != null) definition.refTarget = ext.refTarget as string;
+  if (ext.elementType != null) definition.elementType = ext.elementType as string;
+
+  // Default value (field.default -> definition.defaultValue)
+  if ('default' in ext && ext.default !== undefined) {
+    definition.defaultValue = ext.default;
   }
 
   // Handle relations
