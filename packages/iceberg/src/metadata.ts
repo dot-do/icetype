@@ -6,6 +6,7 @@
  * @packageDocumentation
  */
 
+// @ts-ignore -- node:crypto available at runtime
 import { randomUUID } from 'node:crypto';
 
 import type {
