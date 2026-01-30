@@ -1,6 +1,6 @@
 {
   "name": "@icetype/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "IceType schema language - parser, types, and validation",
   "type": "module",
   "main": "./dist/index.js",
@@ -37,7 +37,7 @@
     "url": "https://github.com/dot-do/icetype/issues"
   },
   "dependencies": {
-    "@graphdl/core": "file:../../../primitives.org.ai/packages/graphdl"
+    "@graphdl/core": "^0.3.0"
   },
   "devDependencies": {
     "@types/node": "^25.0.9",

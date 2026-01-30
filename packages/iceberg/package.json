@@ -1,6 +1,6 @@
 {
   "name": "@icetype/iceberg",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "IceType to Apache Iceberg metadata and Parquet schema generation",
   "type": "module",
   "main": "./dist/index.js",
@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "@icetype/core": "workspace:*",
-    "@graphdl/core": "file:../../../primitives.org.ai/packages/graphdl"
+    "@graphdl/core": "^0.3.0"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

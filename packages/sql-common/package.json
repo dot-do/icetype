@@ -1,6 +1,6 @@
 {
   "name": "@icetype/sql-common",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Shared SQL DDL utilities for IceType database adapters",
   "type": "module",
   "main": "./dist/index.js",

@@ -419,8 +419,8 @@ importers:
   packages/core:
     dependencies:
       '@graphdl/core':
-        specifier: file:../../../primitives.org.ai/packages/graphdl
-        version: file:../primitives.org.ai/packages/graphdl
+        specifier: ^0.3.0
+        version: 0.3.0
     devDependencies:
       '@types/node':
         specifier: ^25.0.9
@@ -486,8 +486,8 @@ importers:
   packages/iceberg:
     dependencies:
       '@graphdl/core':
-        specifier: file:../../../primitives.org.ai/packages/graphdl
-        version: file:../primitives.org.ai/packages/graphdl
+        specifier: ^0.3.0
+        version: 0.3.0
       '@icetype/core':
         specifier: workspace:*
         version: link:../core
@@ -1294,8 +1294,8 @@ packages:
       tailwindcss:
         optional: true
 
-  '@graphdl/core@file:../primitives.org.ai/packages/graphdl':
-    resolution: {directory: ../primitives.org.ai/packages/graphdl, type: directory}
+  '@graphdl/core@0.3.0':
+    resolution: {integrity: sha512-Ld8H4QjK9ecHqZxwaLi2o/VfBBPjrN7lvmHVaqquxeUGPfl0Er8V2bEPOaAVUo3fmzRNyDPBocaAQ2BuNyxBmQ==}
     engines: {node: '>=18'}
 
   '@grpc/grpc-js@1.14.3':
@@ -5682,7 +5682,7 @@ snapshots:
       next: 16.1.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       tailwindcss: 4.1.18
 
-  '@graphdl/core@file:../primitives.org.ai/packages/graphdl': {}
+  '@graphdl/core@0.3.0': {}
 
   '@grpc/grpc-js@1.14.3':
     dependencies:
