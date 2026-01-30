@@ -216,6 +216,43 @@ function fieldToDefinition(field: ParsedField): FieldDefinition {
     isIndexed,
   };
 
+  // Extract parametric type fields (precision, scale, length)
+  const fieldAny = field as Record<string, unknown>;
+  if (fieldAny.precision != null) {
+    definition.precision = fieldAny.precision as number;
+  }
+  if (fieldAny.scale != null) {
+    definition.scale = fieldAny.scale as number;
+  }
+  if (fieldAny.length != null) {
+    definition.length = fieldAny.length as number;
+  }
+
+  // Extract generic type fields (keyType, valueType, structName, enumName, refTarget, elementType)
+  if (fieldAny.keyType != null) {
+    definition.keyType = fieldAny.keyType as string;
+  }
+  if (fieldAny.valueType != null) {
+    definition.valueType = fieldAny.valueType as string;
+  }
+  if (fieldAny.structName != null) {
+    definition.structName = fieldAny.structName as string;
+  }
+  if (fieldAny.enumName != null) {
+    definition.enumName = fieldAny.enumName as string;
+  }
+  if (fieldAny.refTarget != null) {
+    definition.refTarget = fieldAny.refTarget as string;
+  }
+  if (fieldAny.elementType != null) {
+    definition.elementType = fieldAny.elementType as string;
+  }
+
+  // Extract default value
+  if ('default' in fieldAny && fieldAny.default !== undefined) {
+    definition.defaultValue = fieldAny.default;
+  }
+
   // Handle relations
   if (field.isRelation && field.relatedType) {
     const operator = field.operator ?? '->';

@@ -160,6 +160,18 @@ export interface FieldDefinition {
   scale?: number;
   /** Length for varchar/char types */
   length?: number;
+  /** Key type for map types */
+  keyType?: string;
+  /** Value type for map types */
+  valueType?: string;
+  /** Struct name for struct types */
+  structName?: string;
+  /** Enum name for enum types */
+  enumName?: string;
+  /** Reference target for ref types */
+  refTarget?: string;
+  /** Element type for list types */
+  elementType?: string;
 }
 
 // =============================================================================
