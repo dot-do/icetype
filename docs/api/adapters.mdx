@@ -393,6 +393,298 @@ interface ParquetAdapterOptions {
 }
 ```
 
+## Lazy Loading
+
+IceType uses a lazy loading architecture to minimize bundle size and improve startup performance. Adapters are loaded on-demand only when their commands are invoked, rather than at CLI initialization.
+
+### Why Lazy Loading?
+
+<Callout type="info" title="Bundle Size Impact">
+Without lazy loading, importing all adapters at startup could add 500KB+ to the initial bundle. Lazy loading ensures users only pay for what they use.
+</Callout>
+
+**Benefits:**
+
+- **Faster CLI startup** - Only core modules are loaded initially
+- **Smaller bundles** - Unused adapters are never bundled in tree-shaken builds
+- **Graceful degradation** - CLI works even if some adapter packages are not installed
+- **Memory efficiency** - Adapters are instantiated only when needed
+
+### `lazyLoadAdapter(name)`
+
+Dynamically loads an adapter by name. The adapter is loaded via dynamic import only when requested, and the result is cached for subsequent calls.
+
+```typescript
+import { lazyLoadAdapter } from '@icetype/adapters';
+
+// Load adapter only when needed - not at module initialization
+const adapter = await lazyLoadAdapter('postgres');
+const ddl = adapter.transform(schema, { ifNotExists: true });
+
+// Subsequent calls return cached instance
+const sameAdapter = await lazyLoadAdapter('postgres'); // instant, from cache
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `string` | Adapter name (e.g., `'postgres'`, `'mysql'`, `'clickhouse'`) |
+
+**Returns:** `Promise<SchemaAdapter>`
+
+**Throws:** `Error` if the adapter name is unknown or the package is not installed.
+
+**Supported Adapters:**
+
+| Name | Package | Factory |
+|------|---------|---------|
+| `postgres` | `@icetype/postgres` | `createPostgresAdapter` |
+| `mysql` | `@icetype/mysql` | `createMySQLAdapter` |
+| `sqlite` | `@icetype/sqlite` | `createSQLiteAdapter` |
+| `clickhouse` | `@icetype/clickhouse` | `createClickHouseAdapter` |
+| `duckdb` | `@icetype/duckdb` | `createDuckDBAdapter` |
+| `iceberg` | `@icetype/iceberg` | `createIcebergAdapter` |
+| `parquet` | `@icetype/iceberg` | `createParquetAdapter` |
+| `drizzle` | `@icetype/drizzle` | `createDrizzleAdapter` |
+| `prisma` | `@icetype/prisma` | `createPrismaAdapter` |
+
+---
+
+### `createLazyAdapterRegistry()`
+
+Creates a lazy adapter registry that stores loader functions instead of adapter instances. Adapters are only instantiated when requested via `getAsync()`.
+
+```typescript
+import { createLazyAdapterRegistry } from '@icetype/adapters';
+
+const registry = createLazyAdapterRegistry();
+
+// Register loaders - adapters are NOT loaded yet
+registry.registerLoader('postgres', async () => {
+  const { createPostgresAdapter } = await import('@icetype/postgres');
+  return createPostgresAdapter();
+});
+
+registry.registerLoader('mysql', async () => {
+  const { createMySQLAdapter } = await import('@icetype/mysql');
+  return createMySQLAdapter();
+});
+
+// Adapter is loaded only when requested (first call triggers import)
+const adapter = await registry.getAsync('postgres');
+
+// Second call returns cached instance
+const sameAdapter = await registry.getAsync('postgres');
+```
+
+**Returns:** `LazyAdapterRegistry`
+
+---
+
+### `LazyAdapterRegistry` Interface
+
+```typescript
+interface LazyAdapterRegistry {
+  // Register a loader function for an adapter
+  registerLoader(name: string, loader: () => Promise<SchemaAdapter>): void;
+
+  // Check if a loader is registered
+  hasLoader(name: string): boolean;
+
+  // Get adapter asynchronously, loading if necessary (returns cached after first load)
+  getAsync(name: string): Promise<SchemaAdapter | undefined>;
+
+  // List all registered adapter names
+  list(): string[];
+
+  // Unregister a loader
+  unregisterLoader(name: string): boolean;
+
+  // Clear all loaders and cached adapters
+  clear(): void;
+}
+```
+
+## Bundle Optimization Strategies
+
+### Strategy 1: Dynamic Imports with Code Splitting
+
+The CLI uses dynamic imports to enable automatic code splitting by bundlers like Vite, esbuild, and webpack.
+
+```typescript
+// cli.ts - Commands are imported dynamically
+async function main() {
+  const command = process.argv[2];
+
+  switch (command) {
+    case 'postgres':
+      // Adapter loaded only when postgres command is invoked
+      const { loadAdapter } = await import('./utils/adapter-registry.js');
+      await loadAdapter('postgres');
+      const { postgresExport } = await import('./commands/postgres.js');
+      await postgresExport(args);
+      break;
+    // ... other commands
+  }
+}
+```
+
+**How it works:**
+
+1. The main CLI module contains only routing logic
+2. Each command handler is in a separate chunk
+3. Adapter packages are loaded via dynamic import
+4. Bundlers create separate chunks that are loaded on-demand
+
+### Strategy 2: Adapter Registry with On-Demand Loading
+
+The adapter registry tracks which adapters have been loaded to avoid redundant imports.
+
+```typescript
+// adapter-registry.ts
+const loadedAdapters = new Set<string>();
+
+export async function loadAdapter(name: string): Promise<SchemaAdapter> {
+  // Return from cache if already loaded
+  if (globalRegistry.has(name)) {
+    return globalRegistry.get(name)!;
+  }
+
+  // Dynamic import based on adapter name
+  const loaders: Record<string, () => Promise<SchemaAdapter>> = {
+    postgres: async () => {
+      const { PostgresAdapter } = await import('@icetype/postgres');
+      return new PostgresAdapter();
+    },
+    clickhouse: async () => {
+      const { ClickHouseAdapter } = await import('@icetype/clickhouse');
+      return new ClickHouseAdapter();
+    },
+    // ... other adapters
+  };
+
+  const loader = loaders[name];
+  if (!loader) {
+    throw new Error(`Unknown adapter: ${name}`);
+  }
+
+  const adapter = await loader();
+  globalRegistry.register(adapter);
+  loadedAdapters.add(name);
+  return adapter;
+}
+```
+
+### Strategy 3: Peer Dependencies
+
+Adapter packages are designed as optional peer dependencies, allowing users to install only what they need.
+
+```json
+// package.json
+{
+  "peerDependencies": {
+    "@icetype/postgres": ">=1.0.0",
+    "@icetype/mysql": ">=1.0.0",
+    "@icetype/clickhouse": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@icetype/postgres": { "optional": true },
+    "@icetype/mysql": { "optional": true },
+    "@icetype/clickhouse": { "optional": true }
+  }
+}
+```
+
+### Strategy 4: Tree Shaking with Named Exports
+
+All adapters use named exports to enable tree shaking.
+
+```typescript
+// Good: Named exports enable tree shaking
+export { PostgresAdapter } from './postgres-adapter.js';
+export { createPostgresAdapter } from './factory.js';
+
+// Avoid: Default exports and barrel files can prevent tree shaking
+// export default PostgresAdapter;
+// export * from './all-adapters.js';
+```
+
+### Bundle Size Comparison
+
+| Import Strategy | Bundle Size | Load Time |
+|-----------------|-------------|-----------|
+| All adapters at startup | ~500KB+ | Slow |
+| Lazy loading (single adapter) | ~50KB | Fast |
+| Lazy loading with caching | ~50KB first, 0KB subsequent | Fast |
+
+## Best Practices
+
+### 1. Load Adapters On-Demand
+
+```typescript
+// Good: Load when needed
+async function exportToPostgres(schema: IceTypeSchema) {
+  const adapter = await lazyLoadAdapter('postgres');
+  return adapter.transform(schema);
+}
+
+// Avoid: Loading at module initialization
+import { PostgresAdapter } from '@icetype/postgres'; // Loaded even if not used
+const adapter = new PostgresAdapter();
+```
+
+### 2. Use the Global Registry for Caching
+
+```typescript
+import { globalRegistry, lazyLoadAdapter } from '@icetype/adapters';
+
+// First access loads the adapter
+const adapter1 = await lazyLoadAdapter('postgres');
+
+// Subsequent access uses cached instance from globalRegistry
+const adapter2 = globalRegistry.get('postgres'); // Synchronous, instant
+```
+
+### 3. Handle Missing Adapters Gracefully
+
+```typescript
+import { lazyLoadAdapter } from '@icetype/adapters';
+
+async function tryLoadAdapter(name: string) {
+  try {
+    return await lazyLoadAdapter(name);
+  } catch (error) {
+    if (error.message.includes('not installed')) {
+      console.error(`Please install @icetype/${name} to use this feature`);
+      console.error(`  npm install @icetype/${name}`);
+    }
+    throw error;
+  }
+}
+```
+
+### 4. Conditional Adapter Loading
+
+```typescript
+// Load adapter based on runtime configuration
+async function exportSchema(schema: IceTypeSchema, config: Config) {
+  const adapter = await lazyLoadAdapter(config.database); // 'postgres' | 'mysql' | etc.
+  const output = adapter.transform(schema, config.options);
+  return adapter.serialize(output);
+}
+```
+
+### 5. Parallel Loading for Multiple Adapters
+
+```typescript
+// When you need multiple adapters, load in parallel
+const [postgres, clickhouse] = await Promise.all([
+  lazyLoadAdapter('postgres'),
+  lazyLoadAdapter('clickhouse'),
+]);
+```
+
 ## Re-exported Types
 
 For convenience, the adapters package re-exports relevant types from `@icetype/iceberg`:
