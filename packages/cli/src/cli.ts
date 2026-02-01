@@ -12,27 +12,14 @@
  */
 
 import { createRequire } from 'node:module';
-import { initializeAdapterRegistry } from './utils/adapter-registry.js';
-import { init } from './commands/init.js';
-import { generate } from './commands/generate.js';
-import { validate } from './commands/validate.js';
-import { clickhouseExport } from './commands/clickhouse.js';
-import { duckdbExport } from './commands/duckdb.js';
-import { icebergExport } from './commands/iceberg.js';
-import { postgresExport } from './commands/postgres.js';
-import { prismaExport } from './commands/prisma.js';
-import { prismaImport } from './commands/prisma-import.js';
-import { drizzleImport } from './commands/drizzle-import.js';
-import { diff } from './commands/diff.js';
-import { migrate } from './commands/migrate.js';
-import { project } from './commands/project.js';
-import { doctor } from './commands/doctor.js';
 import { generateHelpText, hasHelpFlag, type HelpCommand } from './utils/help.js';
 import { formatCliError } from './utils/cli-error.js';
 
-// Initialize the global adapter registry at CLI startup
-// This registers all supported adapters (postgres, duckdb, clickhouse, iceberg)
-initializeAdapterRegistry();
+// Adapter registry is initialized lazily when an adapter command is invoked
+async function ensureAdapterRegistry(): Promise<void> {
+  const { initializeAdapterRegistry } = await import('./utils/adapter-registry.js');
+  initializeAdapterRegistry();
+}
 
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json') as { version: string };
@@ -234,31 +221,43 @@ async function main() {
 
   try {
     switch (command) {
-      case 'init':
+      case 'init': {
+        const { init } = await import('./commands/init.js');
         await init(commandArgs);
         break;
+      }
 
-      case 'generate':
+      case 'generate': {
+        const { generate } = await import('./commands/generate.js');
         await generate(commandArgs);
         break;
+      }
 
-      case 'validate':
+      case 'validate': {
+        const { validate } = await import('./commands/validate.js');
         await validate(commandArgs);
         break;
+      }
 
-      case 'diff':
+      case 'diff': {
+        const { diff } = await import('./commands/diff.js');
         await diff(commandArgs);
         break;
+      }
 
-      case 'doctor':
+      case 'doctor': {
+        const { doctor } = await import('./commands/doctor.js');
         await doctor(commandArgs);
         break;
+      }
 
       case 'clickhouse':
+        await ensureAdapterRegistry();
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
           console.log(generateHelpText(CLICKHOUSE_HELP));
           process.exit(0);
         } else if (commandArgs[0] === 'export') {
+          const { clickhouseExport } = await import('./commands/clickhouse.js');
           await clickhouseExport(commandArgs.slice(1));
         } else {
           console.error(`Unknown clickhouse subcommand: ${commandArgs[0]}`);
@@ -268,10 +267,12 @@ async function main() {
         break;
 
       case 'duckdb':
+        await ensureAdapterRegistry();
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
           console.log(generateHelpText(DUCKDB_HELP));
           process.exit(0);
         } else if (commandArgs[0] === 'export') {
+          const { duckdbExport } = await import('./commands/duckdb.js');
           await duckdbExport(commandArgs.slice(1));
         } else {
           console.error(`Unknown duckdb subcommand: ${commandArgs[0]}`);
@@ -281,10 +282,12 @@ async function main() {
         break;
 
       case 'iceberg':
+        await ensureAdapterRegistry();
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
           console.log(generateHelpText(ICEBERG_HELP));
           process.exit(0);
         } else if (commandArgs[0] === 'export') {
+          const { icebergExport } = await import('./commands/iceberg.js');
           await icebergExport(commandArgs.slice(1));
         } else {
           console.error(`Unknown iceberg subcommand: ${commandArgs[0]}`);
@@ -294,10 +297,12 @@ async function main() {
         break;
 
       case 'postgres':
+        await ensureAdapterRegistry();
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
           console.log(generateHelpText(POSTGRES_HELP));
           process.exit(0);
         } else if (commandArgs[0] === 'export') {
+          const { postgresExport } = await import('./commands/postgres.js');
           await postgresExport(commandArgs.slice(1));
         } else {
           console.error(`Unknown postgres subcommand: ${commandArgs[0]}`);
@@ -307,6 +312,7 @@ async function main() {
         break;
 
       case 'prisma':
+        await ensureAdapterRegistry();
         if (
           hasHelpFlag(commandArgs) &&
           commandArgs[0] !== 'export' &&
@@ -315,8 +321,10 @@ async function main() {
           console.log(generateHelpText(PRISMA_HELP));
           process.exit(0);
         } else if (commandArgs[0] === 'export') {
+          const { prismaExport } = await import('./commands/prisma.js');
           await prismaExport(commandArgs.slice(1));
         } else if (commandArgs[0] === 'import') {
+          const { prismaImport } = await import('./commands/prisma-import.js');
           await prismaImport(commandArgs.slice(1));
         } else {
           console.error(`Unknown prisma subcommand: ${commandArgs[0]}`);
@@ -326,10 +334,12 @@ async function main() {
         break;
 
       case 'drizzle':
+        await ensureAdapterRegistry();
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'import') {
           console.log(generateHelpText(DRIZZLE_HELP));
           process.exit(0);
         } else if (commandArgs[0] === 'import') {
+          const { drizzleImport } = await import('./commands/drizzle-import.js');
           await drizzleImport(commandArgs.slice(1));
         } else {
           console.error(`Unknown drizzle subcommand: ${commandArgs[0]}`);
@@ -338,7 +348,8 @@ async function main() {
         }
         break;
 
-      case 'migrate':
+      case 'migrate': {
+        await ensureAdapterRegistry();
         if (
           hasHelpFlag(commandArgs) &&
           commandArgs[0] !== 'dev' &&
@@ -349,18 +360,22 @@ async function main() {
           console.log(generateHelpText(MIGRATE_HELP));
           process.exit(0);
         } else {
+          const { migrate } = await import('./commands/migrate.js');
           await migrate(commandArgs);
         }
         break;
+      }
 
-      case 'project':
+      case 'project': {
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'generate') {
           console.log(generateHelpText(PROJECT_HELP));
           process.exit(0);
         } else {
+          const { project } = await import('./commands/project.js');
           await project(commandArgs);
         }
         break;
+      }
 
       default:
         console.error(`Unknown command: ${command}`);

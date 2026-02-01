@@ -11,12 +11,6 @@
 
 import { globalRegistry } from '@icetype/adapters';
 import type { SchemaAdapter } from '@icetype/adapters';
-import { PostgresAdapter } from '@icetype/postgres';
-import { DuckDBAdapter } from '@icetype/duckdb';
-import { ClickHouseAdapter } from '@icetype/clickhouse';
-import { IcebergAdapter } from '@icetype/iceberg';
-import { MySQLAdapter } from '@icetype/mysql';
-import { SQLiteAdapter } from '@icetype/sqlite';
 
 // =============================================================================
 // State Management
@@ -192,44 +186,30 @@ const loadedAdapters = new Set<string>();
  * const postgres = globalRegistry.get('postgres');
  * ```
  */
-export function initializeAdapterRegistry(): void {
+export async function initializeAdapterRegistry(): Promise<void> {
   // Prevent duplicate registration
   if (initialized) {
     return;
   }
 
-  // Register all supported adapters
-  // Note: Each adapter's `name` property determines its registry key
+  // Lazy-load and register all supported adapters on demand
+  const adapterImports: Array<{ name: string; load: () => Promise<{ new(): SchemaAdapter }> }> = [
+    { name: 'postgres', load: async () => (await import('@icetype/postgres')).PostgresAdapter },
+    { name: 'duckdb', load: async () => (await import('@icetype/duckdb')).DuckDBAdapter },
+    { name: 'clickhouse', load: async () => (await import('@icetype/clickhouse')).ClickHouseAdapter },
+    { name: 'iceberg', load: async () => (await import('@icetype/iceberg')).IcebergAdapter },
+    { name: 'mysql', load: async () => (await import('@icetype/mysql')).MySQLAdapter },
+    { name: 'sqlite', load: async () => (await import('@icetype/sqlite')).SQLiteAdapter },
+  ];
 
-  // PostgreSQL adapter
-  if (!globalRegistry.has('postgres')) {
-    globalRegistry.register(new PostgresAdapter());
-  }
-
-  // DuckDB adapter
-  if (!globalRegistry.has('duckdb')) {
-    globalRegistry.register(new DuckDBAdapter());
-  }
-
-  // ClickHouse adapter
-  if (!globalRegistry.has('clickhouse')) {
-    globalRegistry.register(new ClickHouseAdapter());
-  }
-
-  // Iceberg adapter
-  if (!globalRegistry.has('iceberg')) {
-    globalRegistry.register(new IcebergAdapter());
-  }
-
-  // MySQL adapter
-  if (!globalRegistry.has('mysql')) {
-    globalRegistry.register(new MySQLAdapter());
-  }
-
-  // SQLite adapter
-  if (!globalRegistry.has('sqlite')) {
-    globalRegistry.register(new SQLiteAdapter());
-  }
+  await Promise.all(
+    adapterImports.map(async ({ name, load }) => {
+      if (!globalRegistry.has(name)) {
+        const AdapterClass = await load();
+        globalRegistry.register(new AdapterClass());
+      }
+    })
+  );
 
   initialized = true;
 }
