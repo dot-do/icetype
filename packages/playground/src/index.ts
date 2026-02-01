@@ -1308,17 +1308,199 @@ export class Playground {
 
   /**
    * Parse a JavaScript object literal string into an object.
+   * Uses a safe tokenizer instead of eval/new Function() to prevent code injection.
    */
   private parseObjectLiteral(input: string): Record<string, unknown> {
-    // Use Function constructor to safely evaluate the object literal
-    // Wrap in parentheses to make it an expression
+    // Convert JS object literal syntax to JSON, then parse with JSON.parse
+    // This avoids any code execution while supporting:
+    //   - unquoted keys ($type, email, etc.)
+    //   - single-quoted string values ('uuid!', 'string#')
+    //   - arrays, nested objects, numbers, booleans, null
+    const json = this.jsObjectLiteralToJson(input);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-implied-eval
-      const fn = new Function(`return (${input});`);
-      return fn() as Record<string, unknown>;
+      const result = JSON.parse(json);
+      if (typeof result !== 'object' || result === null || Array.isArray(result)) {
+        throw new Error('Expected an object literal');
+      }
+      return result as Record<string, unknown>;
     } catch (error) {
-      throw error;
+      throw new Error(`Failed to parse schema: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  /**
+   * Convert a JS-style object literal string to valid JSON.
+   * Handles unquoted keys, single-quoted strings, and trailing commas.
+   */
+  private jsObjectLiteralToJson(input: string): string {
+    let result = '';
+    let i = 0;
+    const len = input.length;
+
+    const skipWhitespace = () => {
+      while (i < len && /\s/.test(input[i]!)) i++;
+    };
+
+    const skipLineComment = () => {
+      if (i < len - 1 && input[i] === '/' && input[i + 1] === '/') {
+        while (i < len && input[i] !== '\n') i++;
+        return true;
+      }
+      if (i < len - 1 && input[i] === '/' && input[i + 1] === '*') {
+        i += 2;
+        while (i < len - 1 && !(input[i] === '*' && input[i + 1] === '/')) i++;
+        i += 2;
+        return true;
+      }
+      return false;
+    };
+
+    const skipWhitespaceAndComments = () => {
+      while (i < len) {
+        skipWhitespace();
+        if (!skipLineComment()) break;
+      }
+    };
+
+    const readString = (quote: string): string => {
+      let s = '"';
+      i++; // skip opening quote
+      while (i < len && input[i] !== quote) {
+        if (input[i] === '\\') {
+          const next = input[i + 1];
+          if (next === quote) {
+            // Escaped quote of the same type: include the quote char
+            s += (quote === '"' ? '\\"' : '\\"');
+            i += 2;
+            continue;
+          }
+          if (next === '\\') {
+            s += '\\\\';
+            i += 2;
+            continue;
+          }
+          if (next === 'n') { s += '\\n'; i += 2; continue; }
+          if (next === 't') { s += '\\t'; i += 2; continue; }
+          if (next === 'r') { s += '\\r'; i += 2; continue; }
+          // For other escapes (like \" in single-quoted string), skip the backslash
+          i++;
+          continue;
+        }
+        // If inside single-quoted string, escape any double quotes
+        if (quote === "'" && input[i] === '"') {
+          s += '\\"';
+          i++;
+          continue;
+        }
+        s += input[i];
+        i++;
+      }
+      i++; // skip closing quote
+      s += '"';
+      return s;
+    };
+
+    const readIdentifier = (): string => {
+      let id = '';
+      while (i < len && /[a-zA-Z0-9_$]/.test(input[i]!)) {
+        id += input[i]!
+        i++;
+      }
+      return id;
+    };
+
+    const convert = (): string => {
+      skipWhitespaceAndComments();
+      if (i >= len) throw new Error('Unexpected end of input');
+      const ch = input[i]!;
+
+      if (ch === '{') {
+        i++;
+        let obj = '{';
+        let first = true;
+        while (true) {
+          skipWhitespaceAndComments();
+          if (i >= len) throw new Error('Unexpected end of input in object');
+          if (input[i] === '}') { i++; break; }
+          if (!first) {
+            if (input[i] === ',') {
+              i++; skipWhitespaceAndComments();
+            } else if (input[i] !== '}') {
+              throw new Error(`Expected ',' or '}' at position ${i}, got '${input[i]}'`);
+            }
+            // handle trailing comma
+            if (input[i] === '}') { i++; break; }
+          }
+          if (!first) obj += ',';
+          first = false;
+          // Read key
+          skipWhitespaceAndComments();
+          let key: string;
+          if (input[i] === '"' || input[i] === "'") {
+            key = readString(input[i]!);
+          } else {
+            const id = readIdentifier();
+            if (!id) throw new Error(`Expected property name at position ${i}`);
+            key = '"' + id + '"';
+          }
+          obj += key;
+          skipWhitespaceAndComments();
+          if (input[i] !== ':') throw new Error(`Expected ':' at position ${i}`);
+          i++;
+          obj += ':';
+          obj += convert();
+        }
+        obj += '}';
+        return obj;
+      }
+
+      if (ch === '[') {
+        i++;
+        let arr = '[';
+        let first = true;
+        while (true) {
+          skipWhitespaceAndComments();
+          if (i >= len) throw new Error('Unexpected end of input in array');
+          if (input[i] === ']') { i++; break; }
+          if (!first) {
+            if (input[i] === ',') { i++; skipWhitespaceAndComments(); }
+            if (input[i] === ']') { i++; break; }
+          }
+          if (!first) arr += ',';
+          first = false;
+          arr += convert();
+        }
+        arr += ']';
+        return arr;
+      }
+
+      if (ch === '"' || ch === "'") {
+        return readString(ch);
+      }
+
+      // number, boolean, null
+      if (ch === '-' || (ch >= '0' && ch <= '9')) {
+        let num = '';
+        if (ch === '-') { num += ch; i++; }
+        while (i < len && ((input[i]! >= '0' && input[i]! <= '9') || input[i] === '.' || input[i] === 'e' || input[i] === 'E' || input[i] === '+' || input[i] === '-')) {
+          // only allow +/- after e/E
+          if ((input[i] === '+' || input[i] === '-') && num[num.length - 1] !== 'e' && num[num.length - 1] !== 'E') break;
+          num += input[i]!;
+          i++;
+        }
+        return num;
+      }
+
+      // identifiers: true, false, null
+      const id = readIdentifier();
+      if (id === 'true' || id === 'false' || id === 'null') return id;
+      if (id === 'undefined') return 'null';
+
+      throw new Error(`Unexpected token '${id || ch}' at position ${i}`);
+    };
+
+    result = convert();
+    return result;
   }
 
   /**
