@@ -16,6 +16,8 @@ import {
   entityToIceType,
   GRAPHDL_TYPE_ALIASES,
 } from '../src/compiler.js';
+import type { SchemaAdapter, AdapterRegistry } from '../src/adapter-types.js';
+import type { IceTypeSchema } from '../src/types.js';
 
 describe('Compiler', () => {
   describe('GRAPHDL_TYPE_ALIASES', () => {
@@ -312,6 +314,98 @@ describe('Compiler', () => {
 
       expect(result).toBeDefined();
       expect(result.target).toBe('iceberg');
+    });
+  });
+
+  describe('adapter dispatch', () => {
+    function createMockAdapter(name: string): SchemaAdapter {
+      return {
+        name,
+        version: '1.0.0',
+        transform(schema: IceTypeSchema, _options?: unknown) {
+          return { tableName: schema.name, adapter: name };
+        },
+        serialize(output: unknown) {
+          return JSON.stringify(output);
+        },
+      };
+    }
+
+    function createMockRegistry(adapters: SchemaAdapter[]): AdapterRegistry {
+      const map = new Map<string, SchemaAdapter>();
+      for (const a of adapters) map.set(a.name, a);
+      return {
+        register(adapter: SchemaAdapter) { map.set(adapter.name, adapter); },
+        get(n: string) { return map.get(n); },
+        list() { return Array.from(map.keys()); },
+        has(n: string) { return map.has(n); },
+        unregister(n: string) { return map.delete(n); },
+        clear() { map.clear(); },
+      };
+    }
+
+    it('compile() should dispatch to adapter when registry is provided', () => {
+      const graph = Graph({
+        User: { name: 'string', email: 'string!' },
+      });
+
+      const adapter = createMockAdapter('postgres');
+      const registry = createMockRegistry([adapter]);
+
+      const result = compile(graph, 'postgres', { registry });
+
+      expect(result.output).toBeDefined();
+      expect(result.output!.size).toBe(1);
+      expect(result.output!.get('User')).toEqual({ tableName: 'User', adapter: 'postgres' });
+    });
+
+    it('compile() should dispatch for multiple entities', () => {
+      const graph = Graph({
+        User: { name: 'string' },
+        Post: { title: 'string' },
+      });
+
+      const adapter = createMockAdapter('duckdb');
+      const registry = createMockRegistry([adapter]);
+
+      const result = compile(graph, 'duckdb', { registry });
+
+      expect(result.output!.size).toBe(2);
+      expect(result.output!.get('User')).toEqual({ tableName: 'User', adapter: 'duckdb' });
+      expect(result.output!.get('Post')).toEqual({ tableName: 'Post', adapter: 'duckdb' });
+    });
+
+    it('compile() should throw ADAPTER_NOT_FOUND when target not in registry', () => {
+      const graph = Graph({ User: { name: 'string' } });
+      const registry = createMockRegistry([]);
+
+      expect(() => compile(graph, 'iceberg', { registry })).toThrow('No adapter registered for target: iceberg');
+    });
+
+    it('compile() should return empty output when no registry is provided', () => {
+      const graph = Graph({ User: { name: 'string' } });
+      const result = compile(graph, 'postgres');
+
+      expect(result.output!.size).toBe(0);
+    });
+
+    it('compileEntity() should dispatch to adapter when registry is provided', () => {
+      const graph = Graph({ User: { name: 'string' } });
+      const entity = graph.entities.get('User')!;
+      const adapter = createMockAdapter('postgres');
+      const registry = createMockRegistry([adapter]);
+
+      const result = compileEntity(entity, 'postgres', { registry });
+
+      expect(result.output).toEqual({ tableName: 'User', adapter: 'postgres' });
+    });
+
+    it('compileEntity() should throw ADAPTER_NOT_FOUND when target not in registry', () => {
+      const graph = Graph({ User: { name: 'string' } });
+      const entity = graph.entities.get('User')!;
+      const registry = createMockRegistry([]);
+
+      expect(() => compileEntity(entity, 'clickhouse', { registry })).toThrow('No adapter registered for target: clickhouse');
     });
   });
 

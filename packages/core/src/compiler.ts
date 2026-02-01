@@ -43,6 +43,8 @@ import type {
   IndexDirective,
   VectorDirective,
 } from './types.js';
+import type { AdapterRegistry } from './adapter-types.js';
+import { AdapterError, ErrorCodes } from './errors.js';
 
 // =============================================================================
 // Types
@@ -65,6 +67,9 @@ export interface CompileOptions {
 
   /** Additional table properties */
   properties?: Record<string, string>;
+
+  /** Adapter registry to use for dispatching to backend adapters */
+  registry?: AdapterRegistry;
 }
 
 /**
@@ -438,17 +443,32 @@ export function graphToIceType(graph: ParsedGraph): Map<string, IceTypeSchema> {
  * });
  * ```
  */
-export function compile(graph: ParsedGraph, target: CompileTarget, _options?: CompileOptions): CompileResult {
+export function compile(graph: ParsedGraph, target: CompileTarget, options?: CompileOptions): CompileResult {
   // Convert GraphDL to IceType schemas
   const schemas = graphToIceType(graph);
 
-  // Return the result with converted schemas
-  // Target-specific compilation will be handled by adapters
+  const output = new Map<string, unknown>();
+
+  // Dispatch to adapter if a registry is provided
+  if (options?.registry) {
+    const adapter = options.registry.get(target);
+    if (!adapter) {
+      throw new AdapterError(`No adapter registered for target: ${target}`, {
+        adapterName: target,
+        operation: 'compile',
+        code: ErrorCodes.ADAPTER_NOT_FOUND,
+      });
+    }
+
+    for (const [name, schema] of schemas) {
+      output.set(name, adapter.transform(schema, options));
+    }
+  }
+
   return {
     target,
     schemas,
-    // Output will be populated by target-specific adapters when needed
-    output: new Map(),
+    output,
   };
 }
 
@@ -476,13 +496,29 @@ export function compile(graph: ParsedGraph, target: CompileTarget, _options?: Co
 export function compileEntity(
   entity: ParsedEntity,
   target: CompileTarget,
-  _options?: CompileOptions
+  options?: CompileOptions
 ): CompileEntityResult {
   const schema = entityToIceType(entity);
+
+  let output: unknown | undefined;
+
+  // Dispatch to adapter if a registry is provided
+  if (options?.registry) {
+    const adapter = options.registry.get(target);
+    if (!adapter) {
+      throw new AdapterError(`No adapter registered for target: ${target}`, {
+        adapterName: target,
+        operation: 'compileEntity',
+        code: ErrorCodes.ADAPTER_NOT_FOUND,
+      });
+    }
+
+    output = adapter.transform(schema, options);
+  }
 
   return {
     target,
     schema,
-    // Output will be populated by target-specific adapters when needed
+    output,
   };
 }
