@@ -180,6 +180,9 @@ jobs:
         run: pnpm build
 
   # Coverage runs in parallel with tests
+  # This job enforces coverage thresholds defined in vitest.config.ts:
+  # - Global: 80% lines, 75% branches, 80% functions, 80% statements
+  # - Critical paths (core/parser.ts, core/diff.ts): 95%+ coverage
   coverage:
     name: Coverage
     needs: build
@@ -220,15 +223,44 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run tests with coverage
+      - name: Run tests with coverage (enforces thresholds)
         run: pnpm test:coverage
+        # Vitest will fail if coverage thresholds in vitest.config.ts are not met
+
+      - name: Run critical path coverage check (core package)
+        run: |
+          echo "Running coverage check for @icetype/core..."
+          pnpm --filter @icetype/core test -- --coverage
+        # Core package has stricter thresholds:
+        # - parser.ts: 95% lines/statements/branches, 90% functions
+        # - diff.ts: 95% across all metrics
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: coverage-report
-          path: coverage
+          path: |
+            coverage
+            packages/*/coverage
           retention-days: 30
+
+      - name: Coverage Summary
+        if: always()
+        run: |
+          echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Coverage thresholds are enforced by vitest.config.ts:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Global Thresholds" >> $GITHUB_STEP_SUMMARY
+          echo "- Lines: 80%" >> $GITHUB_STEP_SUMMARY
+          echo "- Branches: 75%" >> $GITHUB_STEP_SUMMARY
+          echo "- Functions: 80%" >> $GITHUB_STEP_SUMMARY
+          echo "- Statements: 80%" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Critical Path Thresholds (@icetype/core)" >> $GITHUB_STEP_SUMMARY
+          echo "- parser.ts: 95% lines/statements/branches, 90% functions" >> $GITHUB_STEP_SUMMARY
+          echo "- diff.ts: 95% across all metrics" >> $GITHUB_STEP_SUMMARY
 
   # Integration tests run in parallel with other jobs
   integration:
