@@ -31,7 +31,7 @@ export default defineConfig({
       'apps/playground/**',
       'packages/integration-tests/**',     // Requires Docker containers
       '**/*-red*.test.ts',
-      '**/pull-command.test.ts',           // DB introspection not yet implemented
+      '**/pull-command.test.ts',           // Requires database connections - run with integration tests
       '**/dynamic-imports.test.ts',        // Lazy loading not yet implemented
       '**/schema-loading-errors.test.ts',  // Error enhancements not yet implemented
       '**/adapter-registry.test.ts',       // RED: CLI adapter registry integration

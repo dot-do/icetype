@@ -16,14 +16,14 @@
 
 import { existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import pg from 'pg';
+import { Client as PgClient } from 'pg';
 import * as mysql from 'mysql2/promise';
-import Database from 'better-sqlite3';
+import * as BetterSqlite3 from 'better-sqlite3';
 import type { IceTypeSchema, FieldDefinition, SchemaDirectives, FieldModifier } from '@icetype/core';
 import { diffSchemas, type SchemaDiff } from '@icetype/core';
 
-// ESM interop for pg module
-const { Client: PgClient } = pg;
+// ESM interop for better-sqlite3
+const Database = BetterSqlite3.default || BetterSqlite3;
 
 // =============================================================================
 // Types
@@ -832,7 +832,7 @@ async function introspectSqlite(filePath: string): Promise<IntrospectedTable[]> 
 /**
  * Internal helper to introspect a SQLite table synchronously
  */
-function introspectSqliteTableSync(db: Database.Database, tableName: string): IntrospectedTable {
+function introspectSqliteTableSync(db: BetterSqlite3.Database, tableName: string): IntrospectedTable {
   // Get columns using PRAGMA
   const columnsInfo = db.prepare(`PRAGMA table_info("${tableName}")`).all() as Array<{
     cid: number;
