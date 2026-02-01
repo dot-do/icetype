@@ -485,9 +485,6 @@ importers:
 
   packages/iceberg:
     dependencies:
-      '@graphdl/core':
-        specifier: ^0.3.0
-        version: 0.3.0
       '@icetype/core':
         specifier: workspace:*
         version: link:../core
