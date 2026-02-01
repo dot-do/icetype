@@ -30,10 +30,13 @@ const userSchema = parseSchema({
   age: 'int?',           // ? = optional
   tags: 'string[]',      // [] = array
 
-  // Relations
-  posts: '<- Post.author[]',    // backward relation
-  org: '-> Organization?',      // forward relation
-  similar: '~> User[]',         // fuzzy/semantic relation
+  // Standard Relations (explicit foreign keys)
+  posts: '<- Post.author[]',    // backward relation (one-to-many)
+  org: '-> Organization?',      // forward relation (foreign key)
+
+  // Fuzzy Relations (semantic matching - parsing implemented, runtime planned)
+  similar: '~> User[]',         // fuzzy forward: semantically similar users
+  suggestedTags: '<~ Tag[]',    // fuzzy backward: tags that match this user
 });
 ```
 

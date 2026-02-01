@@ -157,21 +157,134 @@ The format is: `<- TargetEntity.foreignKeyField[]`
 
 ### Fuzzy Relations (`~>`, `<~`)
 
-Fuzzy relations are reserved for future AI-powered semantic matching:
+Fuzzy relations enable AI-powered semantic matching between entities. Unlike standard relations (`->`, `<-`) which require explicit foreign keys, fuzzy relations use semantic similarity to find matches.
+
+| Operator | Name | Description |
+|----------|------|-------------|
+| `~>` | Fuzzy Forward | Semantic matching to find related entities (e.g., similar products, related content) |
+| `<~` | Fuzzy Backward | Semantic reverse lookup for grounded relationships (e.g., tags that semantically match content) |
+
+#### Fuzzy Forward (`~>`)
+
+The `~>` operator defines a semantic similarity relationship:
 
 ```typescript
 const ProductSchema = parseSchema({
   $type: 'Product',
 
+  name: 'string!',
   description: 'text',
-  similar: '~> Product[]',      // Semantically similar products
-  relatedTags: '<~ Tag[]',      // Tags semantically related to this product
+
+  // Find products with similar descriptions/attributes
+  similar: '~> Product[]',
+
+  // Suggest categories based on product content
+  suggestedCategories: '~> Category[]',
 });
 ```
 
-<Callout type="warn" title="Coming Soon">
-Fuzzy relations are parsed and stored in schemas but the AI-powered matching functionality is planned for future releases.
+Use cases for `~>`:
+- **Content recommendations**: Find similar articles, products, or users
+- **Semantic search**: Match entities by meaning, not exact keywords
+- **Auto-categorization**: Suggest tags or categories based on content
+- **Knowledge graphs**: Connect entities by conceptual similarity
+
+#### Fuzzy Backward (`<~`)
+
+The `<~` operator defines a reverse semantic relationship (semantic grounding):
+
+```typescript
+const TagSchema = parseSchema({
+  $type: 'Tag',
+
+  name: 'string!',
+
+  // Products that this tag semantically relates to
+  taggedProducts: '<~ Product[]',
+});
+
+const TopicSchema = parseSchema({
+  $type: 'Topic',
+
+  name: 'string!',
+  description: 'text',
+
+  // Articles that cover this topic (semantic match)
+  relatedArticles: '<~ Article[]',
+});
+```
+
+Use cases for `<~`:
+- **Reverse semantic lookup**: "What items match this concept?"
+- **Semantic grounding**: Ground abstract concepts to concrete entities
+- **Taxonomy enrichment**: Find entities that belong to a semantic category
+
+#### Combining Fuzzy with Other Relations
+
+You can use fuzzy relations alongside standard relations:
+
+```typescript
+const ArticleSchema = parseSchema({
+  $type: 'Article',
+
+  title: 'string!',
+  content: 'text!',
+  authorId: 'uuid!',
+
+  // Standard relations (explicit foreign keys)
+  author: '-> User!',
+  comments: '<- Comment.article[]',
+
+  // Fuzzy relations (semantic matching)
+  similarArticles: '~> Article[]',
+  relatedTopics: '~> Topic[]',
+  suggestedTags: '<~ Tag[]',
+});
+```
+
+#### Self-Referential Fuzzy Relations
+
+Fuzzy relations can reference the same entity type:
+
+```typescript
+const UserSchema = parseSchema({
+  $type: 'User',
+
+  name: 'string!',
+  bio: 'text?',
+  interests: 'string[]',
+
+  // Users with similar profiles/interests
+  similarUsers: '~> User[]',
+});
+```
+
+#### Fuzzy Relations with Inverse Fields
+
+Specify the inverse field for bidirectional semantic relationships:
+
+```typescript
+const schema = parseSchema({
+  $type: 'Product',
+
+  recommendations: '~> Product.recommendations',  // Explicit inverse
+});
+```
+
+<Callout type="info" title="Implementation Status">
+**Parsing**: Fully implemented - fuzzy operators (`~>`, `<~`) are tokenized, parsed, and stored in schemas correctly.
+
+**Runtime**: Planned - AI-powered semantic matching execution is not yet implemented. Currently, fuzzy relations serve as schema-level metadata for future semantic search and recommendation features.
 </Callout>
+
+#### Future Runtime Behavior
+
+When runtime execution is implemented, fuzzy relations will:
+
+1. **Vector embeddings**: Automatically generate embeddings for relevant fields
+2. **Similarity search**: Use vector similarity (cosine, euclidean) to find matches
+3. **Configurable thresholds**: Set minimum similarity scores for matches
+4. **Hybrid search**: Combine semantic matching with traditional filters
 
 ## Directives
 

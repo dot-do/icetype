@@ -96,19 +96,21 @@ if (!result.valid) {
 
 | Operator | Type | Description | Status |
 |----------|------|-------------|--------|
-| `->` | Forward | Direct foreign key reference | Parsed |
-| `<-` | Backward | Reverse reference (one-to-many) | Parsed |
-| `~>` | Fuzzy Forward | AI-powered semantic matching | Planned |
-| `<~` | Fuzzy Backward | AI-powered reverse lookup | Planned |
+| `->` | Forward | Direct foreign key reference | Implemented |
+| `<-` | Backward | Reverse reference (one-to-many) | Implemented |
+| `~>` | Fuzzy Forward | AI-powered semantic matching | Parsing implemented, runtime planned |
+| `<~` | Fuzzy Backward | AI-powered reverse lookup (semantic grounding) | Parsing implemented, runtime planned |
 
-> **Note:** All relation operators are parsed and stored in schemas. The `->` and `<-` operators represent standard foreign key relationships. The fuzzy operators (`~>`, `<~`) are reserved for future AI-powered semantic matching functionality.
+#### Standard Relations (`->`, `<-`)
+
+Standard relations represent explicit foreign key relationships:
 
 ```typescript
 const postSchema = parseSchema({
   $type: 'Post',
 
+  authorId: 'uuid!',
   author: '-> User!',           // Forward relation to User
-  tags: '~> Tag[]',             // Fuzzy relation to Tags
 });
 
 const userSchema = parseSchema({
@@ -117,6 +119,36 @@ const userSchema = parseSchema({
   posts: '<- Post.author[]',    // Backward relation from Post
 });
 ```
+
+#### Fuzzy Relations (`~>`, `<~`)
+
+Fuzzy relations enable semantic matching without explicit foreign keys. They use AI-powered similarity to find related entities.
+
+```typescript
+const productSchema = parseSchema({
+  $type: 'Product',
+
+  name: 'string!',
+  description: 'text',
+
+  // ~> Fuzzy forward: find semantically similar products
+  similar: '~> Product[]',
+
+  // ~> Fuzzy forward: suggest categories based on content
+  suggestedCategories: '~> Category[]',
+});
+
+const tagSchema = parseSchema({
+  $type: 'Tag',
+
+  name: 'string!',
+
+  // <~ Fuzzy backward: products this tag semantically relates to
+  taggedProducts: '<~ Product[]',
+});
+```
+
+> **Implementation Status:** Fuzzy relations are fully parsed and stored in schemas. The AI-powered semantic matching runtime is planned for future releases. Currently, fuzzy relations serve as schema-level metadata for future semantic search and recommendation features.
 
 ### Directives
 
