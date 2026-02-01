@@ -365,6 +365,9 @@ importers:
       '@icetype/iceberg':
         specifier: workspace:*
         version: link:../iceberg
+      '@icetype/migrations':
+        specifier: workspace:*
+        version: link:../migrations
       '@icetype/mysql':
         specifier: workspace:*
         version: link:../mysql
