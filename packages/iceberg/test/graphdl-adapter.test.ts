@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { Graph } from '@graphdl/core';
+import { Graph } from '@icetype/core';
 import {
   compileGraphToIceberg,
   compileEntityToIceberg,

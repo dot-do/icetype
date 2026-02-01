@@ -35,8 +35,7 @@
     "url": "https://github.com/dot-do/icetype/issues"
   },
   "dependencies": {
-    "@icetype/core": "workspace:*",
-    "@graphdl/core": "^0.3.0"
+    "@icetype/core": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

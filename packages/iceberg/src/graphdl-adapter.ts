@@ -34,7 +34,7 @@
  * @packageDocumentation
  */
 
-import type { ParsedGraph, ParsedEntity } from '@graphdl/core';
+import type { ParsedGraph, ParsedEntity } from '@icetype/core';
 import { AdapterError, ErrorCodes, entityToIceType, graphToIceType } from '@icetype/core';
 import { generateIcebergMetadata } from './metadata.js';
 import type { IcebergTableMetadata } from './types.js';
