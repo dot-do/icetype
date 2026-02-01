@@ -11,8 +11,11 @@ export default defineConfig({
     poolOptions: {
       forks: {
         singleFork: true,
+        maxForks: 1,
       },
     },
+    fileParallelism: false,
+    maxConcurrency: 5,
 
     // Include only integration test files
     include: ['src/**/*.integration.test.ts'],

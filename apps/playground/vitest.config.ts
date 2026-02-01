@@ -4,6 +4,14 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   test: {
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        maxForks: 2,
+      },
+    },
+    fileParallelism: false,
+    maxConcurrency: 5,
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/__tests__/setup.ts'],
