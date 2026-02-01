@@ -340,6 +340,11 @@ export {
   isPluginLoadError,
   isPluginDependencyError,
   isPluginLifecycleError,
+
+  // Hook utilities
+  isValidHookName,
+  hasHook,
+  getHook,
 } from './plugin-system.js';
 
 // Re-export plugin system types
@@ -358,6 +363,7 @@ export type {
   TypedPlugin,
   TypedPluginHooks,
   TypedPluginConfig,
+  HookName,
 } from './plugin-system.js';
 
 // Re-export plugin config functions
