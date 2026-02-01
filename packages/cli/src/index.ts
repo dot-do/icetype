@@ -70,9 +70,13 @@ export {
 // Adapter registry utilities
 export {
   initializeAdapterRegistry,
+  loadAdapter,
   getAdapter,
+  getAdapterAsync,
   hasAdapter,
   listAdapters,
+  listSupportedAdapters,
+  getSupportedAdapterNames,
   resetAdapterRegistry,
   globalRegistry,
 } from './utils/adapter-registry.js';

@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import type { IceTypeSchema, FieldDefinition } from '@icetype/core';
-import { initializeAdapterRegistry, resetAdapterRegistry } from '../src/utils/adapter-registry.js';
+import { loadAdapter, resetAdapterRegistry } from '../src/utils/adapter-registry.js';
 
 // Mock modules
 vi.mock('node:fs', async () => {
@@ -25,8 +25,8 @@ vi.mock('node:fs', async () => {
 const _mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
 const _mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-// Initialize adapter registry before all tests
-initializeAdapterRegistry();
+// Load duckdb adapter before tests (using dynamic loading)
+await loadAdapter('duckdb');
 
 // =============================================================================
 // Helper Functions

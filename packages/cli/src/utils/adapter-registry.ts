@@ -1,25 +1,16 @@
 /**
  * Adapter Registry Utilities for IceType CLI
  *
- * This module provides functions to initialize and manage the global adapter
- * registry used throughout the CLI. It registers all supported adapters
- * (postgres, duckdb, clickhouse, iceberg) with the globalRegistry from
- * @icetype/adapters.
+ * This module provides functions to dynamically load and manage adapters.
+ * Adapters are loaded on-demand when their commands are invoked, not at
+ * CLI startup. This improves startup performance and allows the CLI to
+ * function even if some adapter packages are not installed.
  *
  * @packageDocumentation
  */
 
 import { globalRegistry } from '@icetype/adapters';
 import type { SchemaAdapter } from '@icetype/adapters';
-
-// =============================================================================
-// State Management
-// =============================================================================
-
-/**
- * Track whether the registry has been initialized to prevent duplicate registration.
- */
-let initialized = false;
 
 // =============================================================================
 // Extended Adapter Interface for CLI
@@ -159,59 +150,121 @@ const customCommandHandlers = new Map<string, CommandHandler>();
 const loadedAdapters = new Set<string>();
 
 // =============================================================================
-// Initialization
+// Dynamic Adapter Loaders
 // =============================================================================
 
 /**
- * Initialize the global adapter registry with all supported adapters.
+ * Map of adapter names to their dynamic loader functions.
+ * Each loader imports the adapter package only when invoked.
+ */
+const adapterLoaders: Record<string, () => Promise<SchemaAdapter>> = {
+  postgres: async () => {
+    const { PostgresAdapter } = await import('@icetype/postgres');
+    return new PostgresAdapter();
+  },
+  duckdb: async () => {
+    const { DuckDBAdapter } = await import('@icetype/duckdb');
+    return new DuckDBAdapter();
+  },
+  clickhouse: async () => {
+    const { ClickHouseAdapter } = await import('@icetype/clickhouse');
+    return new ClickHouseAdapter();
+  },
+  iceberg: async () => {
+    const { IcebergAdapter } = await import('@icetype/iceberg');
+    return new IcebergAdapter();
+  },
+  mysql: async () => {
+    const { MySQLAdapter } = await import('@icetype/mysql');
+    return new MySQLAdapter();
+  },
+  sqlite: async () => {
+    const { SQLiteAdapter } = await import('@icetype/sqlite');
+    return new SQLiteAdapter();
+  },
+};
+
+/**
+ * Get the list of all supported adapter names.
+ * This does not load the adapters, just returns the names.
+ */
+export function getSupportedAdapterNames(): string[] {
+  return Object.keys(adapterLoaders);
+}
+
+/**
+ * Load a single adapter dynamically by name.
+ * The adapter is loaded only when this function is called.
  *
- * This function registers the following adapters:
- * - postgres: PostgreSQL DDL generation
- * - duckdb: DuckDB DDL generation
- * - clickhouse: ClickHouse DDL generation
- * - iceberg: Apache Iceberg metadata generation
- *
- * The function is idempotent - calling it multiple times will not
- * register adapters more than once.
+ * @param name - The adapter name (e.g., 'postgres', 'duckdb')
+ * @returns The loaded adapter
+ * @throws Error if the adapter is not supported or package is not installed
  *
  * @example
  * ```typescript
- * import { initializeAdapterRegistry } from './utils/adapter-registry.js';
+ * import { loadAdapter } from './utils/adapter-registry.js';
  *
- * // Call at CLI startup
- * initializeAdapterRegistry();
- *
- * // Now adapters are available via globalRegistry
- * import { globalRegistry } from '@icetype/adapters';
- * const postgres = globalRegistry.get('postgres');
+ * // Load postgres adapter on-demand
+ * const adapter = await loadAdapter('postgres');
+ * const ddl = adapter.transform(schema);
  * ```
  */
-export async function initializeAdapterRegistry(): Promise<void> {
-  // Prevent duplicate registration
-  if (initialized) {
-    return;
+export async function loadAdapter(name: string): Promise<SchemaAdapter> {
+  // Check if already loaded
+  if (globalRegistry.has(name)) {
+    return globalRegistry.get(name)!;
   }
 
-  // Lazy-load and register all supported adapters on demand
-  const adapterImports: Array<{ name: string; load: () => Promise<{ new(): SchemaAdapter }> }> = [
-    { name: 'postgres', load: async () => (await import('@icetype/postgres')).PostgresAdapter },
-    { name: 'duckdb', load: async () => (await import('@icetype/duckdb')).DuckDBAdapter },
-    { name: 'clickhouse', load: async () => (await import('@icetype/clickhouse')).ClickHouseAdapter },
-    { name: 'iceberg', load: async () => (await import('@icetype/iceberg')).IcebergAdapter },
-    { name: 'mysql', load: async () => (await import('@icetype/mysql')).MySQLAdapter },
-    { name: 'sqlite', load: async () => (await import('@icetype/sqlite')).SQLiteAdapter },
-  ];
+  // Check if we have a loader for this adapter
+  const loader = adapterLoaders[name];
+  if (!loader) {
+    const supported = Object.keys(adapterLoaders).join(', ');
+    throw new Error(
+      `Unknown adapter '${name}'. Supported adapters: ${supported}`
+    );
+  }
 
+  try {
+    const adapter = await loader();
+    globalRegistry.register(adapter);
+    loadedAdapters.add(name);
+    return adapter;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    // Check if it's a module not found error
+    if (message.includes('Cannot find module') || message.includes('ERR_MODULE_NOT_FOUND')) {
+      throw new Error(
+        `Adapter package '@icetype/${name}' is not installed.\n` +
+        `Please install it with: npm install @icetype/${name}`
+      );
+    }
+    throw new Error(`Failed to load adapter '${name}': ${message}`);
+  }
+}
+
+/**
+ * @deprecated Use loadAdapter() instead for on-demand loading.
+ * This function is kept for backward compatibility but now loads
+ * all adapters which defeats the purpose of lazy loading.
+ *
+ * Initialize the global adapter registry with all supported adapters.
+ * Prefer using loadAdapter() to load only the adapters you need.
+ */
+export async function initializeAdapterRegistry(): Promise<void> {
+  // Load all adapters for backward compatibility
+  const adapterNames = Object.keys(adapterLoaders);
   await Promise.all(
-    adapterImports.map(async ({ name, load }) => {
+    adapterNames.map(async (name) => {
       if (!globalRegistry.has(name)) {
-        const AdapterClass = await load();
-        globalRegistry.register(new AdapterClass());
+        try {
+          await loadAdapter(name);
+        } catch {
+          // Silently skip adapters that fail to load
+          // This allows CLI to work even if some packages aren't installed
+        }
       }
     })
   );
-
-  initialized = true;
 }
 
 // =============================================================================
@@ -219,11 +272,13 @@ export async function initializeAdapterRegistry(): Promise<void> {
 // =============================================================================
 
 /**
- * Get an adapter from the global registry by name.
+ * Get an adapter from the global registry by name (synchronous).
  *
- * This is a convenience wrapper around `globalRegistry.get()` that ensures
- * the registry is initialized before attempting to retrieve an adapter.
+ * This is a convenience wrapper around `globalRegistry.get()`.
  * Returns the adapter with extended CLI metadata attached.
+ *
+ * NOTE: This only returns adapters that have already been loaded.
+ * Use getAdapterAsync() to load an adapter on-demand.
  *
  * @param name - The adapter name (e.g., 'postgres', 'duckdb', 'clickhouse', 'iceberg')
  * @returns The adapter if found, undefined otherwise
@@ -241,6 +296,39 @@ export async function initializeAdapterRegistry(): Promise<void> {
  */
 export function getAdapter(name: string): ExtendedSchemaAdapter | undefined {
   return getExtendedAdapter(name);
+}
+
+/**
+ * Get an adapter by name, loading it on-demand if not already loaded.
+ *
+ * This is the preferred way to get an adapter as it supports lazy loading.
+ * The adapter will only be imported when this function is called.
+ *
+ * @param name - The adapter name (e.g., 'postgres', 'duckdb', 'clickhouse', 'iceberg')
+ * @returns The adapter with extended CLI metadata
+ * @throws Error if the adapter is not supported or fails to load
+ *
+ * @example
+ * ```typescript
+ * import { getAdapterAsync } from './utils/adapter-registry.js';
+ *
+ * const postgresAdapter = await getAdapterAsync('postgres');
+ * const ddl = postgresAdapter.transform(schema);
+ * const sql = postgresAdapter.serialize(ddl);
+ * ```
+ */
+export async function getAdapterAsync(name: string): Promise<ExtendedSchemaAdapter> {
+  // Load if not already in registry
+  if (!globalRegistry.has(name)) {
+    await loadAdapter(name);
+  }
+
+  const adapter = getExtendedAdapter(name);
+  if (!adapter) {
+    throw new Error(`Adapter '${name}' not found after loading`);
+  }
+
+  return adapter;
 }
 
 /**
@@ -263,7 +351,7 @@ export function hasAdapter(name: string): boolean {
 }
 
 /**
- * Get a list of all registered adapter names.
+ * Get a list of all registered adapter names (loaded adapters only).
  *
  * @returns Array of registered adapter names
  *
@@ -281,10 +369,19 @@ export function listAdapters(): string[] {
 }
 
 /**
+ * Get a list of all supported adapter names (includes not-yet-loaded adapters).
+ *
+ * @returns Array of all supported adapter names
+ */
+export function listSupportedAdapters(): string[] {
+  return getSupportedAdapterNames();
+}
+
+/**
  * Reset the registry state (primarily for testing).
  *
- * This clears the global registry and resets the initialized flag,
- * allowing `initializeAdapterRegistry` to register adapters again.
+ * This clears the global registry and the loaded adapters tracking,
+ * allowing adapters to be loaded again.
  *
  * @internal
  */
@@ -292,7 +389,6 @@ export function resetAdapterRegistry(): void {
   globalRegistry.clear();
   customCommandHandlers.clear();
   loadedAdapters.clear();
-  initialized = false;
 }
 
 // =============================================================================
@@ -672,13 +768,8 @@ export function createLazyAdapterLoader(): LazyAdapterLoader {
     },
 
     async load(name: string): Promise<SchemaAdapter> {
-      const adapter = globalRegistry.get(name);
-      if (!adapter) {
-        throw new Error(`Adapter '${name}' not found`);
-      }
-
-      loadedAdapters.add(name);
-      return adapter;
+      // Use the new loadAdapter function for true lazy loading
+      return loadAdapter(name);
     },
   };
 }

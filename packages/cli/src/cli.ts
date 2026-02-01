@@ -15,10 +15,10 @@ import { createRequire } from 'node:module';
 import { generateHelpText, hasHelpFlag, type HelpCommand } from './utils/help.js';
 import { formatCliError, CliExitError } from './utils/cli-error.js';
 
-// Adapter registry is initialized lazily when an adapter command is invoked
-async function ensureAdapterRegistry(): Promise<void> {
-  const { initializeAdapterRegistry } = await import('./utils/adapter-registry.js');
-  initializeAdapterRegistry();
+// Load a specific adapter on-demand when its command is invoked
+async function loadAdapterOnDemand(name: string): Promise<void> {
+  const { loadAdapter } = await import('./utils/adapter-registry.js');
+  await loadAdapter(name);
 }
 
 const require = createRequire(import.meta.url);
@@ -252,10 +252,10 @@ async function main(): Promise<number> {
       }
 
       case 'clickhouse':
-        await ensureAdapterRegistry();
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
           console.log(generateHelpText(CLICKHOUSE_HELP));
         } else if (commandArgs[0] === 'export') {
+          await loadAdapterOnDemand('clickhouse');
           const { clickhouseExport } = await import('./commands/clickhouse.js');
           await clickhouseExport(commandArgs.slice(1));
         } else {
@@ -267,10 +267,10 @@ async function main(): Promise<number> {
         break;
 
       case 'duckdb':
-        await ensureAdapterRegistry();
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
           console.log(generateHelpText(DUCKDB_HELP));
         } else if (commandArgs[0] === 'export') {
+          await loadAdapterOnDemand('duckdb');
           const { duckdbExport } = await import('./commands/duckdb.js');
           await duckdbExport(commandArgs.slice(1));
         } else {
@@ -282,10 +282,10 @@ async function main(): Promise<number> {
         break;
 
       case 'iceberg':
-        await ensureAdapterRegistry();
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
           console.log(generateHelpText(ICEBERG_HELP));
         } else if (commandArgs[0] === 'export') {
+          await loadAdapterOnDemand('iceberg');
           const { icebergExport } = await import('./commands/iceberg.js');
           await icebergExport(commandArgs.slice(1));
         } else {
@@ -297,10 +297,10 @@ async function main(): Promise<number> {
         break;
 
       case 'postgres':
-        await ensureAdapterRegistry();
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
           console.log(generateHelpText(POSTGRES_HELP));
         } else if (commandArgs[0] === 'export') {
+          await loadAdapterOnDemand('postgres');
           const { postgresExport } = await import('./commands/postgres.js');
           await postgresExport(commandArgs.slice(1));
         } else {
@@ -312,7 +312,6 @@ async function main(): Promise<number> {
         break;
 
       case 'prisma':
-        await ensureAdapterRegistry();
         if (
           hasHelpFlag(commandArgs) &&
           commandArgs[0] !== 'export' &&
@@ -320,6 +319,7 @@ async function main(): Promise<number> {
         ) {
           console.log(generateHelpText(PRISMA_HELP));
         } else if (commandArgs[0] === 'export') {
+          // Prisma commands don't need adapter loading (prisma has its own handling)
           const { prismaExport } = await import('./commands/prisma.js');
           await prismaExport(commandArgs.slice(1));
         } else if (commandArgs[0] === 'import') {
@@ -334,10 +334,10 @@ async function main(): Promise<number> {
         break;
 
       case 'drizzle':
-        await ensureAdapterRegistry();
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'import') {
           console.log(generateHelpText(DRIZZLE_HELP));
         } else if (commandArgs[0] === 'import') {
+          // Drizzle import doesn't need adapter loading (uses its own handling)
           const { drizzleImport } = await import('./commands/drizzle-import.js');
           await drizzleImport(commandArgs.slice(1));
         } else {
@@ -349,7 +349,6 @@ async function main(): Promise<number> {
         break;
 
       case 'migrate': {
-        await ensureAdapterRegistry();
         if (
           hasHelpFlag(commandArgs) &&
           commandArgs[0] !== 'dev' &&
@@ -359,6 +358,7 @@ async function main(): Promise<number> {
         ) {
           console.log(generateHelpText(MIGRATE_HELP));
         } else {
+          // Migrate command loads adapters internally based on --dialect flag
           const { migrate } = await import('./commands/migrate.js');
           await migrate(commandArgs);
         }
