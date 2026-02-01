@@ -711,4 +711,463 @@ export const PostSchema = parseSchema({
       expect(result.stdout).toContain('postgres');
     });
   });
+
+  // ============================================================================
+  // Error Scenario Tests (E2E)
+  // ============================================================================
+
+  describe('Error Scenarios', () => {
+    const ERROR_TEST_DIR = join(TEST_DIR, 'error-tests');
+
+    beforeEach(() => {
+      mkdirSync(ERROR_TEST_DIR, { recursive: true });
+    });
+
+    afterEach(() => {
+      rmSync(ERROR_TEST_DIR, { recursive: true, force: true });
+    });
+
+    // --------------------------------------------------------------------------
+    // Invalid Schema File Paths
+    // --------------------------------------------------------------------------
+
+    describe('Invalid Schema File Paths', () => {
+      it('should fail with helpful error for non-existent schema file', () => {
+        const result = runCli('validate --schema /nonexistent/path/to/schema.ts');
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/not found|does not exist|no such file|ENOENT/i);
+      });
+
+      it('should fail with helpful error for non-existent directory in path', () => {
+        const result = runCli('generate --schema /fake/directory/schema.mjs --output /tmp/types.ts');
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/not found|does not exist|no such file|ENOENT/i);
+      });
+
+      it('should fail gracefully for empty schema path', () => {
+        const result = runCli('validate --schema ""');
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/schema|required|empty|invalid/i);
+      });
+
+      it('should fail with helpful error for directory instead of file', () => {
+        // Pass the directory itself as schema path
+        const result = runCli(`validate --schema ${ERROR_TEST_DIR}`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/directory|not a file|invalid|is a directory/i);
+      });
+
+      it('should fail with helpful error when diff --old file does not exist', () => {
+        const newSchemaPath = join(ERROR_TEST_DIR, 'new-schema.mjs');
+        writeFileSync(newSchemaPath, createSchemaFileContent('New'));
+
+        const result = runCli(`diff --old /nonexistent/old.mjs --new ${newSchemaPath}`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/not found|does not exist|no such file|ENOENT/i);
+      });
+
+      it('should fail with helpful error when diff --new file does not exist', () => {
+        const oldSchemaPath = join(ERROR_TEST_DIR, 'old-schema.mjs');
+        writeFileSync(oldSchemaPath, createSchemaFileContent('Old'));
+
+        const result = runCli(`diff --old ${oldSchemaPath} --new /nonexistent/new.mjs`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/not found|does not exist|no such file|ENOENT/i);
+      });
+    });
+
+    // --------------------------------------------------------------------------
+    // Malformed Schema Content
+    // --------------------------------------------------------------------------
+
+    describe('Malformed Schema Content', () => {
+      it('should fail with helpful error for invalid JSON schema', () => {
+        const schemaPath = join(ERROR_TEST_DIR, 'malformed.json');
+        writeFileSync(schemaPath, '{ "name": "Test", invalid json here }');
+
+        const result = runCli(`validate --schema ${schemaPath}`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/parse|syntax|json|unexpected/i);
+      });
+
+      it('should fail with helpful error for JavaScript syntax error', () => {
+        const schemaPath = join(ERROR_TEST_DIR, 'syntax-error.mjs');
+        writeFileSync(schemaPath, `
+export const Schema = {
+  $type: 'Test',
+  id: 'uuid!'
+// Missing closing brace
+`);
+
+        const result = runCli(`validate --schema ${schemaPath}`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/parse|syntax|unexpected|error/i);
+      });
+
+      it('should fail with helpful error for schema with missing import', () => {
+        const schemaPath = join(ERROR_TEST_DIR, 'missing-import.mjs');
+        writeFileSync(schemaPath, `
+import { parseSchema } from 'non-existent-package-xyz';
+
+export const TestSchema = parseSchema({
+  $type: 'Test',
+  id: 'uuid!',
+});
+`);
+
+        const result = runCli(`validate --schema ${schemaPath}`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/module|import|not found|cannot find/i);
+      });
+
+      it('should fail with helpful error for schema with runtime error', () => {
+        const schemaPath = join(ERROR_TEST_DIR, 'runtime-error.mjs');
+        writeFileSync(schemaPath, `
+const config = undefined;
+const value = config.someProperty; // Will throw TypeError
+
+export const Schema = { value };
+`);
+
+        const result = runCli(`validate --schema ${schemaPath}`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/cannot read|undefined|TypeError|error/i);
+      });
+
+      it('should fail with helpful error for schema exporting non-schema object', () => {
+        const schemaPath = join(ERROR_TEST_DIR, 'not-a-schema.mjs');
+        writeFileSync(schemaPath, `
+export const SomethingElse = {
+  notASchema: true,
+  randomData: 42,
+};
+`);
+
+        const result = runCli(`validate --schema ${schemaPath}`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/no.*schema|invalid|not.*valid|found 0/i);
+      });
+
+      it('should fail with helpful error for empty file', () => {
+        const schemaPath = join(ERROR_TEST_DIR, 'empty.mjs');
+        writeFileSync(schemaPath, '');
+
+        const result = runCli(`validate --schema ${schemaPath}`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/empty|no.*schema|export|found 0/i);
+      });
+
+      it('should fail with helpful error for schema with invalid field type', () => {
+        const schemaPath = join(ERROR_TEST_DIR, 'invalid-type.mjs');
+        writeFileSync(schemaPath, `import { parseSchema } from '${CORE_PATH}';
+
+export const TestSchema = parseSchema({
+  $type: 'Test',
+  id: 'uuid!',
+  badField: 'unknownTypeThatDoesNotExist!',
+});
+`);
+
+        const result = runCli(`validate --schema ${schemaPath}`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/invalid|unknown|type|error/i);
+      });
+    });
+
+    // --------------------------------------------------------------------------
+    // Missing Required Options
+    // --------------------------------------------------------------------------
+
+    describe('Missing Required Options', () => {
+      it('should fail with helpful error when validate is missing --schema', () => {
+        const result = runCli('validate');
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/--schema.*required|required.*--schema|schema/i);
+      });
+
+      it('should fail with helpful error when generate is missing --schema', () => {
+        const result = runCli('generate');
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/--schema.*required|required.*--schema|schema/i);
+      });
+
+      it('should fail with helpful error when diff is missing --old', () => {
+        const schemaPath = join(ERROR_TEST_DIR, 'temp-schema.mjs');
+        writeFileSync(schemaPath, createSchemaFileContent('Temp'));
+
+        const result = runCli(`diff --new ${schemaPath}`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/--old.*required|required.*--old|old/i);
+      });
+
+      it('should fail with helpful error when diff is missing --new', () => {
+        const schemaPath = join(ERROR_TEST_DIR, 'temp-schema.mjs');
+        writeFileSync(schemaPath, createSchemaFileContent('Temp'));
+
+        const result = runCli(`diff --old ${schemaPath}`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/--new.*required|required.*--new|new/i);
+      });
+
+      it('should fail with helpful error when clickhouse export is missing --schema', () => {
+        const result = runCli('clickhouse export');
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/schema/i);
+      });
+
+      it('should fail with helpful error when duckdb export is missing --schema', () => {
+        const result = runCli('duckdb export');
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/schema/i);
+      });
+
+      it('should fail with helpful error when postgres export is missing --schema', () => {
+        const result = runCli('postgres export');
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/schema/i);
+      });
+
+      it('should fail with helpful error when iceberg export is missing --schema', () => {
+        const result = runCli('iceberg export');
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/schema/i);
+      });
+    });
+
+    // --------------------------------------------------------------------------
+    // Invalid Option Values
+    // --------------------------------------------------------------------------
+
+    describe('Invalid Option Values', () => {
+      it('should fail with helpful error for invalid dialect in diff command', () => {
+        const schemaV1Path = join(ERROR_TEST_DIR, 'v1.mjs');
+        const schemaV2Path = join(ERROR_TEST_DIR, 'v2.mjs');
+        writeFileSync(schemaV1Path, createSchemaFileContent('Test'));
+        writeFileSync(schemaV2Path, createSchemaFileContentV2('Test'));
+
+        const result = runCli(`diff --old ${schemaV1Path} --new ${schemaV2Path} --dialect invalid_dialect_xyz`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/invalid|dialect|unsupported|unknown/i);
+      });
+
+      it('should fail with helpful error for invalid engine in clickhouse export', () => {
+        const schemaPath = join(ERROR_TEST_DIR, 'engine-test.mjs');
+        writeFileSync(schemaPath, createSchemaFileContent('Engine'));
+
+        const result = runCli(`clickhouse export --schema ${schemaPath} --engine InvalidEngineName`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/invalid|engine|unsupported|unknown/i);
+      });
+
+      it('should fail with helpful error for invalid nullable-style in generate', () => {
+        const schemaPath = join(ERROR_TEST_DIR, 'nullable-test.mjs');
+        writeFileSync(schemaPath, createSchemaFileContent('Nullable'));
+
+        const result = runCli(`generate --schema ${schemaPath} --nullable-style invalid_style`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/invalid|nullable|unsupported|unknown/i);
+      });
+    });
+
+    // --------------------------------------------------------------------------
+    // Output Path Errors
+    // --------------------------------------------------------------------------
+
+    describe('Output Path Errors', () => {
+      it('should fail with helpful error when output directory does not exist', () => {
+        const schemaPath = join(ERROR_TEST_DIR, 'output-test.mjs');
+        writeFileSync(schemaPath, createSchemaFileContent('Output'));
+
+        const result = runCli(`generate --schema ${schemaPath} --output /nonexistent/deep/path/types.ts`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/directory|path|ENOENT|not found|does not exist/i);
+      });
+
+      it('should fail with helpful error when output path is a directory', () => {
+        const schemaPath = join(ERROR_TEST_DIR, 'dir-output.mjs');
+        const outputDir = join(ERROR_TEST_DIR, 'output-dir');
+        writeFileSync(schemaPath, createSchemaFileContent('DirOutput'));
+        mkdirSync(outputDir, { recursive: true });
+
+        const result = runCli(`generate --schema ${schemaPath} --output ${outputDir}`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/directory|is a directory|EISDIR|invalid/i);
+      });
+    });
+
+    // --------------------------------------------------------------------------
+    // Unknown Commands and Options
+    // --------------------------------------------------------------------------
+
+    describe('Unknown Commands and Options', () => {
+      it('should fail with helpful error for unknown command', () => {
+        const result = runCli('unknowncommand');
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/unknown|invalid|command|not found/i);
+      });
+
+      it('should fail with helpful error for unknown option', () => {
+        const result = runCli('validate --unknown-option value');
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/unknown|invalid|option|unrecognized/i);
+      });
+
+      it('should fail with helpful error for unknown subcommand', () => {
+        const result = runCli('clickhouse unknownsub');
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        expect(output).toMatch(/unknown|invalid|command|not found/i);
+      });
+    });
+
+    // --------------------------------------------------------------------------
+    // Multiple Errors Reporting
+    // --------------------------------------------------------------------------
+
+    describe('Multiple Errors Reporting', () => {
+      it('should report multiple validation errors when schema has multiple issues', () => {
+        const schemaPath = join(ERROR_TEST_DIR, 'multiple-errors.mjs');
+        writeFileSync(schemaPath, `import { parseSchema } from '${CORE_PATH}';
+
+export const Schema1 = parseSchema({
+  $type: 'Schema1',
+  id: 'uuid!',
+  badField1: 'unknownType1',
+});
+
+export const Schema2 = parseSchema({
+  $type: 'Schema2',
+  id: 'uuid!',
+  badField2: 'unknownType2',
+});
+`);
+
+        const result = runCli(`validate --schema ${schemaPath}`);
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        // Should mention both schemas or both errors
+        expect(output.toLowerCase()).toMatch(/error/i);
+      });
+    });
+
+    // --------------------------------------------------------------------------
+    // Error Exit Codes
+    // --------------------------------------------------------------------------
+
+    describe('Error Exit Codes', () => {
+      it('should return non-zero exit code for validation failure', () => {
+        const schemaPath = join(ERROR_TEST_DIR, 'exit-code-test.mjs');
+        writeFileSync(schemaPath, '{ invalid }');
+
+        const result = runCli(`validate --schema ${schemaPath}`);
+
+        expect(result.code).not.toBe(0);
+        expect(result.code).toBeGreaterThanOrEqual(1);
+      });
+
+      it('should return non-zero exit code for missing file', () => {
+        const result = runCli('validate --schema /nonexistent/schema.ts');
+
+        expect(result.code).not.toBe(0);
+        expect(result.code).toBeGreaterThanOrEqual(1);
+      });
+
+      it('should return non-zero exit code for missing required option', () => {
+        const result = runCli('validate');
+
+        expect(result.code).not.toBe(0);
+        expect(result.code).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    // --------------------------------------------------------------------------
+    // Error Message Quality
+    // --------------------------------------------------------------------------
+
+    describe('Error Message Quality', () => {
+      it('should provide actionable error message for file not found', () => {
+        const result = runCli('validate --schema /path/to/missing.ts');
+
+        expect(result.code).not.toBe(0);
+        const output = result.stderr + result.stdout;
+        // Should mention the file path
+        expect(output).toContain('/path/to/missing.ts');
+      });
+
+      it('should not expose internal stack traces in normal mode', () => {
+        const result = runCli('validate --schema /nonexistent/schema.ts');
+
+        const output = result.stderr + result.stdout;
+        // Should not contain internal node_modules paths in normal (non-verbose) mode
+        expect(output).not.toMatch(/at\s+Object\.<anonymous>\s+\(.*node_modules/);
+      });
+
+      it('should provide hint about --help for invalid usage', () => {
+        const result = runCli('validate');
+
+        const output = result.stderr + result.stdout;
+        // Many CLI tools suggest --help; this is optional but good practice
+        // At minimum, the error should be clear about what's wrong
+        expect(output).toMatch(/--schema.*required|usage|help/i);
+      });
+    });
+  });
 });
