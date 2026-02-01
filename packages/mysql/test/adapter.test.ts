@@ -1034,3 +1034,97 @@ describe('MySQL-Specific Features', () => {
     expect(sql).toContain('COLLATE utf8mb4_unicode_ci');
   });
 });
+
+// =============================================================================
+// Array Type Support Tests
+// =============================================================================
+
+describe('Array Type Support', () => {
+  let adapter: MySQLAdapter;
+
+  beforeEach(() => {
+    adapter = new MySQLAdapter();
+  });
+
+  it('should map string[] to JSON column type', () => {
+    const schema = parseSchema({
+      $type: 'Post',
+      id: 'uuid!',
+      tags: 'string[]',
+    });
+
+    const ddl = adapter.transform(schema);
+    const tagsCol = ddl.columns.find(c => c.name === 'tags');
+    expect(tagsCol?.type).toBe('JSON');
+  });
+
+  it('should map int[] to JSON column type', () => {
+    const schema = parseSchema({
+      $type: 'Matrix',
+      id: 'uuid!',
+      scores: 'int[]',
+    });
+
+    const ddl = adapter.transform(schema);
+    const scoresCol = ddl.columns.find(c => c.name === 'scores');
+    expect(scoresCol?.type).toBe('JSON');
+  });
+
+  it('should map uuid[] to JSON column type', () => {
+    const schema = parseSchema({
+      $type: 'Group',
+      id: 'uuid!',
+      memberIds: 'uuid[]',
+    });
+
+    const ddl = adapter.transform(schema);
+    const memberIdsCol = ddl.columns.find(c => c.name === 'memberIds');
+    expect(memberIdsCol?.type).toBe('JSON');
+  });
+
+  it('should serialize array fields as JSON in SQL output', () => {
+    const schema = parseSchema({
+      $type: 'Article',
+      id: 'uuid!',
+      tags: 'string[]',
+      scores: 'int[]',
+    });
+
+    const sql = transformToMySQLDDL(schema);
+    expect(sql).toContain('tags JSON');
+    expect(sql).toContain('scores JSON');
+  });
+
+  it('should handle optional array fields', () => {
+    const schema = parseSchema({
+      $type: 'Profile',
+      id: 'uuid!',
+      interests: 'string[]?',
+    });
+
+    const ddl = adapter.transform(schema);
+    const interestsCol = ddl.columns.find(c => c.name === 'interests');
+    expect(interestsCol?.type).toBe('JSON');
+    expect(interestsCol?.nullable).toBe(true);
+  });
+
+  it('should handle schema with mix of array and non-array fields', () => {
+    const schema = parseSchema({
+      $type: 'User',
+      id: 'uuid!',
+      email: 'string#',
+      name: 'string',
+      tags: 'string[]',
+      age: 'int?',
+    });
+
+    const ddl = adapter.transform(schema);
+    const findCol = (name: string) => ddl.columns.find(c => c.name === name);
+
+    expect(findCol('id')?.type).toBe('CHAR(36)');
+    expect(findCol('email')?.type).toBe('VARCHAR(255)');
+    expect(findCol('name')?.type).toBe('VARCHAR(255)');
+    expect(findCol('tags')?.type).toBe('JSON');
+    expect(findCol('age')?.type).toBe('INT');
+  });
+});

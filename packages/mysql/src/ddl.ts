@@ -144,8 +144,17 @@ export function fieldToMySQLColumn(
   fieldName: string,
   field: FieldDefinition
 ): MySQLColumn {
-  const typeMapping = mapIceTypeToMySQL(field.type, field);
-  let typeString = getMySQLTypeString(typeMapping);
+  let typeString: string;
+  let typeMapping: MySQLTypeMapping | undefined;
+
+  // Handle array types - MySQL doesn't have native array support,
+  // so we serialize arrays to JSON columns (requires MySQL 5.7+)
+  if (field.isArray) {
+    typeString = 'JSON';
+  } else {
+    typeMapping = mapIceTypeToMySQL(field.type, field);
+    typeString = getMySQLTypeString(typeMapping);
+  }
 
   // Handle relation fields - store as foreign key reference (VARCHAR)
   if (field.relation) {
@@ -160,7 +169,7 @@ export function fieldToMySQLColumn(
   };
 
   // Add precision/scale for decimal
-  if (typeMapping.precision !== undefined) {
+  if (typeMapping?.precision !== undefined) {
     column.precision = typeMapping.precision;
     column.scale = typeMapping.scale;
   }
