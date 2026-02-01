@@ -8,39 +8,8 @@
  */
 
 import type { IceTypeSchema } from '@icetype/core';
-
-// =============================================================================
-// Types (duplicated to avoid circular dependency)
-// =============================================================================
-
-/**
- * Supported SQL dialects.
- */
-export type SqlDialect = 'duckdb' | 'postgres' | 'clickhouse' | 'sqlite' | 'mysql';
-
-// =============================================================================
-// Identifier Escaping (duplicated to avoid circular dependency)
-// =============================================================================
-
-/**
- * Escape an identifier for the given SQL dialect.
- */
-function escapeIdentifier(identifier: string, dialect: SqlDialect): string {
-  const isSimpleIdentifier = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(identifier);
-  const startsWithDollar = identifier.startsWith('$');
-
-  if (isSimpleIdentifier && !startsWithDollar) {
-    return identifier;
-  }
-
-  if (dialect === 'clickhouse' || dialect === 'mysql') {
-    const escaped = identifier.replace(/`/g, '``');
-    return `\`${escaped}\``;
-  } else {
-    const escaped = identifier.replace(/"/g, '""');
-    return `"${escaped}"`;
-  }
-}
+import type { SqlDialect } from './types.js';
+import { escapeIdentifier } from './escape.js';
 
 // =============================================================================
 // Types

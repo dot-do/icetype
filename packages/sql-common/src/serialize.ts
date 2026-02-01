@@ -8,13 +8,10 @@
  * @packageDocumentation
  */
 
-import {
-  escapeIdentifier,
-  serializeColumn as serializeColumnBase,
-  validateSchemaName,
-  type SqlDialect,
-  type SqlColumn,
-} from './index.js';
+import type { SqlDialect, SqlColumn } from './types.js';
+import { escapeIdentifier } from './escape.js';
+import { serializeColumn as serializeColumnBase } from './columns.js';
+import { validateSchemaName } from './validation.js';
 
 // =============================================================================
 // Types
