@@ -220,6 +220,132 @@ console.log(iceTypeSchemas);
 const schemas = await drizzleImport('./drizzle/schema.ts');
 ```
 
+## Security
+
+The IceType CLI implements comprehensive input sanitization to protect against common security vulnerabilities. All file paths provided to CLI commands are validated before use.
+
+### Input Sanitization
+
+The `@icetype/cli` package includes a path sanitization module (`path-sanitizer.ts`) that validates all user-provided file paths. The following security controls are implemented:
+
+#### Path Traversal Prevention (CWE-22)
+
+- Path traversal sequences (`../`, `..\\`) are rejected
+- URL-encoded traversal (`%2e%2e`) is detected and blocked
+- Unicode variants of dots (e.g., full-width period `\uFF0E`) are normalized
+- Paths are validated to remain within the project directory after normalization
+
+#### Symlink Safety (CWE-59)
+
+- Symbolic links are resolved using `realpathSync()` before access
+- The resolved path must be within the project directory
+- Both input and output paths undergo symlink validation
+
+#### Command Injection Prevention (CWE-78)
+
+- Dangerous shell characters are rejected: `;`, `|`, `&`, `$`, `` ` ``, `<`, `>`, `(`, `)`, `!`, `{`, `}`, `[`, `]`, `#`
+- Command substitution patterns (`$(...)` and backticks) are explicitly blocked
+- Null byte injection (`\x00`) is detected and rejected
+- Windows UNC paths (`\\server\share`) are not allowed
+
+#### Extension Validation (CWE-434)
+
+Schema files must have one of these extensions:
+- `.ts`, `.js`, `.mjs`, `.json`
+
+Output files must have one of these extensions:
+- `.ts`, `.d.ts`, `.js`
+
+Migration outputs must have one of these extensions:
+- `.sql`, `.json`, `.ts`, `.js`
+
+Dangerous extensions are explicitly blocked:
+- `.sh`, `.bash`, `.exe`, `.bat`, `.cmd`, `.php`, `.py`, `.rb`, etc.
+
+Double extensions with dangerous intermediate extensions (e.g., `schema.sh.ts`) are rejected.
+
+#### Resource Limits (CWE-400)
+
+- Maximum path length: 4096 characters
+- Empty paths are rejected
+
+### Commands with Path Validation
+
+| Command | Validated Paths |
+|---------|-----------------|
+| `ice generate` | `--schema`, `--output` |
+| `ice validate` | `--schema` |
+| `ice init` | `--dir` |
+| `ice migrate` | `--schema`, `--output`, `--old`, `--new` |
+
+### API Functions
+
+The path sanitization utilities are available for programmatic use:
+
+```typescript
+import {
+  sanitizePath,
+  validateSchemaPath,
+  validateOutputPath,
+  validateDirectoryPath,
+  validateMigrationOutputPath,
+  isWithinProjectDirectory,
+  checkSymlinkSafety,
+  PathSecurityError,
+} from '@icetype/cli/utils/path-sanitizer';
+
+// Sanitize a path (throws PathSecurityError on invalid input)
+const safePath = sanitizePath(userInput);
+
+// Validate a schema file path
+validateSchemaPath('./schema.ts'); // throws if invalid
+
+// Check if a path is within project bounds
+const isValid = isWithinProjectDirectory('./src/schema.ts');
+
+// Validate symlink safety
+checkSymlinkSafety('./linked-schema.ts'); // throws if symlink escapes project
+```
+
+### Test Mode
+
+For testing purposes, strict path validation (project boundary and symlink checks) can be disabled:
+
+```bash
+ICETYPE_SKIP_PATH_SECURITY=1
+```
+
+**Warning**: This environment variable should NEVER be set in production. It is intended solely for unit tests that use mock paths.
+
+### Error Codes
+
+When path validation fails, a `PathSecurityError` is thrown with one of these codes:
+
+| Code | Description |
+|------|-------------|
+| `EMPTY_PATH` | Path is empty or whitespace only |
+| `PATH_TOO_LONG` | Path exceeds 4096 characters |
+| `NULL_BYTE` | Path contains null byte injection |
+| `SHELL_CHARS` | Path contains dangerous shell characters |
+| `COMMAND_SUBSTITUTION` | Path contains command substitution patterns |
+| `UNC_PATH` | Path is a Windows UNC/network path |
+| `ENCODED_TRAVERSAL` | Path contains URL-encoded traversal |
+| `PATH_TRAVERSAL` | Path contains `..` traversal sequences |
+| `INVALID_PATH` | Path is invalid (e.g., only dots) |
+| `OUTSIDE_PROJECT` | Path resolves outside project directory |
+| `SYMLINK_ESCAPE` | Symlink resolves outside project directory |
+| `INVALID_EXTENSION` | File has an invalid or dangerous extension |
+
+### Limitations
+
+1. **Project Root Detection**: The project root defaults to `process.cwd()`. Custom project roots can be passed to validation functions.
+
+2. **Race Conditions**: Symlink checks are point-in-time. A TOCTOU (time-of-check-time-of-use) vulnerability could exist if symlinks are modified between validation and use.
+
+3. **Glob Patterns**: The `*` and `?` characters are allowed in paths for glob pattern support. This is intentional for schema discovery patterns like `./schemas/*.ts`.
+
+For more details, see the project's [Security Policy](/SECURITY.md).
+
 ## Documentation
 
 For full documentation, visit the [IceType Documentation](https://icetype.dev/docs/cli).
