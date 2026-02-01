@@ -180,7 +180,7 @@ describe('generatePostgresDDL', () => {
   });
 
   it('should generate valid CREATE TABLE statement', async () => {
-    const { generatePostgresDDL } = await import('../commands/postgres.js');
+    const { generatePostgresDDL } = await import('../src/commands/postgres.js');
     const schema = createValidSchema('User');
 
     const ddl = generatePostgresDDL(schema);
@@ -190,7 +190,7 @@ describe('generatePostgresDDL', () => {
   });
 
   it('should include all fields from schema', async () => {
-    const { generatePostgresDDL } = await import('../commands/postgres.js');
+    const { generatePostgresDDL } = await import('../src/commands/postgres.js');
     const schema = createValidSchema('User');
 
     const ddl = generatePostgresDDL(schema);
@@ -201,7 +201,7 @@ describe('generatePostgresDDL', () => {
   });
 
   it('should use appropriate PostgreSQL types', async () => {
-    const { generatePostgresDDL } = await import('../commands/postgres.js');
+    const { generatePostgresDDL } = await import('../src/commands/postgres.js');
     const schema = createSchemaWithTypes();
 
     const ddl = generatePostgresDDL(schema);
@@ -225,7 +225,7 @@ describe('generatePostgresDDL', () => {
   });
 
   it('should mark required fields as NOT NULL', async () => {
-    const { generatePostgresDDL } = await import('../commands/postgres.js');
+    const { generatePostgresDDL } = await import('../src/commands/postgres.js');
     const schema = createValidSchema('User');
 
     const ddl = generatePostgresDDL(schema);
@@ -235,7 +235,7 @@ describe('generatePostgresDDL', () => {
   });
 
   it('should allow NULL for optional fields', async () => {
-    const { generatePostgresDDL } = await import('../commands/postgres.js');
+    const { generatePostgresDDL } = await import('../src/commands/postgres.js');
     const schema = createSchemaWithTypes();
 
     const ddl = generatePostgresDDL(schema);
@@ -249,7 +249,7 @@ describe('generatePostgresDDL', () => {
   });
 
   it('should add UNIQUE constraint for unique fields', async () => {
-    const { generatePostgresDDL } = await import('../commands/postgres.js');
+    const { generatePostgresDDL } = await import('../src/commands/postgres.js');
     const schema = createValidSchema('User');
 
     const ddl = generatePostgresDDL(schema);
@@ -259,7 +259,7 @@ describe('generatePostgresDDL', () => {
   });
 
   it('should generate CREATE INDEX for indexed fields', async () => {
-    const { generatePostgresDDL } = await import('../commands/postgres.js');
+    const { generatePostgresDDL } = await import('../src/commands/postgres.js');
     const schema = createValidSchema('User');
 
     const ddl = generatePostgresDDL(schema);
@@ -270,7 +270,7 @@ describe('generatePostgresDDL', () => {
   });
 
   it('should support --schema-name option for PostgreSQL schema', async () => {
-    const { generatePostgresDDL } = await import('../commands/postgres.js');
+    const { generatePostgresDDL } = await import('../src/commands/postgres.js');
     const schema = createValidSchema('User');
 
     const ddl = generatePostgresDDL(schema, { schemaName: 'public' });
@@ -280,7 +280,7 @@ describe('generatePostgresDDL', () => {
   });
 
   it('should skip system fields starting with $', async () => {
-    const { generatePostgresDDL } = await import('../commands/postgres.js');
+    const { generatePostgresDDL } = await import('../src/commands/postgres.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('$internalField', {
@@ -319,7 +319,7 @@ describe('generatePostgresDDL', () => {
   });
 
   it('should handle empty fields map gracefully', async () => {
-    const { generatePostgresDDL } = await import('../commands/postgres.js');
+    const { generatePostgresDDL } = await import('../src/commands/postgres.js');
 
     const schema: IceTypeSchema = {
       name: 'EmptyEntity',
@@ -353,7 +353,7 @@ describe('ice postgres export command', () => {
 
   describe('argument parsing', () => {
     it('should error when --schema is missing', async () => {
-      const { postgresExport } = await import('../commands/postgres.js');
+      const { postgresExport } = await import('../src/commands/postgres.js');
 
       // Commands now throw errors (main CLI catches and exits)
       await expect(postgresExport([])).rejects.toThrow('--schema is required');
@@ -411,7 +411,7 @@ describe('ice postgres export command', () => {
   describe('output handling', () => {
     it('should output to stdout by default when no --output specified', async () => {
       // Create a simple mock for loadSchemaFile
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'TestSchema', schema: createValidSchema('TestSchema') }],
           errors: [],
@@ -419,7 +419,7 @@ describe('ice postgres export command', () => {
       }));
 
       // Re-import to get mocked version
-      const { postgresExport } = await import('../commands/postgres.js');
+      const { postgresExport } = await import('../src/commands/postgres.js');
 
       // Mock fs.existsSync to return true for schema file
       vi.mocked(fs.existsSync).mockReturnValue(true);
@@ -458,7 +458,7 @@ describe('ice postgres export command', () => {
     it('should throw error when file not found', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
-      const { postgresExport } = await import('../commands/postgres.js');
+      const { postgresExport } = await import('../src/commands/postgres.js');
 
       // Commands now throw errors (main CLI catches and exits)
       await expect(postgresExport(['--schema', './nonexistent.ts'])).rejects.toThrow();
@@ -480,7 +480,7 @@ describe('DDL generation edge cases', () => {
   });
 
   it('should handle multiple indexed fields', async () => {
-    const { generatePostgresDDL } = await import('../commands/postgres.js');
+    const { generatePostgresDDL } = await import('../src/commands/postgres.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('id', {
@@ -529,7 +529,7 @@ describe('DDL generation edge cases', () => {
   });
 
   it('should generate proper index names', async () => {
-    const { generatePostgresDDL } = await import('../commands/postgres.js');
+    const { generatePostgresDDL } = await import('../src/commands/postgres.js');
     const schema = createValidSchema('User');
 
     const ddl = generatePostgresDDL(schema);
@@ -539,7 +539,7 @@ describe('DDL generation edge cases', () => {
   });
 
   it('should handle schema names with special characters in table name', async () => {
-    const { generatePostgresDDL } = await import('../commands/postgres.js');
+    const { generatePostgresDDL } = await import('../src/commands/postgres.js');
 
     const schema: IceTypeSchema = {
       name: 'UserProfile',
@@ -567,7 +567,7 @@ describe('DDL generation edge cases', () => {
   });
 
   it('should handle fields with both unique and indexed flags', async () => {
-    const { generatePostgresDDL } = await import('../commands/postgres.js');
+    const { generatePostgresDDL } = await import('../src/commands/postgres.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('email', {
@@ -613,7 +613,7 @@ describe('generatePostgresDDLForAllSchemas', () => {
   });
 
   it('should generate DDL for multiple schemas', async () => {
-    const { generatePostgresDDLForAllSchemas } = await import('../commands/postgres.js');
+    const { generatePostgresDDLForAllSchemas } = await import('../src/commands/postgres.js');
 
     const schemas = [
       createValidSchema('User'),
@@ -628,7 +628,7 @@ describe('generatePostgresDDLForAllSchemas', () => {
   });
 
   it('should separate multiple tables with blank lines', async () => {
-    const { generatePostgresDDLForAllSchemas } = await import('../commands/postgres.js');
+    const { generatePostgresDDLForAllSchemas } = await import('../src/commands/postgres.js');
 
     const schemas = [
       createValidSchema('User'),
@@ -642,7 +642,7 @@ describe('generatePostgresDDLForAllSchemas', () => {
   });
 
   it('should apply schema name to all tables', async () => {
-    const { generatePostgresDDLForAllSchemas } = await import('../commands/postgres.js');
+    const { generatePostgresDDLForAllSchemas } = await import('../src/commands/postgres.js');
 
     const schemas = [
       createValidSchema('User'),
@@ -657,7 +657,7 @@ describe('generatePostgresDDLForAllSchemas', () => {
   });
 
   it('should handle empty schemas array', async () => {
-    const { generatePostgresDDLForAllSchemas } = await import('../commands/postgres.js');
+    const { generatePostgresDDLForAllSchemas } = await import('../src/commands/postgres.js');
 
     const ddl = generatePostgresDDLForAllSchemas([]);
 

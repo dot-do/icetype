@@ -55,7 +55,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -69,7 +69,7 @@ describe('init command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['--dir', 'myproject']);
 
@@ -83,7 +83,7 @@ describe('init command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['-d', 'mydir']);
 
@@ -93,7 +93,7 @@ describe('init command', () => {
     it('should not overwrite existing schema.ts without --force', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -107,7 +107,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['--force']);
 
@@ -118,7 +118,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['-f']);
 
@@ -135,7 +135,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -154,7 +154,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -171,7 +171,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -187,7 +187,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -204,7 +204,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -218,7 +218,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -232,7 +232,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -246,7 +246,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -260,7 +260,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -274,7 +274,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -289,7 +289,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -303,7 +303,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -325,7 +325,7 @@ describe('init command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['--dir', 'newdir']);
 
@@ -337,7 +337,7 @@ describe('init command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['--dir', 'path/to/nested/project']);
 
@@ -348,7 +348,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -360,7 +360,7 @@ describe('init command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['--dir', 'newdir']);
 
@@ -385,7 +385,7 @@ describe('init command', () => {
         throw new Error('EACCES: permission denied');
       });
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       try {
         await init(['--dir', '/root/protected']);
@@ -411,7 +411,7 @@ describe('init command', () => {
         throw new Error('EACCES: permission denied');
       });
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       try {
         await init([]);
@@ -437,7 +437,7 @@ describe('init command', () => {
         throw new Error('EACCES: permission denied');
       });
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       try {
         await init([]);
@@ -462,7 +462,7 @@ describe('init command', () => {
         throw 'string error'; // Non-Error exception
       });
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       try {
         await init(['--dir', 'somedir']);
@@ -486,7 +486,7 @@ describe('init command', () => {
         throw 'string error'; // Non-Error exception
       });
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       try {
         await init([]);
@@ -510,7 +510,7 @@ describe('init command', () => {
         throw new Error('EPERM: operation not permitted');
       });
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       try {
         await init(['--dir', 'forbidden']);
@@ -535,7 +535,7 @@ describe('init command', () => {
         throw new Error('ENOSPC: no space left on device');
       });
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       try {
         await init([]);
@@ -560,7 +560,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -573,7 +573,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -586,7 +586,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -599,7 +599,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -611,7 +611,7 @@ describe('init command', () => {
     it('should suggest using --force when file exists', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -624,7 +624,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -637,7 +637,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -659,7 +659,7 @@ describe('init command', () => {
         .mockReturnValueOnce(false); // Schema file check
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['--dir', 'existing-dir']);
 
@@ -671,7 +671,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -684,7 +684,7 @@ describe('init command', () => {
       // Both directory and schema.ts exist
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -707,7 +707,7 @@ describe('init command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['--dir', 'newproject', '--force']);
 
@@ -720,7 +720,7 @@ describe('init command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['-d', 'shortflags', '-f']);
 
@@ -733,7 +733,7 @@ describe('init command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['--dir', 'mixedflags', '-f']);
 
@@ -746,7 +746,7 @@ describe('init command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['-d', 'reversemixed', '--force']);
 
@@ -764,7 +764,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -777,7 +777,7 @@ describe('init command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['--dir', 'myproject']);
 
@@ -797,7 +797,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -810,7 +810,7 @@ describe('init command', () => {
     it('should default --force to false', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 

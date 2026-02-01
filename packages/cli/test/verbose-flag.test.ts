@@ -103,18 +103,18 @@ describe('--verbose flag behavior', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await generate(['--schema', './schema.ts', '--verbose']);
 
@@ -134,18 +134,18 @@ describe('--verbose flag behavior', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await generate(['--schema', './my-schema.ts', '--verbose']);
 
@@ -166,7 +166,7 @@ describe('--verbose flag behavior', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [
             { name: 'User', schema: mockSchema },
@@ -176,11 +176,11 @@ describe('--verbose flag behavior', () => {
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await generate(['--schema', './schema.ts', '--verbose']);
 
@@ -201,18 +201,18 @@ describe('--verbose flag behavior', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await generate(['--schema', './schema.ts']);
 
@@ -232,18 +232,18 @@ describe('--verbose flag behavior', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await generate(['--schema', './schema.ts', '-v']);
 
@@ -260,7 +260,7 @@ describe('--verbose flag behavior', () => {
     it('should show debug-level logging when --verbose is set', async () => {
       const mockSchema = createValidSchema('User');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
@@ -275,7 +275,7 @@ describe('--verbose flag behavior', () => {
         };
       });
 
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       await validate(['--schema', '/path/to/schema.ts', '--verbose']);
 
@@ -286,7 +286,7 @@ describe('--verbose flag behavior', () => {
     it('should show schema loading path in verbose mode', async () => {
       const mockSchema = createValidSchema('User');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
@@ -301,7 +301,7 @@ describe('--verbose flag behavior', () => {
         };
       });
 
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       await validate(['--schema', '/path/to/schema.ts', '--verbose']);
 
@@ -313,7 +313,7 @@ describe('--verbose flag behavior', () => {
     it('should show schema name being validated in verbose mode', async () => {
       const mockSchema = createValidSchema('MyEntity');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'MyEntity', schema: mockSchema }],
           errors: [],
@@ -328,7 +328,7 @@ describe('--verbose flag behavior', () => {
         };
       });
 
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       await validate(['--schema', '/path/to/schema.ts', '--verbose']);
 
@@ -340,7 +340,7 @@ describe('--verbose flag behavior', () => {
     it('should NOT show debug logs without --verbose flag', async () => {
       const mockSchema = createValidSchema('User');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
@@ -355,7 +355,7 @@ describe('--verbose flag behavior', () => {
         };
       });
 
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       await validate(['--schema', '/path/to/schema.ts']);
 
@@ -366,7 +366,7 @@ describe('--verbose flag behavior', () => {
     it('should support -v short flag for verbose mode', async () => {
       const mockSchema = createValidSchema('User');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
@@ -381,7 +381,7 @@ describe('--verbose flag behavior', () => {
         };
       });
 
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       await validate(['--schema', '/path/to/schema.ts', '-v']);
 
@@ -398,14 +398,14 @@ describe('--verbose flag behavior', () => {
     it('should show debug-level logging when --verbose is set', async () => {
       const mockSchema = createValidSchema('User');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/adapter-registry.js', () => ({
+      vi.doMock('../src/utils/adapter-registry.js', () => ({
         getAdapter: vi.fn().mockReturnValue({
           transform: vi.fn().mockReturnValue({
             tableName: 'User',
@@ -417,7 +417,7 @@ describe('--verbose flag behavior', () => {
         }),
       }));
 
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       await clickhouseExport(['--schema', '/path/to/schema.ts', '--verbose']);
 
@@ -428,14 +428,14 @@ describe('--verbose flag behavior', () => {
     it('should show options being used in verbose mode', async () => {
       const mockSchema = createValidSchema('User');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/adapter-registry.js', () => ({
+      vi.doMock('../src/utils/adapter-registry.js', () => ({
         getAdapter: vi.fn().mockReturnValue({
           transform: vi.fn().mockReturnValue({
             tableName: 'User',
@@ -447,7 +447,7 @@ describe('--verbose flag behavior', () => {
         }),
       }));
 
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       await clickhouseExport(['--schema', '/path/to/schema.ts', '--engine', 'ReplacingMergeTree', '--verbose']);
 
@@ -459,14 +459,14 @@ describe('--verbose flag behavior', () => {
     it('should show schema processing details in verbose mode', async () => {
       const mockSchema = createValidSchema('User');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/adapter-registry.js', () => ({
+      vi.doMock('../src/utils/adapter-registry.js', () => ({
         getAdapter: vi.fn().mockReturnValue({
           transform: vi.fn().mockReturnValue({
             tableName: 'User',
@@ -478,7 +478,7 @@ describe('--verbose flag behavior', () => {
         }),
       }));
 
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       await clickhouseExport(['--schema', '/path/to/schema.ts', '--verbose']);
 
@@ -490,14 +490,14 @@ describe('--verbose flag behavior', () => {
     it('should NOT show debug logs without --verbose flag', async () => {
       const mockSchema = createValidSchema('User');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/adapter-registry.js', () => ({
+      vi.doMock('../src/utils/adapter-registry.js', () => ({
         getAdapter: vi.fn().mockReturnValue({
           transform: vi.fn().mockReturnValue({
             tableName: 'User',
@@ -509,7 +509,7 @@ describe('--verbose flag behavior', () => {
         }),
       }));
 
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       await clickhouseExport(['--schema', '/path/to/schema.ts']);
 
@@ -526,14 +526,14 @@ describe('--verbose flag behavior', () => {
     it('should show debug-level logging when --verbose is set', async () => {
       const mockSchema = createValidSchema('User');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/adapter-registry.js', () => ({
+      vi.doMock('../src/utils/adapter-registry.js', () => ({
         getAdapter: vi.fn().mockReturnValue({
           transform: vi.fn().mockReturnValue({
             tableName: 'User',
@@ -544,7 +544,7 @@ describe('--verbose flag behavior', () => {
         }),
       }));
 
-      const { duckdbExport } = await import('../commands/duckdb.js');
+      const { duckdbExport } = await import('../src/commands/duckdb.js');
 
       await duckdbExport(['--schema', '/path/to/schema.ts', '--verbose']);
 
@@ -555,14 +555,14 @@ describe('--verbose flag behavior', () => {
     it('should show schema name option in verbose mode when provided', async () => {
       const mockSchema = createValidSchema('User');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/adapter-registry.js', () => ({
+      vi.doMock('../src/utils/adapter-registry.js', () => ({
         getAdapter: vi.fn().mockReturnValue({
           transform: vi.fn().mockReturnValue({
             tableName: 'User',
@@ -573,7 +573,7 @@ describe('--verbose flag behavior', () => {
         }),
       }));
 
-      const { duckdbExport } = await import('../commands/duckdb.js');
+      const { duckdbExport } = await import('../src/commands/duckdb.js');
 
       await duckdbExport(['--schema', '/path/to/schema.ts', '--schema-name', 'analytics', '--verbose']);
 
@@ -585,14 +585,14 @@ describe('--verbose flag behavior', () => {
     it('should NOT show debug logs without --verbose flag', async () => {
       const mockSchema = createValidSchema('User');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/adapter-registry.js', () => ({
+      vi.doMock('../src/utils/adapter-registry.js', () => ({
         getAdapter: vi.fn().mockReturnValue({
           transform: vi.fn().mockReturnValue({
             tableName: 'User',
@@ -603,7 +603,7 @@ describe('--verbose flag behavior', () => {
         }),
       }));
 
-      const { duckdbExport } = await import('../commands/duckdb.js');
+      const { duckdbExport } = await import('../src/commands/duckdb.js');
 
       await duckdbExport(['--schema', '/path/to/schema.ts']);
 
@@ -620,7 +620,7 @@ describe('--verbose flag behavior', () => {
     it('should show debug-level logging when --verbose is set', async () => {
       const mockSchema = createValidSchema('User');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
@@ -639,7 +639,7 @@ describe('--verbose flag behavior', () => {
         escapeIdentifier: vi.fn((name: string) => `"${name}"`),
       }));
 
-      const { postgresExport } = await import('../commands/postgres.js');
+      const { postgresExport } = await import('../src/commands/postgres.js');
 
       await postgresExport(['--schema', '/path/to/schema.ts', '--verbose']);
 
@@ -650,7 +650,7 @@ describe('--verbose flag behavior', () => {
     it('should show file paths in verbose mode', async () => {
       const mockSchema = createValidSchema('User');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
@@ -669,7 +669,7 @@ describe('--verbose flag behavior', () => {
         escapeIdentifier: vi.fn((name: string) => `"${name}"`),
       }));
 
-      const { postgresExport } = await import('../commands/postgres.js');
+      const { postgresExport } = await import('../src/commands/postgres.js');
 
       await postgresExport(['--schema', '/my/custom/path.ts', '--verbose']);
 
@@ -681,7 +681,7 @@ describe('--verbose flag behavior', () => {
     it('should NOT show debug logs without --verbose flag', async () => {
       const mockSchema = createValidSchema('User');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
@@ -700,7 +700,7 @@ describe('--verbose flag behavior', () => {
         escapeIdentifier: vi.fn((name: string) => `"${name}"`),
       }));
 
-      const { postgresExport } = await import('../commands/postgres.js');
+      const { postgresExport } = await import('../src/commands/postgres.js');
 
       await postgresExport(['--schema', '/path/to/schema.ts']);
 
@@ -717,7 +717,7 @@ describe('--verbose flag behavior', () => {
     it('should accept verbose option in WatcherOptions', async () => {
       // The watcher utility already supports the verbose option
       // This test verifies the type and interface contract
-      const watcherModule = await vi.importActual('../utils/watcher.js');
+      const watcherModule = await vi.importActual('../src/utils/watcher.js');
 
       // Verify the module exports the expected functions
       expect(watcherModule).toHaveProperty('createWatcher');

@@ -198,13 +198,13 @@ describe('ice pull command', () => {
 
   describe('argument parsing', () => {
     it('should error when connection URL is missing', async () => {
-      const { pull } = await import('../commands/pull.js');
+      const { pull } = await import('../src/commands/pull.js');
 
       await expect(pull([])).rejects.toThrow('Connection URL is required');
     });
 
     it('should accept connection URL as positional argument', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const args = ['postgres://localhost:5432/mydb'];
       const parsed = _testHelpers.parseArgs(args);
@@ -213,7 +213,7 @@ describe('ice pull command', () => {
     });
 
     it('should parse --output option', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const args = ['postgres://localhost:5432/mydb', '--output', './schema.ts'];
       const parsed = _testHelpers.parseArgs(args);
@@ -222,7 +222,7 @@ describe('ice pull command', () => {
     });
 
     it('should parse -o short option for output', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const args = ['postgres://localhost:5432/mydb', '-o', './schema.ts'];
       const parsed = _testHelpers.parseArgs(args);
@@ -231,7 +231,7 @@ describe('ice pull command', () => {
     });
 
     it('should parse --schema-name option for database schema', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const args = ['postgres://localhost:5432/mydb', '--schema-name', 'public'];
       const parsed = _testHelpers.parseArgs(args);
@@ -240,7 +240,7 @@ describe('ice pull command', () => {
     });
 
     it('should parse --tables option to filter specific tables', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const args = ['postgres://localhost:5432/mydb', '--tables', 'users,posts'];
       const parsed = _testHelpers.parseArgs(args);
@@ -249,7 +249,7 @@ describe('ice pull command', () => {
     });
 
     it('should parse --exclude option to exclude tables', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const args = ['postgres://localhost:5432/mydb', '--exclude', 'migrations,logs'];
       const parsed = _testHelpers.parseArgs(args);
@@ -258,7 +258,7 @@ describe('ice pull command', () => {
     });
 
     it('should parse --format option', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const args = ['postgres://localhost:5432/mydb', '--format', 'json'];
       const parsed = _testHelpers.parseArgs(args);
@@ -267,7 +267,7 @@ describe('ice pull command', () => {
     });
 
     it('should default format to typescript', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const args = ['postgres://localhost:5432/mydb'];
       const parsed = _testHelpers.parseArgs(args);
@@ -276,7 +276,7 @@ describe('ice pull command', () => {
     });
 
     it('should parse --verbose option', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const args = ['postgres://localhost:5432/mydb', '--verbose'];
       const parsed = _testHelpers.parseArgs(args);
@@ -285,7 +285,7 @@ describe('ice pull command', () => {
     });
 
     it('should parse -v short option for verbose', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const args = ['postgres://localhost:5432/mydb', '-v'];
       const parsed = _testHelpers.parseArgs(args);
@@ -294,7 +294,7 @@ describe('ice pull command', () => {
     });
 
     it('should parse --quiet option', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const args = ['postgres://localhost:5432/mydb', '--quiet'];
       const parsed = _testHelpers.parseArgs(args);
@@ -303,7 +303,7 @@ describe('ice pull command', () => {
     });
 
     it('should parse -q short option for quiet', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const args = ['postgres://localhost:5432/mydb', '-q'];
       const parsed = _testHelpers.parseArgs(args);
@@ -314,49 +314,49 @@ describe('ice pull command', () => {
 
   describe('database dialect detection', () => {
     it('should detect PostgreSQL from connection URL', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const dialect = _testHelpers.detectDialect('postgres://localhost:5432/mydb');
       expect(dialect).toBe('postgres');
     });
 
     it('should detect PostgreSQL from postgresql:// URL', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const dialect = _testHelpers.detectDialect('postgresql://localhost:5432/mydb');
       expect(dialect).toBe('postgres');
     });
 
     it('should detect MySQL from connection URL', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const dialect = _testHelpers.detectDialect('mysql://localhost:3306/mydb');
       expect(dialect).toBe('mysql');
     });
 
     it('should detect SQLite from file path', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const dialect = _testHelpers.detectDialect('sqlite:///path/to/database.db');
       expect(dialect).toBe('sqlite');
     });
 
     it('should detect SQLite from .db file extension', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const dialect = _testHelpers.detectDialect('./database.db');
       expect(dialect).toBe('sqlite');
     });
 
     it('should detect SQLite from .sqlite file extension', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const dialect = _testHelpers.detectDialect('./database.sqlite');
       expect(dialect).toBe('sqlite');
     });
 
     it('should throw error for unsupported database dialect', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       expect(() => _testHelpers.detectDialect('oracle://localhost:1521/mydb')).toThrow(
         'Unsupported database dialect'
@@ -366,7 +366,7 @@ describe('ice pull command', () => {
 
   describe('schema extraction - PostgreSQL', () => {
     it('should connect to PostgreSQL database and extract schema', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       // Mock database connection
       const mockConnection = {
@@ -385,7 +385,7 @@ describe('ice pull command', () => {
     });
 
     it('should extract tables from PostgreSQL information_schema', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const tables = await _testHelpers.introspectPostgres('postgres://localhost:5432/mydb', {
         schemaName: 'public',
@@ -395,7 +395,7 @@ describe('ice pull command', () => {
     });
 
     it('should map PostgreSQL types to IceType types', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       expect(_testHelpers.mapPostgresType('uuid')).toBe('uuid');
       expect(_testHelpers.mapPostgresType('varchar')).toBe('string');
@@ -414,7 +414,7 @@ describe('ice pull command', () => {
     });
 
     it('should extract indexes from PostgreSQL', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const table = await _testHelpers.introspectPostgresTable(
         'postgres://localhost:5432/mydb',
@@ -427,7 +427,7 @@ describe('ice pull command', () => {
     });
 
     it('should extract foreign key constraints from PostgreSQL', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const table = await _testHelpers.introspectPostgresTable(
         'postgres://localhost:5432/mydb',
@@ -440,7 +440,7 @@ describe('ice pull command', () => {
     });
 
     it('should handle PostgreSQL SERIAL/BIGSERIAL columns', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       // SERIAL is actually integer with nextval()
       const iceType = _testHelpers.mapPostgresType('integer', true);
@@ -448,7 +448,7 @@ describe('ice pull command', () => {
     });
 
     it('should handle PostgreSQL arrays', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const iceType = _testHelpers.mapPostgresType('text[]');
       expect(iceType).toBe('text[]');
@@ -457,7 +457,7 @@ describe('ice pull command', () => {
 
   describe('schema extraction - MySQL', () => {
     it('should connect to MySQL database and extract schema', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       await expect(
         _testHelpers.extractSchema('mysql://localhost:3306/mydb', 'mysql')
@@ -465,7 +465,7 @@ describe('ice pull command', () => {
     });
 
     it('should map MySQL types to IceType types', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       expect(_testHelpers.mapMysqlType('varchar')).toBe('string');
       expect(_testHelpers.mapMysqlType('char')).toBe('string');
@@ -490,7 +490,7 @@ describe('ice pull command', () => {
     });
 
     it('should extract indexes from MySQL', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const table = await _testHelpers.introspectMysqlTable(
         'mysql://localhost:3306/mydb',
@@ -502,7 +502,7 @@ describe('ice pull command', () => {
     });
 
     it('should extract foreign key constraints from MySQL', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const table = await _testHelpers.introspectMysqlTable(
         'mysql://localhost:3306/mydb',
@@ -516,7 +516,7 @@ describe('ice pull command', () => {
 
   describe('schema extraction - SQLite', () => {
     it('should connect to SQLite database and extract schema', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
@@ -526,7 +526,7 @@ describe('ice pull command', () => {
     });
 
     it('should error when SQLite file does not exist', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
@@ -536,7 +536,7 @@ describe('ice pull command', () => {
     });
 
     it('should map SQLite types to IceType types', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       expect(_testHelpers.mapSqliteType('TEXT')).toBe('string');
       expect(_testHelpers.mapSqliteType('INTEGER')).toBe('int');
@@ -549,7 +549,7 @@ describe('ice pull command', () => {
     });
 
     it('should extract tables from SQLite sqlite_master', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
@@ -559,7 +559,7 @@ describe('ice pull command', () => {
     });
 
     it('should extract indexes from SQLite', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
@@ -570,7 +570,7 @@ describe('ice pull command', () => {
     });
 
     it('should extract foreign keys from SQLite', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
@@ -583,7 +583,7 @@ describe('ice pull command', () => {
 
   describe('IceType schema generation', () => {
     it('should generate IceType schema from introspected table', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const table = createMockTable('users');
       const schema = _testHelpers.tableToIceTypeSchema(table);
@@ -596,7 +596,7 @@ describe('ice pull command', () => {
     });
 
     it('should mark required fields with ! modifier', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const table = createMockTable('users');
       const schema = _testHelpers.tableToIceTypeSchema(table);
@@ -607,7 +607,7 @@ describe('ice pull command', () => {
     });
 
     it('should mark optional fields with ? modifier', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const table = createMockTable('users');
       const schema = _testHelpers.tableToIceTypeSchema(table);
@@ -617,7 +617,7 @@ describe('ice pull command', () => {
     });
 
     it('should mark unique fields', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const table = createMockTable('users');
       const schema = _testHelpers.tableToIceTypeSchema(table);
@@ -627,7 +627,7 @@ describe('ice pull command', () => {
     });
 
     it('should mark indexed fields with # modifier', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const table = createMockTable('users');
       const schema = _testHelpers.tableToIceTypeSchema(table);
@@ -637,7 +637,7 @@ describe('ice pull command', () => {
     });
 
     it('should generate relations from foreign keys', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const table = createMockTableWithRelations();
       const schema = _testHelpers.tableToIceTypeSchema(table);
@@ -647,7 +647,7 @@ describe('ice pull command', () => {
     });
 
     it('should generate $index directive from indexes', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const table = createMockTable('users');
       const schema = _testHelpers.tableToIceTypeSchema(table);
@@ -658,7 +658,7 @@ describe('ice pull command', () => {
 
   describe('TypeScript output generation', () => {
     it('should generate valid TypeScript schema file', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const tables = [createMockTable('users'), createMockTableWithRelations()];
       const output = _testHelpers.generateTypescriptOutput(tables);
@@ -670,7 +670,7 @@ describe('ice pull command', () => {
     });
 
     it('should use camelCase for field names in TypeScript', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const table = createMockTable('users');
       const output = _testHelpers.generateTypescriptOutput([table]);
@@ -680,7 +680,7 @@ describe('ice pull command', () => {
     });
 
     it('should use PascalCase for schema names in TypeScript', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const table = createMockTable('user_profiles');
       const output = _testHelpers.generateTypescriptOutput([table]);
@@ -689,7 +689,7 @@ describe('ice pull command', () => {
     });
 
     it('should include proper type definitions', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const tables = [createMockTable('users')];
       const output = _testHelpers.generateTypescriptOutput(tables);
@@ -700,7 +700,7 @@ describe('ice pull command', () => {
     });
 
     it('should generate valid JSON output when format is json', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const tables = [createMockTable('users')];
       const output = _testHelpers.generateJsonOutput(tables);
@@ -715,7 +715,7 @@ describe('ice pull command', () => {
 
   describe('error handling', () => {
     it('should handle connection refused errors', async () => {
-      const { pull } = await import('../commands/pull.js');
+      const { pull } = await import('../src/commands/pull.js');
 
       // Mock connection failure
       await expect(
@@ -724,7 +724,7 @@ describe('ice pull command', () => {
     });
 
     it('should handle authentication failures', async () => {
-      const { pull } = await import('../commands/pull.js');
+      const { pull } = await import('../src/commands/pull.js');
 
       await expect(
         pull(['postgres://invalid:password@localhost:5432/mydb'])
@@ -732,7 +732,7 @@ describe('ice pull command', () => {
     });
 
     it('should handle database not found errors', async () => {
-      const { pull } = await import('../commands/pull.js');
+      const { pull } = await import('../src/commands/pull.js');
 
       await expect(
         pull(['postgres://localhost:5432/nonexistent_db'])
@@ -740,13 +740,13 @@ describe('ice pull command', () => {
     });
 
     it('should provide helpful error message for invalid connection URL', async () => {
-      const { pull } = await import('../commands/pull.js');
+      const { pull } = await import('../src/commands/pull.js');
 
       await expect(pull(['invalid-url'])).rejects.toThrow(/Invalid connection URL/i);
     });
 
     it('should clean up database connection on error', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const mockConnection = {
         connect: vi.fn().mockResolvedValue(undefined),
@@ -770,7 +770,7 @@ describe('ice pull command', () => {
 
   describe('output handling', () => {
     it('should output to stdout by default', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const tables = [createMockTable('users')];
       const output = _testHelpers.generateTypescriptOutput(tables);
@@ -782,7 +782,7 @@ describe('ice pull command', () => {
     it('should write to file when --output is specified', async () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { pull } = await import('../commands/pull.js');
+      const { pull } = await import('../src/commands/pull.js');
 
       // This would write to a file if the implementation existed
       // For now, we verify the test structure
@@ -794,7 +794,7 @@ describe('ice pull command', () => {
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       await _testHelpers.writeOutput('./nested/dir/schema.ts', 'content');
 
@@ -804,7 +804,7 @@ describe('ice pull command', () => {
 
   describe('table filtering', () => {
     it('should include only specified tables when --tables is provided', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const allTables = [
         createMockTable('users'),
@@ -823,7 +823,7 @@ describe('ice pull command', () => {
     });
 
     it('should exclude specified tables when --exclude is provided', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const allTables = [
         createMockTable('users'),
@@ -842,7 +842,7 @@ describe('ice pull command', () => {
     });
 
     it('should exclude system tables by default', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const allTables = [
         createMockTable('users'),
@@ -860,7 +860,7 @@ describe('ice pull command', () => {
 
   describe('naming conventions', () => {
     it('should convert snake_case table names to PascalCase', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       expect(_testHelpers.toPascalCase('user_profiles')).toBe('UserProfiles');
       expect(_testHelpers.toPascalCase('order_line_items')).toBe('OrderLineItems');
@@ -868,7 +868,7 @@ describe('ice pull command', () => {
     });
 
     it('should convert snake_case column names to camelCase', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       expect(_testHelpers.toCamelCase('created_at')).toBe('createdAt');
       expect(_testHelpers.toCamelCase('user_profile_id')).toBe('userProfileId');
@@ -876,7 +876,7 @@ describe('ice pull command', () => {
     });
 
     it('should preserve acronyms in conversion', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       expect(_testHelpers.toPascalCase('http_request_logs')).toBe('HttpRequestLogs');
       expect(_testHelpers.toCamelCase('http_url')).toBe('httpUrl');
@@ -885,7 +885,7 @@ describe('ice pull command', () => {
 
   describe('composite primary keys and constraints', () => {
     it('should handle composite primary keys', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const table: IntrospectedTable = {
         name: 'order_items',
@@ -906,7 +906,7 @@ describe('ice pull command', () => {
     });
 
     it('should handle unique constraints across multiple columns', async () => {
-      const { _testHelpers } = await import('../commands/pull.js');
+      const { _testHelpers } = await import('../src/commands/pull.js');
 
       const table: IntrospectedTable = {
         name: 'user_emails',
@@ -943,7 +943,7 @@ describe('ice pull integration (mocked)', () => {
   });
 
   it('should complete full introspection workflow for PostgreSQL', async () => {
-    const { pull } = await import('../commands/pull.js');
+    const { pull } = await import('../src/commands/pull.js');
 
     // This test verifies the complete workflow with mocked database
     // In a real integration test, this would connect to an actual PostgreSQL instance
@@ -953,7 +953,7 @@ describe('ice pull integration (mocked)', () => {
   });
 
   it('should complete full introspection workflow for MySQL', async () => {
-    const { pull } = await import('../commands/pull.js');
+    const { pull } = await import('../src/commands/pull.js');
 
     await expect(
       pull(['mysql://localhost:3306/testdb', '--output', './schema.ts'])
@@ -963,7 +963,7 @@ describe('ice pull integration (mocked)', () => {
   it('should complete full introspection workflow for SQLite', async () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
 
-    const { pull } = await import('../commands/pull.js');
+    const { pull } = await import('../src/commands/pull.js');
 
     await expect(
       pull(['./test.sqlite', '--output', './schema.ts'])

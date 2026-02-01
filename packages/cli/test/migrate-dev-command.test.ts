@@ -41,7 +41,7 @@ vi.mock('node:fs', async () => {
 });
 
 // Mock the schema loader
-vi.mock('../utils/schema-loader.js', () => ({
+vi.mock('../src/utils/schema-loader.js', () => ({
   loadSchemaFile: vi.fn(),
 }));
 
@@ -113,7 +113,7 @@ function createLoadResult(schemas: IceTypeSchema[], errors: string[] = []): Load
  * Get the mocked loadSchemaFile function
  */
 async function getMockedLoadSchemaFile() {
-  const module = await import('../utils/schema-loader.js');
+  const module = await import('../src/utils/schema-loader.js');
   return vi.mocked(module.loadSchemaFile);
 }
 
@@ -140,14 +140,14 @@ describe('migrate dev command', () => {
   describe('command existence', () => {
     it('should export migrateDev function', async () => {
       // This test verifies the migrate dev command exists
-      const migrateModule = await import('../commands/migrate.js');
+      const migrateModule = await import('../src/commands/migrate.js');
 
       expect(migrateModule.migrateDev).toBeDefined();
       expect(typeof migrateModule.migrateDev).toBe('function');
     });
 
     it('should be registered as a subcommand in migrate router', async () => {
-      const { migrate } = await import('../commands/migrate.js');
+      const { migrate } = await import('../src/commands/migrate.js');
 
       try {
         await migrate(['dev', '--help']);
@@ -176,7 +176,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres']);
 
@@ -194,7 +194,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres']);
 
@@ -214,7 +214,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres']);
 
@@ -234,7 +234,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres']);
 
@@ -260,7 +260,7 @@ describe('migrate dev command', () => {
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres']);
 
@@ -279,7 +279,7 @@ describe('migrate dev command', () => {
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres']);
 
@@ -301,7 +301,7 @@ describe('migrate dev command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres']);
 
@@ -324,7 +324,7 @@ describe('migrate dev command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres']);
 
@@ -350,7 +350,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres', '--yes']);
 
@@ -369,7 +369,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres', '--yes']);
 
@@ -387,7 +387,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres']);
 
@@ -411,7 +411,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres', '--dry-run']);
 
@@ -429,7 +429,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres', '--dry-run']);
 
@@ -449,7 +449,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres', '--dry-run']);
 
@@ -475,7 +475,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres']);
 
@@ -495,7 +495,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres']);
 
@@ -523,7 +523,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres']);
 
@@ -542,7 +542,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres']);
 
@@ -560,7 +560,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       // --force should allow bypassing breaking change confirmation
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres', '--force', '--yes']);
@@ -576,7 +576,7 @@ describe('migrate dev command', () => {
 
   describe('required arguments', () => {
     it('should error when --schema is not provided', async () => {
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await expect(migrateDev(['--dialect', 'postgres'])).rejects.toThrow(
         '--schema is required'
@@ -584,7 +584,7 @@ describe('migrate dev command', () => {
     });
 
     it('should error when --dialect is not provided', async () => {
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await expect(migrateDev(['--schema', './schema.ts'])).rejects.toThrow(
         '--dialect is required'
@@ -592,7 +592,7 @@ describe('migrate dev command', () => {
     });
 
     it('should error with unsupported dialect', async () => {
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await expect(
         migrateDev(['--schema', './schema.ts', '--dialect', 'oracle'])
@@ -606,7 +606,7 @@ describe('migrate dev command', () => {
 
   describe('help text', () => {
     it('should show help when --help flag is provided', async () => {
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       try {
         await migrateDev(['--help']);
@@ -623,7 +623,7 @@ describe('migrate dev command', () => {
     });
 
     it('should show -h short help flag', async () => {
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       try {
         await migrateDev(['-h']);
@@ -650,7 +650,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev([
         '--schema', './schema.ts',
@@ -672,7 +672,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev([
         '--schema', './schema.ts',
@@ -703,7 +703,7 @@ describe('migrate dev command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev([
         '--schema', './schema.ts',
@@ -735,7 +735,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev([
         '--schema', './schema.ts',
@@ -764,7 +764,7 @@ describe('migrate dev command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev([
         '--schema', './schema.ts',
@@ -795,7 +795,7 @@ describe('migrate dev command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev([
         '--schema', './schema.ts',
@@ -824,7 +824,7 @@ describe('migrate dev command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev(['--schema', './schema.ts', '--dialect', 'postgres', '--yes']);
 
@@ -852,7 +852,7 @@ describe('migrate command router - dev subcommand', () => {
   });
 
   it('should list dev in available subcommands', async () => {
-    const { migrate } = await import('../commands/migrate.js');
+    const { migrate } = await import('../src/commands/migrate.js');
 
     try {
       await migrate([]);
@@ -873,7 +873,7 @@ describe('migrate command router - dev subcommand', () => {
 
     loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-    const { migrate } = await import('../commands/migrate.js');
+    const { migrate } = await import('../src/commands/migrate.js');
 
     await migrate(['dev', '--schema', './schema.ts', '--dialect', 'postgres', '--dry-run']);
 

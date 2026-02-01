@@ -135,7 +135,7 @@ describe('Dynamic Adapter Imports', () => {
       // This should only load the postgres adapter, not mysql
 
       // Import only the postgres command (simulating lazy loading)
-      const { postgresExport } = await import('../commands/postgres.js');
+      const { postgresExport } = await import('../src/commands/postgres.js');
 
       // After running postgres command, mysql should NOT be loaded
       // This test FAILS because current implementation loads all adapters
@@ -481,8 +481,8 @@ describe('Dynamic Adapter Imports', () => {
       // This should just show help text without loading any adapters
 
       // With lazy loading, displaying help shouldn't trigger adapter imports
-      const { generateHelpText } = await import('../utils/help.js');
-      type HelpCommand = Awaited<typeof import('../utils/help.js')>['HelpCommand'];
+      const { generateHelpText } = await import('../src/utils/help.js');
+      type HelpCommand = Awaited<typeof import('../src/utils/help.js')>['HelpCommand'];
 
       const helpDef: HelpCommand = {
         name: 'test',

@@ -16,9 +16,9 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_DIR = join(tmpdir(), `icetype-ts-test-${Date.now()}`);
-const CLI_PATH = join(__dirname, '../../dist/cli.js');
+const CLI_PATH = join(__dirname, '../dist/cli.js');
 // Use absolute path to @icetype/core for tests to avoid module resolution issues
-const CORE_PATH = resolve(__dirname, '../../../core/dist/index.js');
+const CORE_PATH = resolve(__dirname, '../../core/dist/index.js');
 
 function runCli(args: string): { stdout: string; stderr: string; code: number } {
   try {

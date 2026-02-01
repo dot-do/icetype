@@ -138,7 +138,7 @@ describe('ice sqlite command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
       // Import the command
-      const { sqliteExport } = await import('../commands/sqlite.js');
+      const { sqliteExport } = await import('../src/commands/sqlite.js');
 
       // Create a mock schema loader that returns our test schema
       const mockSchema = createValidSchema('User');
@@ -158,7 +158,7 @@ describe('ice sqlite command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { _testHelpers } = await import('../commands/sqlite.js');
+      const { _testHelpers } = await import('../src/commands/sqlite.js');
 
       // Use test helper to bypass schema loading
       const mockSchema = createValidSchema('User');
@@ -169,7 +169,7 @@ describe('ice sqlite command', () => {
     });
 
     it('should output to stdout by default', async () => {
-      const { _testHelpers } = await import('../commands/sqlite.js');
+      const { _testHelpers } = await import('../src/commands/sqlite.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {});
@@ -180,14 +180,14 @@ describe('ice sqlite command', () => {
     });
 
     it('should error when --schema is missing', async () => {
-      const { sqliteExport } = await import('../commands/sqlite.js');
+      const { sqliteExport } = await import('../src/commands/sqlite.js');
 
       // Should throw or exit when no schema provided
       await expect(sqliteExport([])).rejects.toThrow('--schema is required');
     });
 
     it('should include indexes when schema has indexed fields', async () => {
-      const { _testHelpers } = await import('../commands/sqlite.js');
+      const { _testHelpers } = await import('../src/commands/sqlite.js');
 
       const mockSchema = createSchemaWithIndexes('IndexedEntity');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {
@@ -200,7 +200,7 @@ describe('ice sqlite command', () => {
     });
 
     it('should handle multiple schemas in a file', async () => {
-      const { _testHelpers } = await import('../commands/sqlite.js');
+      const { _testHelpers } = await import('../src/commands/sqlite.js');
 
       const schemas = [
         createValidSchema('User'),
@@ -215,7 +215,7 @@ describe('ice sqlite command', () => {
     });
 
     it('should generate valid SQLite SQL syntax', async () => {
-      const { _testHelpers } = await import('../commands/sqlite.js');
+      const { _testHelpers } = await import('../src/commands/sqlite.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {});
@@ -229,7 +229,7 @@ describe('ice sqlite command', () => {
     });
 
     it('should include system columns by default', async () => {
-      const { _testHelpers } = await import('../commands/sqlite.js');
+      const { _testHelpers } = await import('../src/commands/sqlite.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {});
@@ -243,7 +243,7 @@ describe('ice sqlite command', () => {
     });
 
     it('should support IF NOT EXISTS option', async () => {
-      const { _testHelpers } = await import('../commands/sqlite.js');
+      const { _testHelpers } = await import('../src/commands/sqlite.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {
@@ -254,7 +254,7 @@ describe('ice sqlite command', () => {
     });
 
     it('should support STRICT mode option', async () => {
-      const { _testHelpers } = await import('../commands/sqlite.js');
+      const { _testHelpers } = await import('../src/commands/sqlite.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {
@@ -265,7 +265,7 @@ describe('ice sqlite command', () => {
     });
 
     it('should support WITHOUT ROWID option', async () => {
-      const { _testHelpers } = await import('../commands/sqlite.js');
+      const { _testHelpers } = await import('../src/commands/sqlite.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {
@@ -276,7 +276,7 @@ describe('ice sqlite command', () => {
     });
 
     it('should support both STRICT and WITHOUT ROWID together', async () => {
-      const { _testHelpers } = await import('../commands/sqlite.js');
+      const { _testHelpers } = await import('../src/commands/sqlite.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {
@@ -289,7 +289,7 @@ describe('ice sqlite command', () => {
     });
 
     it('should use SQLite storage classes (TEXT, INTEGER, REAL, BLOB)', async () => {
-      const { _testHelpers } = await import('../commands/sqlite.js');
+      const { _testHelpers } = await import('../src/commands/sqlite.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {});
@@ -314,7 +314,7 @@ describe('sqlite command argument parsing', () => {
   });
 
   it('should parse --schema option', async () => {
-    const { _testHelpers } = await import('../commands/sqlite.js');
+    const { _testHelpers } = await import('../src/commands/sqlite.js');
 
     const args = ['--schema', './schema.ts'];
     const parsed = _testHelpers.parseArgs(args);
@@ -323,7 +323,7 @@ describe('sqlite command argument parsing', () => {
   });
 
   it('should parse -s short option for schema', async () => {
-    const { _testHelpers } = await import('../commands/sqlite.js');
+    const { _testHelpers } = await import('../src/commands/sqlite.js');
 
     const args = ['-s', './schema.ts'];
     const parsed = _testHelpers.parseArgs(args);
@@ -332,7 +332,7 @@ describe('sqlite command argument parsing', () => {
   });
 
   it('should parse --output option', async () => {
-    const { _testHelpers } = await import('../commands/sqlite.js');
+    const { _testHelpers } = await import('../src/commands/sqlite.js');
 
     const args = ['--schema', './schema.ts', '--output', './tables.sql'];
     const parsed = _testHelpers.parseArgs(args);
@@ -341,7 +341,7 @@ describe('sqlite command argument parsing', () => {
   });
 
   it('should parse -o short option for output', async () => {
-    const { _testHelpers } = await import('../commands/sqlite.js');
+    const { _testHelpers } = await import('../src/commands/sqlite.js');
 
     const args = ['-s', './schema.ts', '-o', './tables.sql'];
     const parsed = _testHelpers.parseArgs(args);
@@ -350,7 +350,7 @@ describe('sqlite command argument parsing', () => {
   });
 
   it('should parse --table-name option', async () => {
-    const { _testHelpers } = await import('../commands/sqlite.js');
+    const { _testHelpers } = await import('../src/commands/sqlite.js');
 
     const args = ['--schema', './schema.ts', '--table-name', 'custom_table'];
     const parsed = _testHelpers.parseArgs(args);
@@ -359,7 +359,7 @@ describe('sqlite command argument parsing', () => {
   });
 
   it('should parse --if-not-exists option', async () => {
-    const { _testHelpers } = await import('../commands/sqlite.js');
+    const { _testHelpers } = await import('../src/commands/sqlite.js');
 
     const args = ['--schema', './schema.ts', '--if-not-exists'];
     const parsed = _testHelpers.parseArgs(args);
@@ -368,7 +368,7 @@ describe('sqlite command argument parsing', () => {
   });
 
   it('should parse --strict option', async () => {
-    const { _testHelpers } = await import('../commands/sqlite.js');
+    const { _testHelpers } = await import('../src/commands/sqlite.js');
 
     const args = ['--schema', './schema.ts', '--strict'];
     const parsed = _testHelpers.parseArgs(args);
@@ -377,7 +377,7 @@ describe('sqlite command argument parsing', () => {
   });
 
   it('should parse --without-rowid option', async () => {
-    const { _testHelpers } = await import('../commands/sqlite.js');
+    const { _testHelpers } = await import('../src/commands/sqlite.js');
 
     const args = ['--schema', './schema.ts', '--without-rowid'];
     const parsed = _testHelpers.parseArgs(args);
@@ -386,7 +386,7 @@ describe('sqlite command argument parsing', () => {
   });
 
   it('should parse --indexes option', async () => {
-    const { _testHelpers } = await import('../commands/sqlite.js');
+    const { _testHelpers } = await import('../src/commands/sqlite.js');
 
     const args = ['--schema', './schema.ts', '--indexes'];
     const parsed = _testHelpers.parseArgs(args);
@@ -395,7 +395,7 @@ describe('sqlite command argument parsing', () => {
   });
 
   it('should parse --quiet option', async () => {
-    const { _testHelpers } = await import('../commands/sqlite.js');
+    const { _testHelpers } = await import('../src/commands/sqlite.js');
 
     const args = ['--schema', './schema.ts', '--quiet'];
     const parsed = _testHelpers.parseArgs(args);
@@ -404,7 +404,7 @@ describe('sqlite command argument parsing', () => {
   });
 
   it('should parse -q short option for quiet', async () => {
-    const { _testHelpers } = await import('../commands/sqlite.js');
+    const { _testHelpers } = await import('../src/commands/sqlite.js');
 
     const args = ['-s', './schema.ts', '-q'];
     const parsed = _testHelpers.parseArgs(args);
@@ -413,7 +413,7 @@ describe('sqlite command argument parsing', () => {
   });
 
   it('should parse --verbose option', async () => {
-    const { _testHelpers } = await import('../commands/sqlite.js');
+    const { _testHelpers } = await import('../src/commands/sqlite.js');
 
     const args = ['--schema', './schema.ts', '--verbose'];
     const parsed = _testHelpers.parseArgs(args);
@@ -422,7 +422,7 @@ describe('sqlite command argument parsing', () => {
   });
 
   it('should parse -v short option for verbose', async () => {
-    const { _testHelpers } = await import('../commands/sqlite.js');
+    const { _testHelpers } = await import('../src/commands/sqlite.js');
 
     const args = ['-s', './schema.ts', '-v'];
     const parsed = _testHelpers.parseArgs(args);
@@ -431,7 +431,7 @@ describe('sqlite command argument parsing', () => {
   });
 
   it('should parse all SQLite-specific options together', async () => {
-    const { _testHelpers } = await import('../commands/sqlite.js');
+    const { _testHelpers } = await import('../src/commands/sqlite.js');
 
     const args = [
       '--schema', './schema.ts',

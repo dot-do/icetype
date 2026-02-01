@@ -24,9 +24,9 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_DIR = join(tmpdir(), `icetype-native-ts-${Date.now()}`);
-const CLI_PATH = join(__dirname, '../../dist/cli.js');
-const PACKAGE_ROOT = resolve(__dirname, '../..');
-const CORE_PATH = resolve(__dirname, '../../../core/dist/index.js');
+const CLI_PATH = join(__dirname, '../dist/cli.js');
+const PACKAGE_ROOT = resolve(__dirname, '..');
+const CORE_PATH = resolve(__dirname, '../../core/dist/index.js');
 
 /**
  * Helper to run the CLI via the package bin entry point.

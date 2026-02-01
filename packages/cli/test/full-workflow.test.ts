@@ -23,8 +23,8 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_DIR = join(tmpdir(), `icetype-full-workflow-${Date.now()}`);
-const CLI_PATH = join(__dirname, '../../dist/cli.js');
-const CORE_PATH = resolve(__dirname, '../../../core/dist/index.js');
+const CLI_PATH = join(__dirname, '../dist/cli.js');
+const CORE_PATH = resolve(__dirname, '../../core/dist/index.js');
 
 /**
  * Run CLI command and capture output

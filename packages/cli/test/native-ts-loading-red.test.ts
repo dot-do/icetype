@@ -35,8 +35,8 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const CLI_PATH = join(__dirname, '../../dist/cli.js');
-const CORE_PATH = resolve(__dirname, '../../../core/dist/index.js');
+const CLI_PATH = join(__dirname, '../dist/cli.js');
+const CORE_PATH = resolve(__dirname, '../../core/dist/index.js');
 
 // =============================================================================
 // Test Utilities
@@ -121,7 +121,7 @@ export { loadTime };
     );
 
     // Import the schema loader directly to test caching
-    const { loadSchemaFile, clearSchemaLoaderCaches } = await import('../utils/schema-loader.js');
+    const { loadSchemaFile, clearSchemaLoaderCaches } = await import('../src/utils/schema-loader.js');
 
     // Clear any existing cache
     clearSchemaLoaderCaches();
@@ -165,7 +165,7 @@ export const MutableSchema = parseSchema({
 `
     );
 
-    const { loadSchemaFile, clearSchemaLoaderCaches } = await import('../utils/schema-loader.js');
+    const { loadSchemaFile, clearSchemaLoaderCaches } = await import('../src/utils/schema-loader.js');
     clearSchemaLoaderCaches();
 
     const result1 = await loadSchemaFile(schemaPath);
@@ -245,7 +245,7 @@ export const PostSchema = parseSchema({
 `
     );
 
-    const { loadSchemaFile, clearSchemaLoaderCaches } = await import('../utils/schema-loader.js');
+    const { loadSchemaFile, clearSchemaLoaderCaches } = await import('../src/utils/schema-loader.js');
     clearSchemaLoaderCaches();
 
     // Load both files
@@ -297,7 +297,7 @@ export const PerfSchema = parseSchema({
 `
     );
 
-    const { loadSchemaFile, clearSchemaLoaderCaches } = await import('../utils/schema-loader.js');
+    const { loadSchemaFile, clearSchemaLoaderCaches } = await import('../src/utils/schema-loader.js');
     clearSchemaLoaderCaches();
 
     // Cold load (no cache)
@@ -345,7 +345,7 @@ export const StatsSchema = parseSchema({
     );
 
     // Import with dynamic import to get fresh module reference
-    const schemaLoader = await import('../utils/schema-loader.js');
+    const schemaLoader = await import('../src/utils/schema-loader.js');
     schemaLoader.clearSchemaLoaderCaches();
 
     // Load a file

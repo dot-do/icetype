@@ -82,18 +82,18 @@ describe('path traversal attack prevention', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Attempting to read from parent directories should be rejected
       await expect(
@@ -110,18 +110,18 @@ describe('path traversal attack prevention', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // URL-encoded traversal should also be rejected
       await expect(
@@ -138,18 +138,18 @@ describe('path traversal attack prevention', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Attempting to write outside project should be rejected
       await expect(
@@ -166,18 +166,18 @@ describe('path traversal attack prevention', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Windows-style path traversal should also be rejected
       await expect(
@@ -198,7 +198,7 @@ describe('path traversal attack prevention', () => {
         };
       });
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       // Attempting to create directories outside project should be rejected
       await expect(
@@ -209,14 +209,14 @@ describe('path traversal attack prevention', () => {
 
   describe('validate command', () => {
     it('should reject schema paths containing .. traversal', async () => {
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       await expect(
         validate(['--schema', '../../sensitive/schema.ts', '-q'])
@@ -238,14 +238,14 @@ describe('path traversal attack prevention', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      const { migrate } = await import('../commands/migrate.js');
+      const { migrate } = await import('../src/commands/migrate.js');
 
       await expect(
         migrate(['generate', '--schema', '../../../etc/shadow', '--dialect', 'postgres'])
@@ -265,14 +265,14 @@ describe('path traversal attack prevention', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      const { migrate } = await import('../commands/migrate.js');
+      const { migrate } = await import('../src/commands/migrate.js');
 
       await expect(
         migrate(['generate', '--schema', './schema.ts', '--output', '../../../tmp/migrations', '--dialect', 'postgres'])
@@ -305,18 +305,18 @@ describe('absolute path outside project prevention', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Absolute paths to sensitive system files should be rejected
       await expect(
@@ -333,18 +333,18 @@ describe('absolute path outside project prevention', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Writing to absolute paths outside project should be rejected
       await expect(
@@ -367,18 +367,18 @@ describe('absolute path outside project prevention', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // This should succeed - absolute paths within project are fine
       await generate(['--schema', schemaPath, '--output', outputPath, '-q']);
@@ -399,7 +399,7 @@ describe('absolute path outside project prevention', () => {
         };
       });
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await expect(
         init(['--dir', '/tmp/malicious-project'])
@@ -436,18 +436,18 @@ describe('symbolic link security', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Symlinks pointing outside project should be rejected
       await expect(
@@ -476,18 +476,18 @@ describe('symbolic link security', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await expect(
         generate(['--schema', './schema.ts', '--output', './output-symlink.ts', '-q'])
@@ -510,18 +510,18 @@ describe('symbolic link security', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Symlinks within project should be allowed
       await generate(['--schema', './schema-symlink.ts', '-q']);
@@ -546,7 +546,7 @@ describe('symbolic link security', () => {
         };
       });
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await expect(
         init(['--dir', './symlink-to-etc'])
@@ -579,18 +579,18 @@ describe('file extension validation', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Executable or script files should be rejected
       await expect(
@@ -607,18 +607,18 @@ describe('file extension validation', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Output should only be .ts, .js, or .d.ts files
       await expect(
@@ -635,18 +635,18 @@ describe('file extension validation', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await expect(
         generate(['--schema', './schema.ts.exe', '-q'])
@@ -664,18 +664,18 @@ describe('file extension validation', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Valid extensions should work
       await generate(['--schema', './schema.ts', '-q']);
@@ -693,18 +693,18 @@ describe('file extension validation', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await generate(['--schema', './schema.ts', '--output', './types.d.ts', '-q']);
       expect(mockWriteFileSync).toHaveBeenCalled();
@@ -725,14 +725,14 @@ describe('file extension validation', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      const { migrate } = await import('../commands/migrate.js');
+      const { migrate } = await import('../src/commands/migrate.js');
 
       // Migration files should only be .sql or valid formats
       await expect(
@@ -766,18 +766,18 @@ describe('output path sanitization', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Null byte injection should be rejected
       await expect(
@@ -794,18 +794,18 @@ describe('output path sanitization', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Shell injection characters should be rejected or sanitized
       await expect(
@@ -822,18 +822,18 @@ describe('output path sanitization', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await expect(
         generate(['--schema', './schema.ts', '--output', './types|cat /etc/passwd.ts', '-q'])
@@ -849,18 +849,18 @@ describe('output path sanitization', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Command substitution should be rejected
       await expect(
@@ -877,18 +877,18 @@ describe('output path sanitization', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await expect(
         generate(['--schema', '`whoami`.ts', '-q'])
@@ -908,7 +908,7 @@ describe('output path sanitization', () => {
         };
       });
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await expect(
         init(['--dir', 'project;rm -rf /'])
@@ -940,18 +940,18 @@ describe('additional path security edge cases', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'User', schema: createValidSchema('User') }],
         errors: [],
       }),
     }));
 
-    vi.doMock('../utils/watcher.js', () => ({
+    vi.doMock('../src/utils/watcher.js', () => ({
       watchGenerate: vi.fn(),
     }));
 
-    const { generate } = await import('../commands/generate.js');
+    const { generate } = await import('../src/commands/generate.js');
 
     // Very long paths should be rejected
     const longPath = './' + 'a'.repeat(10000) + '.ts';
@@ -969,18 +969,18 @@ describe('additional path security edge cases', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'User', schema: createValidSchema('User') }],
         errors: [],
       }),
     }));
 
-    vi.doMock('../utils/watcher.js', () => ({
+    vi.doMock('../src/utils/watcher.js', () => ({
       watchGenerate: vi.fn(),
     }));
 
-    const { generate } = await import('../commands/generate.js');
+    const { generate } = await import('../src/commands/generate.js');
 
     // Paths like "..." or "...." should be rejected
     await expect(
@@ -997,18 +997,18 @@ describe('additional path security edge cases', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'User', schema: createValidSchema('User') }],
         errors: [],
       }),
     }));
 
-    vi.doMock('../utils/watcher.js', () => ({
+    vi.doMock('../src/utils/watcher.js', () => ({
       watchGenerate: vi.fn(),
     }));
 
-    const { generate } = await import('../commands/generate.js');
+    const { generate } = await import('../src/commands/generate.js');
 
     // Empty paths should be rejected
     await expect(
@@ -1025,18 +1025,18 @@ describe('additional path security edge cases', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'User', schema: createValidSchema('User') }],
         errors: [],
       }),
     }));
 
-    vi.doMock('../utils/watcher.js', () => ({
+    vi.doMock('../src/utils/watcher.js', () => ({
       watchGenerate: vi.fn(),
     }));
 
-    const { generate } = await import('../commands/generate.js');
+    const { generate } = await import('../src/commands/generate.js');
 
     // Paths that normalize outside project should be rejected
     await expect(
@@ -1053,18 +1053,18 @@ describe('additional path security edge cases', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'User', schema: createValidSchema('User') }],
         errors: [],
       }),
     }));
 
-    vi.doMock('../utils/watcher.js', () => ({
+    vi.doMock('../src/utils/watcher.js', () => ({
       watchGenerate: vi.fn(),
     }));
 
-    const { generate } = await import('../commands/generate.js');
+    const { generate } = await import('../src/commands/generate.js');
 
     // Unicode variants of .. should be rejected
     // Full-width period: \uFF0E
@@ -1082,18 +1082,18 @@ describe('additional path security edge cases', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'User', schema: createValidSchema('User') }],
         errors: [],
       }),
     }));
 
-    vi.doMock('../utils/watcher.js', () => ({
+    vi.doMock('../src/utils/watcher.js', () => ({
       watchGenerate: vi.fn(),
     }));
 
-    const { generate } = await import('../commands/generate.js');
+    const { generate } = await import('../src/commands/generate.js');
 
     // UNC paths should be rejected
     await expect(
@@ -1114,35 +1114,35 @@ describe('path sanitization utility functions (to be implemented)', () => {
 
   it('should export a sanitizePath function', async () => {
     // This import will fail until the utility is implemented
-    const pathSanitizer = await import('../utils/path-sanitizer.js').catch(() => null);
+    const pathSanitizer = await import('../src/utils/path-sanitizer.js').catch(() => null);
 
     expect(pathSanitizer).not.toBeNull();
     expect(typeof pathSanitizer?.sanitizePath).toBe('function');
   });
 
   it('should export a validateSchemaPath function', async () => {
-    const pathSanitizer = await import('../utils/path-sanitizer.js').catch(() => null);
+    const pathSanitizer = await import('../src/utils/path-sanitizer.js').catch(() => null);
 
     expect(pathSanitizer).not.toBeNull();
     expect(typeof pathSanitizer?.validateSchemaPath).toBe('function');
   });
 
   it('should export a validateOutputPath function', async () => {
-    const pathSanitizer = await import('../utils/path-sanitizer.js').catch(() => null);
+    const pathSanitizer = await import('../src/utils/path-sanitizer.js').catch(() => null);
 
     expect(pathSanitizer).not.toBeNull();
     expect(typeof pathSanitizer?.validateOutputPath).toBe('function');
   });
 
   it('should export a isWithinProjectDirectory function', async () => {
-    const pathSanitizer = await import('../utils/path-sanitizer.js').catch(() => null);
+    const pathSanitizer = await import('../src/utils/path-sanitizer.js').catch(() => null);
 
     expect(pathSanitizer).not.toBeNull();
     expect(typeof pathSanitizer?.isWithinProjectDirectory).toBe('function');
   });
 
   it('should export a checkSymlinkSafety function', async () => {
-    const pathSanitizer = await import('../utils/path-sanitizer.js').catch(() => null);
+    const pathSanitizer = await import('../src/utils/path-sanitizer.js').catch(() => null);
 
     expect(pathSanitizer).not.toBeNull();
     expect(typeof pathSanitizer?.checkSymlinkSafety).toBe('function');

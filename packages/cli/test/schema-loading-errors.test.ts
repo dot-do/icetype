@@ -128,7 +128,7 @@ describe('Schema Loading Errors: Stack Trace Preservation', () => {
     at loadSchema (/path/to/schema-loader.ts:100:20)
     at processSchema (/path/to/cli.ts:50:10)`;
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockRejectedValue(originalError),
       }));
 
@@ -136,7 +136,7 @@ describe('Schema Loading Errors: Stack Trace Preservation', () => {
         throw new Error('process.exit called');
       });
 
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       try {
         await validate(['--schema', '/path/to/missing-schema.ts', '--verbose']);
@@ -161,7 +161,7 @@ describe('Schema Loading Errors: Stack Trace Preservation', () => {
     at Module._resolveFilename (internal/modules/cjs/loader.js:636:15)
     at loadSchema (/path/to/schema-loader.ts:100:20)`;
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockRejectedValue(originalError),
       }));
 
@@ -169,7 +169,7 @@ describe('Schema Loading Errors: Stack Trace Preservation', () => {
         throw new Error('process.exit called');
       });
 
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       try {
         await validate(['--schema', '/path/to/missing-schema.ts']);
@@ -195,7 +195,7 @@ describe('Schema Loading Errors: Stack Trace Preservation', () => {
         code: ErrorCodes.SCHEMA_LOAD_ERROR,
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockRejectedValue(schemaError),
       }));
 
@@ -203,7 +203,7 @@ describe('Schema Loading Errors: Stack Trace Preservation', () => {
         throw new Error('process.exit called');
       });
 
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       try {
         await validate(['--schema', '/path/to/schema.ts', '--verbose']);
@@ -222,7 +222,7 @@ describe('Schema Loading Errors: Stack Trace Preservation', () => {
     it('should show TypeError name when TypeError is thrown', async () => {
       const typeError = new TypeError('undefined is not a function');
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockRejectedValue(typeError),
       }));
 
@@ -230,7 +230,7 @@ describe('Schema Loading Errors: Stack Trace Preservation', () => {
         throw new Error('process.exit called');
       });
 
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       try {
         await validate(['--schema', '/path/to/schema.ts', '--verbose']);
@@ -267,7 +267,7 @@ describe('Schema Loading Errors: File Path Inclusion', () => {
   it('should include the absolute file path in error messages', async () => {
     const schemaPath = '/Users/test/project/schemas/user.ts';
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [],
         errors: [`Failed to load module: ${schemaPath}`],
@@ -278,7 +278,7 @@ describe('Schema Loading Errors: File Path Inclusion', () => {
       throw new Error('process.exit called');
     });
 
-    const { validate } = await import('../commands/validate.js');
+    const { validate } = await import('../src/commands/validate.js');
 
     try {
       await validate(['--schema', schemaPath]);
@@ -298,7 +298,7 @@ describe('Schema Loading Errors: File Path Inclusion', () => {
     const relativePath = './schemas/user.ts';
     const expectedAbsolute = resolve(process.cwd(), relativePath);
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [],
         errors: ['File not found'],
@@ -309,7 +309,7 @@ describe('Schema Loading Errors: File Path Inclusion', () => {
       throw new Error('process.exit called');
     });
 
-    const { validate } = await import('../commands/validate.js');
+    const { validate } = await import('../src/commands/validate.js');
 
     try {
       await validate(['--schema', relativePath]);
@@ -348,7 +348,7 @@ describe('Schema Loading Errors: Line Number Reporting', () => {
     const syntaxError = new SyntaxError('Unexpected token');
     (syntaxError as any).loc = { line: 42, column: 10 };
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockRejectedValue(syntaxError),
     }));
 
@@ -356,7 +356,7 @@ describe('Schema Loading Errors: Line Number Reporting', () => {
       throw new Error('process.exit called');
     });
 
-    const { validate } = await import('../commands/validate.js');
+    const { validate } = await import('../src/commands/validate.js');
 
     try {
       await validate(['--schema', '/path/to/schema.ts', '--verbose']);
@@ -378,7 +378,7 @@ describe('Schema Loading Errors: Line Number Reporting', () => {
     at /path/to/schema.ts:25:15
     at Module._compile (internal/modules/cjs/loader.js:1085:14)`;
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockRejectedValue(error),
     }));
 
@@ -386,7 +386,7 @@ describe('Schema Loading Errors: Line Number Reporting', () => {
       throw new Error('process.exit called');
     });
 
-    const { validate } = await import('../commands/validate.js');
+    const { validate } = await import('../src/commands/validate.js');
 
     try {
       await validate(['--schema', '/path/to/schema.ts', '--verbose']);
@@ -424,7 +424,7 @@ describe('Schema Loading Errors: Transpilation Error Clarity', () => {
     error.stack = `SyntaxError: Unexpected token '}'
     at /path/to/schema.ts:15:1`;
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockRejectedValue(error),
     }));
 
@@ -432,7 +432,7 @@ describe('Schema Loading Errors: Transpilation Error Clarity', () => {
       throw new Error('process.exit called');
     });
 
-    const { validate } = await import('../commands/validate.js');
+    const { validate } = await import('../src/commands/validate.js');
 
     try {
       await validate(['--schema', '/path/to/schema.ts', '--verbose']);
@@ -453,7 +453,7 @@ describe('Schema Loading Errors: Transpilation Error Clarity', () => {
     const transpileError = new Error('[jiti] Failed to transform /path/schema.ts');
     transpileError.name = 'TransformError';
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockRejectedValue(transpileError),
     }));
 
@@ -461,7 +461,7 @@ describe('Schema Loading Errors: Transpilation Error Clarity', () => {
       throw new Error('process.exit called');
     });
 
-    const { validate } = await import('../commands/validate.js');
+    const { validate } = await import('../src/commands/validate.js');
 
     try {
       await validate(['--schema', '/path/to/schema.ts', '--verbose']);
@@ -499,7 +499,7 @@ describe('Schema Loading Errors: Import Error Clarity', () => {
     error.stack = `Error: Cannot find module '@myorg/shared-types'
     at /path/to/schema.ts:1:1`;
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockRejectedValue(error),
     }));
 
@@ -507,7 +507,7 @@ describe('Schema Loading Errors: Import Error Clarity', () => {
       throw new Error('process.exit called');
     });
 
-    const { validate } = await import('../commands/validate.js');
+    const { validate } = await import('../src/commands/validate.js');
 
     try {
       await validate(['--schema', '/path/to/schema.ts', '--verbose']);
@@ -528,7 +528,7 @@ describe('Schema Loading Errors: Import Error Clarity', () => {
   it('should show the import path for relative import errors', async () => {
     const error = new Error("Cannot find module './utils/helpers'");
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockRejectedValue(error),
     }));
 
@@ -536,7 +536,7 @@ describe('Schema Loading Errors: Import Error Clarity', () => {
       throw new Error('process.exit called');
     });
 
-    const { validate } = await import('../commands/validate.js');
+    const { validate } = await import('../src/commands/validate.js');
 
     try {
       await validate(['--schema', '/path/to/schema.ts', '--verbose']);
@@ -555,7 +555,7 @@ describe('Schema Loading Errors: Import Error Clarity', () => {
   it('should suggest tsconfig paths for path alias errors', async () => {
     const error = new Error("Cannot find module '@schemas/user'");
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockRejectedValue(error),
     }));
 
@@ -563,7 +563,7 @@ describe('Schema Loading Errors: Import Error Clarity', () => {
       throw new Error('process.exit called');
     });
 
-    const { validate } = await import('../commands/validate.js');
+    const { validate } = await import('../src/commands/validate.js');
 
     try {
       await validate(['--schema', '/path/to/schema.ts', '--verbose']);
@@ -603,7 +603,7 @@ describe('Schema Loading Errors: Runtime Error Stack Traces', () => {
     at Object.<anonymous> (/path/to/schema.ts:100:1)
     at Module._compile (internal/modules/cjs/loader.js:1085:14)`;
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockRejectedValue(runtimeError),
     }));
 
@@ -611,7 +611,7 @@ describe('Schema Loading Errors: Runtime Error Stack Traces', () => {
       throw new Error('process.exit called');
     });
 
-    const { validate } = await import('../commands/validate.js');
+    const { validate } = await import('../src/commands/validate.js');
 
     try {
       await validate(['--schema', '/path/to/schema.ts', '--verbose']);
@@ -633,7 +633,7 @@ describe('Schema Loading Errors: Runtime Error Stack Traces', () => {
     runtimeError.stack = `ReferenceError: config is not defined
     at /path/to/schema.ts:10:5`;
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockRejectedValue(runtimeError),
     }));
 
@@ -641,7 +641,7 @@ describe('Schema Loading Errors: Runtime Error Stack Traces', () => {
       throw new Error('process.exit called');
     });
 
-    const { validate } = await import('../commands/validate.js');
+    const { validate } = await import('../src/commands/validate.js');
 
     try {
       await validate(['--schema', '/path/to/schema.ts', '--verbose']);
@@ -679,7 +679,7 @@ describe('Schema Loading Errors: Error Location Reporting', () => {
     const error = new Error('Invalid schema definition');
     (error as any).loc = { line: 15, column: 8 };
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockRejectedValue(error),
     }));
 
@@ -687,7 +687,7 @@ describe('Schema Loading Errors: Error Location Reporting', () => {
       throw new Error('process.exit called');
     });
 
-    const { validate } = await import('../commands/validate.js');
+    const { validate } = await import('../src/commands/validate.js');
 
     try {
       await validate(['--schema', '/path/to/schema.ts', '--verbose']);
@@ -709,7 +709,7 @@ describe('Schema Loading Errors: Error Location Reporting', () => {
     error.stack = `Error: Schema validation failed
     at /path/to/schema.ts:42:13`;
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockRejectedValue(error),
     }));
 
@@ -717,7 +717,7 @@ describe('Schema Loading Errors: Error Location Reporting', () => {
       throw new Error('process.exit called');
     });
 
-    const { validate } = await import('../commands/validate.js');
+    const { validate } = await import('../src/commands/validate.js');
 
     try {
       await validate(['--schema', '/path/to/schema.ts', '--verbose']);
@@ -760,7 +760,7 @@ describe('Schema Loading Errors: Cause Chain Preservation', () => {
       code: ErrorCodes.SCHEMA_LOAD_ERROR,
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockRejectedValue(topError),
     }));
 
@@ -768,7 +768,7 @@ describe('Schema Loading Errors: Cause Chain Preservation', () => {
       throw new Error('process.exit called');
     });
 
-    const { validate } = await import('../commands/validate.js');
+    const { validate } = await import('../src/commands/validate.js');
 
     try {
       await validate(['--schema', '/path/to/schema.ts', '--verbose']);

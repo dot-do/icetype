@@ -97,7 +97,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -111,7 +111,7 @@ describe('init command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['--dir', 'myproject']);
 
@@ -123,7 +123,7 @@ describe('init command', () => {
     it('should not overwrite existing schema.ts without --force', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -137,7 +137,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['--force']);
 
@@ -148,7 +148,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['-f']);
 
@@ -159,7 +159,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -179,7 +179,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -192,7 +192,7 @@ describe('init command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 
@@ -208,7 +208,7 @@ describe('init command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['--dir', 'newdir']);
 
@@ -220,7 +220,7 @@ describe('init command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
       vi.mocked(fs.mkdirSync).mockImplementation(() => undefined);
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init(['-d', 'mydir']);
 
@@ -235,7 +235,7 @@ describe('init command', () => {
 
 describe('generateTypeScriptInterface', () => {
   it('should generate valid TypeScript interface', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
     const schema = createValidSchema('User');
 
     const output = generateTypeScriptInterface(schema);
@@ -249,7 +249,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should include user-defined fields', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
     const schema = createValidSchema('User');
 
     const output = generateTypeScriptInterface(schema);
@@ -259,7 +259,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should generate input type interface', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
     const schema = createValidSchema('User');
 
     const output = generateTypeScriptInterface(schema);
@@ -268,7 +268,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should include @generated JSDoc comment', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
     const schema = createValidSchema('User');
 
     const output = generateTypeScriptInterface(schema);
@@ -277,7 +277,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should mark optional fields correctly', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('id', {
@@ -315,7 +315,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should handle array fields', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('tags', {
@@ -344,7 +344,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should map primitive types correctly', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('strField', {
@@ -403,7 +403,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should handle relation fields as string IDs', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('author', {
@@ -452,7 +452,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should handle json type as unknown', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('metadata', {
@@ -481,7 +481,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should handle binary type as Uint8Array', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('data', {
@@ -510,7 +510,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should handle text type as string', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('content', {
@@ -539,7 +539,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should handle uuid type as string', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('id', {
@@ -568,7 +568,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should handle float and double types as number', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('price', {
@@ -607,7 +607,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should handle date and time types as number (epoch)', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('birthDate', {
@@ -646,7 +646,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should handle unknown types as unknown', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('custom', {
@@ -675,7 +675,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should handle long and bigint types as number', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('bigNum', {
@@ -714,7 +714,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should skip system fields starting with $', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('$systemField', {
@@ -760,7 +760,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should handle decimal type as number', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('price', {
@@ -791,7 +791,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should mark fields with default values as optional in input type', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('status', {
@@ -822,7 +822,7 @@ describe('generateTypeScriptInterface', () => {
   });
 
   it('should handle arrays of numbers', async () => {
-    const { generateTypeScriptInterface } = await import('../commands/generate.js');
+    const { generateTypeScriptInterface } = await import('../src/commands/generate.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('scores', {
@@ -869,7 +869,7 @@ describe('CLI integration', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { init } = await import('../commands/init.js');
+      const { init } = await import('../src/commands/init.js');
 
       await init([]);
 

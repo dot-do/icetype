@@ -58,7 +58,7 @@ describe('doctor command', () => {
 
   describe('command structure', () => {
     it('should export a doctor function', async () => {
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
 
       expect(typeof doctor).toBe('function');
     });
@@ -71,13 +71,13 @@ describe('doctor command', () => {
       );
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
 
       await expect(doctor([])).resolves.not.toThrow();
     });
 
     it('should display help when --help flag is passed', async () => {
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
 
       // Help flag should cause early exit with help text displayed
       const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
@@ -99,7 +99,7 @@ describe('doctor command', () => {
     });
 
     it('should display help when -h short flag is passed', async () => {
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
 
       const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit called');
@@ -134,7 +134,7 @@ describe('doctor command', () => {
         configurable: true,
       });
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -160,7 +160,7 @@ describe('doctor command', () => {
         configurable: true,
       });
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       // Should show checkmark or "Supported" for Node.js 20.x
@@ -184,7 +184,7 @@ describe('doctor command', () => {
         configurable: true,
       });
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       // Should show warning for unsupported Node.js version
@@ -208,7 +208,7 @@ describe('doctor command', () => {
         configurable: true,
       });
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -231,7 +231,7 @@ describe('doctor command', () => {
         configurable: true,
       });
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -254,7 +254,7 @@ describe('doctor command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -269,7 +269,7 @@ describe('doctor command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -281,7 +281,7 @@ describe('doctor command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('4.9.5'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleWarn).toHaveBeenCalledWith(
@@ -298,7 +298,7 @@ describe('doctor command', () => {
         return Buffer.from('');
       });
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleWarn).toHaveBeenCalledWith(
@@ -316,7 +316,7 @@ describe('doctor command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(fs.existsSync).toHaveBeenCalledWith(
@@ -328,7 +328,7 @@ describe('doctor command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleWarn).toHaveBeenCalledWith(
@@ -343,7 +343,7 @@ describe('doctor command', () => {
       );
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleWarn).toHaveBeenCalledWith(
@@ -358,7 +358,7 @@ describe('doctor command', () => {
       );
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -378,7 +378,7 @@ describe('doctor command', () => {
       );
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       // Should warn about using 'node' vs 'bundler' or 'node16'
@@ -392,7 +392,7 @@ describe('doctor command', () => {
       vi.mocked(fs.readFileSync).mockReturnValue('{ invalid json }');
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleError).toHaveBeenCalledWith(
@@ -412,7 +412,7 @@ describe('doctor command', () => {
       );
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleWarn).toHaveBeenCalledWith(
@@ -444,7 +444,7 @@ describe('doctor command', () => {
       });
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -471,7 +471,7 @@ describe('doctor command', () => {
       });
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -503,7 +503,7 @@ describe('doctor command', () => {
       });
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -529,7 +529,7 @@ describe('doctor command', () => {
       });
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleWarn).toHaveBeenCalledWith(
@@ -555,7 +555,7 @@ describe('doctor command', () => {
       });
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleWarn).toHaveBeenCalledWith(
@@ -567,7 +567,7 @@ describe('doctor command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleWarn).toHaveBeenCalledWith(
@@ -585,7 +585,7 @@ describe('doctor command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       // Should look for config file
@@ -598,7 +598,7 @@ describe('doctor command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -614,7 +614,7 @@ describe('doctor command', () => {
       vi.mocked(fs.readFileSync).mockReturnValue('export default {}');
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -629,7 +629,7 @@ describe('doctor command', () => {
       });
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       // This may or may not be a warning depending on implementation
@@ -649,7 +649,7 @@ describe('doctor command', () => {
       vi.mocked(fs.readFileSync).mockReturnValue('export default {}');
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleWarn).toHaveBeenCalledWith(
@@ -681,7 +681,7 @@ describe('doctor command', () => {
       });
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       // Should suggest upgrade command
@@ -694,7 +694,7 @@ describe('doctor command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('4.9.5'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -706,7 +706,7 @@ describe('doctor command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -724,7 +724,7 @@ describe('doctor command', () => {
         configurable: true,
       });
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -741,7 +741,7 @@ describe('doctor command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('4.9.5'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -783,7 +783,7 @@ describe('doctor command', () => {
         configurable: true,
       });
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -806,7 +806,7 @@ describe('doctor command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -821,7 +821,7 @@ describe('doctor command', () => {
       );
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       // Should have separate sections for environment, packages, config
@@ -841,7 +841,7 @@ describe('doctor command', () => {
       );
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor([]);
 
       // Check for checkmark (\u2713) or cross (\u2717) or warning (\u26A0) symbols
@@ -872,7 +872,7 @@ describe('doctor command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor(['--verbose']);
 
       // In verbose mode, should show more detailed information
@@ -884,7 +884,7 @@ describe('doctor command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
 
       // Should not throw with -v flag
       await expect(doctor(['-v'])).resolves.not.toThrow();
@@ -897,7 +897,7 @@ describe('doctor command', () => {
       );
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor(['--quiet']);
 
       // In quiet mode, should have minimal output
@@ -909,7 +909,7 @@ describe('doctor command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
 
       // Should not throw with -q flag
       await expect(doctor(['-q'])).resolves.not.toThrow();
@@ -922,7 +922,7 @@ describe('doctor command', () => {
       );
       vi.mocked(childProcess.execSync).mockReturnValue(Buffer.from('5.3.2'));
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
       await doctor(['--json']);
 
       // Should output valid JSON
@@ -978,7 +978,7 @@ describe('doctor command', () => {
         configurable: true,
       });
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
 
       // Should complete without throwing
       await expect(doctor([])).resolves.not.toThrow();
@@ -1008,7 +1008,7 @@ describe('doctor command', () => {
         throw new Error('process.exit called');
       });
 
-      const { doctor } = await import('../commands/doctor.js');
+      const { doctor } = await import('../src/commands/doctor.js');
 
       try {
         await doctor([]);

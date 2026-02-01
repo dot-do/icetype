@@ -29,19 +29,19 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 describe('Dynamic CLI Adapter Loading', () => {
   beforeEach(async () => {
     // Reset the adapter registry before each test
-    const { resetAdapterRegistry } = await import('../utils/adapter-registry.js');
+    const { resetAdapterRegistry } = await import('../src/utils/adapter-registry.js');
     resetAdapterRegistry();
   });
 
   afterEach(async () => {
-    const { resetAdapterRegistry } = await import('../utils/adapter-registry.js');
+    const { resetAdapterRegistry } = await import('../src/utils/adapter-registry.js');
     resetAdapterRegistry();
     vi.restoreAllMocks();
   });
 
   describe('CLI discovers adapters from registry', () => {
     it('should discover all registered adapters without hardcoded imports', async () => {
-      const { initializeAdapterRegistry, listAdapters } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry, listAdapters } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
@@ -59,13 +59,13 @@ describe('Dynamic CLI Adapter Loading', () => {
     });
 
     it('should have a getAvailableCommands function that returns adapter-based commands', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
       // This function should exist and return commands based on registered adapters
       // Currently does not exist - this is the RED phase
-      const { getAvailableCommands } = await import('../utils/adapter-registry.js');
+      const { getAvailableCommands } = await import('../src/utils/adapter-registry.js');
 
       const commands = getAvailableCommands();
 
@@ -81,7 +81,7 @@ describe('Dynamic CLI Adapter Loading', () => {
     });
 
     it('should provide adapter metadata including supported operations', async () => {
-      const { initializeAdapterRegistry, getAdapter } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry, getAdapter } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
@@ -99,7 +99,7 @@ describe('Dynamic CLI Adapter Loading', () => {
   describe('new adapters do not require CLI code changes', () => {
     it('should automatically support a newly registered adapter', async () => {
       const { globalRegistry } = await import('@icetype/adapters');
-      const { initializeAdapterRegistry, listAdapters } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry, listAdapters } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
@@ -125,7 +125,7 @@ describe('Dynamic CLI Adapter Loading', () => {
     });
 
     it('should generate help text dynamically from registered adapters', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
       const { globalRegistry } = await import('@icetype/adapters');
 
       initializeAdapterRegistry();
@@ -142,7 +142,7 @@ describe('Dynamic CLI Adapter Loading', () => {
 
       // This function should generate dynamic help text
       // Currently does not exist - RED phase
-      const { generateDynamicHelpText } = await import('../utils/adapter-registry.js');
+      const { generateDynamicHelpText } = await import('../src/utils/adapter-registry.js');
 
       const helpText = generateDynamicHelpText();
 
@@ -155,7 +155,7 @@ describe('Dynamic CLI Adapter Loading', () => {
       // This test verifies the architecture allows dynamic command routing
       // Currently cli.ts has a hardcoded switch statement - RED phase
 
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
       const { globalRegistry } = await import('@icetype/adapters');
 
       initializeAdapterRegistry();
@@ -173,7 +173,7 @@ describe('Dynamic CLI Adapter Loading', () => {
 
       // A dynamic command router should be able to handle this new adapter
       // Currently the CLI requires adding a case to the switch statement - RED phase
-      const { createDynamicCommandRouter } = await import('../utils/adapter-registry.js');
+      const { createDynamicCommandRouter } = await import('../src/utils/adapter-registry.js');
 
       const router = createDynamicCommandRouter();
 
@@ -185,13 +185,13 @@ describe('Dynamic CLI Adapter Loading', () => {
 
   describe('commands are registered dynamically', () => {
     it('should register export command for each adapter that supports it', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
       // This function should build a command registry from adapters
       // Currently does not exist - RED phase
-      const { buildCommandRegistry } = await import('../utils/adapter-registry.js');
+      const { buildCommandRegistry } = await import('../src/utils/adapter-registry.js');
 
       const commandRegistry = buildCommandRegistry();
 
@@ -203,14 +203,14 @@ describe('Dynamic CLI Adapter Loading', () => {
     });
 
     it('should provide a unified export handler that works with any adapter', async () => {
-      const { initializeAdapterRegistry, getAdapter } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry, getAdapter } = await import('../src/utils/adapter-registry.js');
       const { parseSchema } = await import('@icetype/core');
 
       initializeAdapterRegistry();
 
       // A generic export handler that works with any registered adapter
       // Currently each command file has its own handler - RED phase
-      const { createUnifiedExportHandler } = await import('../utils/adapter-registry.js');
+      const { createUnifiedExportHandler } = await import('../src/utils/adapter-registry.js');
 
       const exportHandler = createUnifiedExportHandler();
 
@@ -233,7 +233,7 @@ describe('Dynamic CLI Adapter Loading', () => {
     });
 
     it('should support registering custom command handlers for adapters', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
       const { globalRegistry } = await import('@icetype/adapters');
 
       initializeAdapterRegistry();
@@ -241,14 +241,14 @@ describe('Dynamic CLI Adapter Loading', () => {
       // Adapters should be able to register custom command handlers
       // beyond just export (e.g., migrate, sync, etc.)
       // Currently not supported - RED phase
-      const { registerAdapterCommand } = await import('../utils/adapter-registry.js');
+      const { registerAdapterCommand } = await import('../src/utils/adapter-registry.js');
 
       const customHandler = vi.fn().mockResolvedValue('Migration complete');
 
       registerAdapterCommand('postgres', 'migrate', customHandler);
 
       // The command should be callable
-      const { executeAdapterCommand } = await import('../utils/adapter-registry.js');
+      const { executeAdapterCommand } = await import('../src/utils/adapter-registry.js');
 
       await executeAdapterCommand('postgres', 'migrate', ['--version', '1']);
 
@@ -258,7 +258,7 @@ describe('Dynamic CLI Adapter Loading', () => {
 
   describe('unknown adapters show helpful error messages', () => {
     it('should throw descriptive error when adapter not found', async () => {
-      const { initializeAdapterRegistry, getAdapter } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry, getAdapter } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
@@ -266,7 +266,7 @@ describe('Dynamic CLI Adapter Loading', () => {
 
       // Currently returns undefined - should throw helpful error instead
       // This requires a getAdapterOrThrow function - RED phase
-      const { getAdapterOrThrow } = await import('../utils/adapter-registry.js');
+      const { getAdapterOrThrow } = await import('../src/utils/adapter-registry.js');
 
       expect(() => getAdapterOrThrow('nonexistent-adapter')).toThrow();
 
@@ -286,13 +286,13 @@ describe('Dynamic CLI Adapter Loading', () => {
     });
 
     it('should suggest similar adapter names for typos', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
       // This function should suggest corrections for typos
       // Currently does not exist - RED phase
-      const { suggestSimilarAdapters } = await import('../utils/adapter-registry.js');
+      const { suggestSimilarAdapters } = await import('../src/utils/adapter-registry.js');
 
       // Test typos
       const postgresSuggestions = suggestSimilarAdapters('postgress'); // double s
@@ -306,11 +306,11 @@ describe('Dynamic CLI Adapter Loading', () => {
     });
 
     it('should provide list of available adapters in error message', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
-      const { getAdapterOrThrow } = await import('../utils/adapter-registry.js');
+      const { getAdapterOrThrow } = await import('../src/utils/adapter-registry.js');
 
       try {
         getAdapterOrThrow('oracle');
@@ -326,13 +326,13 @@ describe('Dynamic CLI Adapter Loading', () => {
     });
 
     it('should show help for unknown subcommand on valid adapter', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
       // This function should validate subcommands and show available ones
       // Currently does not exist - RED phase
-      const { validateAdapterSubcommand } = await import('../utils/adapter-registry.js');
+      const { validateAdapterSubcommand } = await import('../src/utils/adapter-registry.js');
 
       expect(() => {
         validateAdapterSubcommand('postgres', 'invalidsubcommand');
@@ -357,12 +357,12 @@ describe('Dynamic CLI Adapter Loading', () => {
       // This test verifies that cli.ts can be refactored to use dynamic routing
       // Currently cli.ts uses a hardcoded switch statement - RED phase
 
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
       // A CLI router that dispatches based on registered adapters
-      const { createCliRouter } = await import('../utils/adapter-registry.js');
+      const { createCliRouter } = await import('../src/utils/adapter-registry.js');
 
       const router = createCliRouter();
 
@@ -378,13 +378,13 @@ describe('Dynamic CLI Adapter Loading', () => {
     });
 
     it('should support lazy loading of adapter implementations', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
       // Adapters should be lazily loaded to reduce startup time
       // Currently all adapters are imported at startup - RED phase
-      const { createLazyAdapterLoader } = await import('../utils/adapter-registry.js');
+      const { createLazyAdapterLoader } = await import('../src/utils/adapter-registry.js');
 
       const loader = createLazyAdapterLoader();
 
@@ -406,17 +406,17 @@ describe('Dynamic CLI Adapter Loading', () => {
 
 describe('Extended Adapter Interface for CLI', () => {
   beforeEach(async () => {
-    const { resetAdapterRegistry } = await import('../utils/adapter-registry.js');
+    const { resetAdapterRegistry } = await import('../src/utils/adapter-registry.js');
     resetAdapterRegistry();
   });
 
   afterEach(async () => {
-    const { resetAdapterRegistry } = await import('../utils/adapter-registry.js');
+    const { resetAdapterRegistry } = await import('../src/utils/adapter-registry.js');
     resetAdapterRegistry();
   });
 
   it('should have adapters with CLI metadata', async () => {
-    const { initializeAdapterRegistry, getAdapter } = await import('../utils/adapter-registry.js');
+    const { initializeAdapterRegistry, getAdapter } = await import('../src/utils/adapter-registry.js');
 
     initializeAdapterRegistry();
 
@@ -431,7 +431,7 @@ describe('Extended Adapter Interface for CLI', () => {
   });
 
   it('should have adapters with option definitions for parseArgs', async () => {
-    const { initializeAdapterRegistry, getAdapter } = await import('../utils/adapter-registry.js');
+    const { initializeAdapterRegistry, getAdapter } = await import('../src/utils/adapter-registry.js');
 
     initializeAdapterRegistry();
 

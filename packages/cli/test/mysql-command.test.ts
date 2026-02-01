@@ -142,7 +142,7 @@ describe('ice mysql command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
       // Import the command
-      const { mysqlExport } = await import('../commands/mysql.js');
+      const { mysqlExport } = await import('../src/commands/mysql.js');
 
       // Create a mock schema loader that returns our test schema
       const mockSchema = createValidSchema('User');
@@ -162,7 +162,7 @@ describe('ice mysql command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { _testHelpers } = await import('../commands/mysql.js');
+      const { _testHelpers } = await import('../src/commands/mysql.js');
 
       // Use test helper to bypass schema loading
       const mockSchema = createValidSchema('User');
@@ -173,7 +173,7 @@ describe('ice mysql command', () => {
     });
 
     it('should output to stdout by default', async () => {
-      const { _testHelpers } = await import('../commands/mysql.js');
+      const { _testHelpers } = await import('../src/commands/mysql.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {});
@@ -184,14 +184,14 @@ describe('ice mysql command', () => {
     });
 
     it('should error when --schema is missing', async () => {
-      const { mysqlExport } = await import('../commands/mysql.js');
+      const { mysqlExport } = await import('../src/commands/mysql.js');
 
       // Should throw or exit when no schema provided
       await expect(mysqlExport([])).rejects.toThrow('--schema is required');
     });
 
     it('should include indexes when schema has indexed fields', async () => {
-      const { _testHelpers } = await import('../commands/mysql.js');
+      const { _testHelpers } = await import('../src/commands/mysql.js');
 
       const mockSchema = createSchemaWithIndexes('IndexedEntity');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {
@@ -204,7 +204,7 @@ describe('ice mysql command', () => {
     });
 
     it('should handle multiple schemas in a file', async () => {
-      const { _testHelpers } = await import('../commands/mysql.js');
+      const { _testHelpers } = await import('../src/commands/mysql.js');
 
       const schemas = [
         createValidSchema('User'),
@@ -219,7 +219,7 @@ describe('ice mysql command', () => {
     });
 
     it('should generate valid MySQL SQL syntax', async () => {
-      const { _testHelpers } = await import('../commands/mysql.js');
+      const { _testHelpers } = await import('../src/commands/mysql.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {});
@@ -233,7 +233,7 @@ describe('ice mysql command', () => {
     });
 
     it('should include system columns by default', async () => {
-      const { _testHelpers } = await import('../commands/mysql.js');
+      const { _testHelpers } = await import('../src/commands/mysql.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {});
@@ -247,7 +247,7 @@ describe('ice mysql command', () => {
     });
 
     it('should support IF NOT EXISTS option', async () => {
-      const { _testHelpers } = await import('../commands/mysql.js');
+      const { _testHelpers } = await import('../src/commands/mysql.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {
@@ -258,7 +258,7 @@ describe('ice mysql command', () => {
     });
 
     it('should support engine option', async () => {
-      const { _testHelpers } = await import('../commands/mysql.js');
+      const { _testHelpers } = await import('../src/commands/mysql.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {
@@ -269,7 +269,7 @@ describe('ice mysql command', () => {
     });
 
     it('should support charset option', async () => {
-      const { _testHelpers } = await import('../commands/mysql.js');
+      const { _testHelpers } = await import('../src/commands/mysql.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {
@@ -280,7 +280,7 @@ describe('ice mysql command', () => {
     });
 
     it('should support collation option', async () => {
-      const { _testHelpers } = await import('../commands/mysql.js');
+      const { _testHelpers } = await import('../src/commands/mysql.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {
@@ -302,7 +302,7 @@ describe('mysql command argument parsing', () => {
   });
 
   it('should parse --schema option', async () => {
-    const { _testHelpers } = await import('../commands/mysql.js');
+    const { _testHelpers } = await import('../src/commands/mysql.js');
 
     const args = ['--schema', './schema.ts'];
     const parsed = _testHelpers.parseArgs(args);
@@ -311,7 +311,7 @@ describe('mysql command argument parsing', () => {
   });
 
   it('should parse -s short option for schema', async () => {
-    const { _testHelpers } = await import('../commands/mysql.js');
+    const { _testHelpers } = await import('../src/commands/mysql.js');
 
     const args = ['-s', './schema.ts'];
     const parsed = _testHelpers.parseArgs(args);
@@ -320,7 +320,7 @@ describe('mysql command argument parsing', () => {
   });
 
   it('should parse --output option', async () => {
-    const { _testHelpers } = await import('../commands/mysql.js');
+    const { _testHelpers } = await import('../src/commands/mysql.js');
 
     const args = ['--schema', './schema.ts', '--output', './tables.sql'];
     const parsed = _testHelpers.parseArgs(args);
@@ -329,7 +329,7 @@ describe('mysql command argument parsing', () => {
   });
 
   it('should parse -o short option for output', async () => {
-    const { _testHelpers } = await import('../commands/mysql.js');
+    const { _testHelpers } = await import('../src/commands/mysql.js');
 
     const args = ['-s', './schema.ts', '-o', './tables.sql'];
     const parsed = _testHelpers.parseArgs(args);
@@ -338,7 +338,7 @@ describe('mysql command argument parsing', () => {
   });
 
   it('should parse --engine option', async () => {
-    const { _testHelpers } = await import('../commands/mysql.js');
+    const { _testHelpers } = await import('../src/commands/mysql.js');
 
     const args = ['--schema', './schema.ts', '--engine', 'InnoDB'];
     const parsed = _testHelpers.parseArgs(args);
@@ -347,7 +347,7 @@ describe('mysql command argument parsing', () => {
   });
 
   it('should parse -e short option for engine', async () => {
-    const { _testHelpers } = await import('../commands/mysql.js');
+    const { _testHelpers } = await import('../src/commands/mysql.js');
 
     const args = ['-s', './schema.ts', '-e', 'MyISAM'];
     const parsed = _testHelpers.parseArgs(args);
@@ -356,7 +356,7 @@ describe('mysql command argument parsing', () => {
   });
 
   it('should parse --charset option', async () => {
-    const { _testHelpers } = await import('../commands/mysql.js');
+    const { _testHelpers } = await import('../src/commands/mysql.js');
 
     const args = ['--schema', './schema.ts', '--charset', 'utf8mb4'];
     const parsed = _testHelpers.parseArgs(args);
@@ -365,7 +365,7 @@ describe('mysql command argument parsing', () => {
   });
 
   it('should parse --collation option', async () => {
-    const { _testHelpers } = await import('../commands/mysql.js');
+    const { _testHelpers } = await import('../src/commands/mysql.js');
 
     const args = ['--schema', './schema.ts', '--collation', 'utf8mb4_unicode_ci'];
     const parsed = _testHelpers.parseArgs(args);
@@ -374,7 +374,7 @@ describe('mysql command argument parsing', () => {
   });
 
   it('should parse --if-not-exists option', async () => {
-    const { _testHelpers } = await import('../commands/mysql.js');
+    const { _testHelpers } = await import('../src/commands/mysql.js');
 
     const args = ['--schema', './schema.ts', '--if-not-exists'];
     const parsed = _testHelpers.parseArgs(args);
@@ -383,7 +383,7 @@ describe('mysql command argument parsing', () => {
   });
 
   it('should parse --indexes option', async () => {
-    const { _testHelpers } = await import('../commands/mysql.js');
+    const { _testHelpers } = await import('../src/commands/mysql.js');
 
     const args = ['--schema', './schema.ts', '--indexes'];
     const parsed = _testHelpers.parseArgs(args);
@@ -392,7 +392,7 @@ describe('mysql command argument parsing', () => {
   });
 
   it('should parse --quiet option', async () => {
-    const { _testHelpers } = await import('../commands/mysql.js');
+    const { _testHelpers } = await import('../src/commands/mysql.js');
 
     const args = ['--schema', './schema.ts', '--quiet'];
     const parsed = _testHelpers.parseArgs(args);
@@ -401,7 +401,7 @@ describe('mysql command argument parsing', () => {
   });
 
   it('should parse -q short option for quiet', async () => {
-    const { _testHelpers } = await import('../commands/mysql.js');
+    const { _testHelpers } = await import('../src/commands/mysql.js');
 
     const args = ['-s', './schema.ts', '-q'];
     const parsed = _testHelpers.parseArgs(args);
@@ -410,7 +410,7 @@ describe('mysql command argument parsing', () => {
   });
 
   it('should parse --verbose option', async () => {
-    const { _testHelpers } = await import('../commands/mysql.js');
+    const { _testHelpers } = await import('../src/commands/mysql.js');
 
     const args = ['--schema', './schema.ts', '--verbose'];
     const parsed = _testHelpers.parseArgs(args);
@@ -419,7 +419,7 @@ describe('mysql command argument parsing', () => {
   });
 
   it('should parse -v short option for verbose', async () => {
-    const { _testHelpers } = await import('../commands/mysql.js');
+    const { _testHelpers } = await import('../src/commands/mysql.js');
 
     const args = ['-s', './schema.ts', '-v'];
     const parsed = _testHelpers.parseArgs(args);

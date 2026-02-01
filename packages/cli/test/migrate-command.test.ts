@@ -26,7 +26,7 @@ vi.mock('node:fs', async () => {
 });
 
 // Mock the schema loader
-vi.mock('../utils/schema-loader.js', () => ({
+vi.mock('../src/utils/schema-loader.js', () => ({
   loadSchemaFile: vi.fn(),
 }));
 
@@ -98,7 +98,7 @@ function createLoadResult(schemas: IceTypeSchema[], errors: string[] = []): Load
  * Get the mocked loadSchemaFile function
  */
 async function getMockedLoadSchemaFile() {
-  const module = await import('../utils/schema-loader.js');
+  const module = await import('../src/utils/schema-loader.js');
   return vi.mocked(module.loadSchemaFile);
 }
 
@@ -120,7 +120,7 @@ describe('migrate generate command', () => {
 
   describe('error cases - missing arguments', () => {
     it('should error when --schema is not provided', async () => {
-      const { migrateGenerate } = await import('../commands/migrate.js');
+      const { migrateGenerate } = await import('../src/commands/migrate.js');
 
       await expect(migrateGenerate(['--from', '1', '--to', '2'])).rejects.toThrow(
         '--schema is required'
@@ -128,7 +128,7 @@ describe('migrate generate command', () => {
     });
 
     it('should error when --from is not provided', async () => {
-      const { migrateGenerate } = await import('../commands/migrate.js');
+      const { migrateGenerate } = await import('../src/commands/migrate.js');
 
       await expect(
         migrateGenerate(['--schema', './schema.ts', '--to', '2'])
@@ -136,7 +136,7 @@ describe('migrate generate command', () => {
     });
 
     it('should error when --to is not provided', async () => {
-      const { migrateGenerate } = await import('../commands/migrate.js');
+      const { migrateGenerate } = await import('../src/commands/migrate.js');
 
       await expect(
         migrateGenerate(['--schema', './schema.ts', '--from', '1'])
@@ -144,7 +144,7 @@ describe('migrate generate command', () => {
     });
 
     it('should error with unsupported dialect', async () => {
-      const { migrateGenerate } = await import('../commands/migrate.js');
+      const { migrateGenerate } = await import('../src/commands/migrate.js');
 
       await expect(
         migrateGenerate([
@@ -161,7 +161,7 @@ describe('migrate generate command', () => {
     });
 
     it('should error with unsupported format', async () => {
-      const { migrateGenerate } = await import('../commands/migrate.js');
+      const { migrateGenerate } = await import('../src/commands/migrate.js');
 
       await expect(
         migrateGenerate([
@@ -186,7 +186,7 @@ describe('migrate generate command', () => {
         errors: ['File not found: ./schema.ts'],
       });
 
-      const { migrateGenerate } = await import('../commands/migrate.js');
+      const { migrateGenerate } = await import('../src/commands/migrate.js');
 
       await expect(
         migrateGenerate(['--schema', './schema.ts', '--from', '1', '--to', '2'])
@@ -200,7 +200,7 @@ describe('migrate generate command', () => {
         errors: [],
       });
 
-      const { migrateGenerate } = await import('../commands/migrate.js');
+      const { migrateGenerate } = await import('../src/commands/migrate.js');
 
       await expect(
         migrateGenerate(['--schema', './schema.ts', '--from', '1', '--to', '2'])
@@ -219,7 +219,7 @@ describe('migrate generate command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateGenerate } = await import('../commands/migrate.js');
+      const { migrateGenerate } = await import('../src/commands/migrate.js');
 
       await migrateGenerate(['--schema', './schema.ts', '--from', '1', '--to', '2']);
 
@@ -239,7 +239,7 @@ describe('migrate generate command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateGenerate } = await import('../commands/migrate.js');
+      const { migrateGenerate } = await import('../src/commands/migrate.js');
 
       await migrateGenerate([
         '--schema',
@@ -274,7 +274,7 @@ describe('migrate generate command', () => {
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { migrateGenerate } = await import('../commands/migrate.js');
+      const { migrateGenerate } = await import('../src/commands/migrate.js');
 
       await migrateGenerate([
         '--schema',
@@ -313,7 +313,7 @@ describe('migrate diff command', () => {
 
   describe('error cases - missing arguments', () => {
     it('should error when --old is not provided', async () => {
-      const { migrateDiff } = await import('../commands/migrate.js');
+      const { migrateDiff } = await import('../src/commands/migrate.js');
 
       await expect(migrateDiff(['--new', './new-schema.ts'])).rejects.toThrow(
         '--old is required'
@@ -321,7 +321,7 @@ describe('migrate diff command', () => {
     });
 
     it('should error when --new is not provided', async () => {
-      const { migrateDiff } = await import('../commands/migrate.js');
+      const { migrateDiff } = await import('../src/commands/migrate.js');
 
       await expect(migrateDiff(['--old', './old-schema.ts'])).rejects.toThrow(
         '--new is required'
@@ -329,7 +329,7 @@ describe('migrate diff command', () => {
     });
 
     it('should error with unsupported dialect', async () => {
-      const { migrateDiff } = await import('../commands/migrate.js');
+      const { migrateDiff } = await import('../src/commands/migrate.js');
 
       await expect(
         migrateDiff(['--old', './old.ts', '--new', './new.ts', '--dialect', 'oracle'])
@@ -345,7 +345,7 @@ describe('migrate diff command', () => {
         errors: ['File not found: ./old-schema.ts'],
       });
 
-      const { migrateDiff } = await import('../commands/migrate.js');
+      const { migrateDiff } = await import('../src/commands/migrate.js');
 
       await expect(
         migrateDiff(['--old', './old-schema.ts', '--new', './new-schema.ts'])
@@ -359,7 +359,7 @@ describe('migrate diff command', () => {
         errors: [],
       });
 
-      const { migrateDiff } = await import('../commands/migrate.js');
+      const { migrateDiff } = await import('../src/commands/migrate.js');
 
       await expect(
         migrateDiff(['--old', './old-schema.ts', '--new', './new-schema.ts'])
@@ -380,7 +380,7 @@ describe('migrate diff command', () => {
           errors: ['Failed to parse new-schema.ts'],
         });
 
-      const { migrateDiff } = await import('../commands/migrate.js');
+      const { migrateDiff } = await import('../src/commands/migrate.js');
 
       await expect(
         migrateDiff(['--old', './old-schema.ts', '--new', './new-schema.ts'])
@@ -407,7 +407,7 @@ describe('migrate diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { migrateDiff } = await import('../commands/migrate.js');
+      const { migrateDiff } = await import('../src/commands/migrate.js');
 
       await migrateDiff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -433,7 +433,7 @@ describe('migrate diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { migrateDiff } = await import('../commands/migrate.js');
+      const { migrateDiff } = await import('../src/commands/migrate.js');
 
       await migrateDiff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -454,7 +454,7 @@ describe('migrate diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { migrateDiff } = await import('../commands/migrate.js');
+      const { migrateDiff } = await import('../src/commands/migrate.js');
 
       await migrateDiff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -479,7 +479,7 @@ describe('migrate diff command', () => {
         .mockResolvedValueOnce(createLoadResult([userSchema]))
         .mockResolvedValueOnce(createLoadResult([userSchema, postSchema]));
 
-      const { migrateDiff } = await import('../commands/migrate.js');
+      const { migrateDiff } = await import('../src/commands/migrate.js');
 
       await migrateDiff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -504,7 +504,7 @@ describe('migrate diff command', () => {
         .mockResolvedValueOnce(createLoadResult([userSchema, postSchema]))
         .mockResolvedValueOnce(createLoadResult([userSchema]));
 
-      const { migrateDiff } = await import('../commands/migrate.js');
+      const { migrateDiff } = await import('../src/commands/migrate.js');
 
       await migrateDiff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -530,7 +530,7 @@ describe('migrate diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { migrateDiff } = await import('../commands/migrate.js');
+      const { migrateDiff } = await import('../src/commands/migrate.js');
 
       await migrateDiff([
         '--old',
@@ -566,7 +566,7 @@ describe('migrate diff command', () => {
 
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { migrateDiff } = await import('../commands/migrate.js');
+      const { migrateDiff } = await import('../src/commands/migrate.js');
 
       await migrateDiff([
         '--old',
@@ -603,13 +603,13 @@ describe('migrate plan command', () => {
 
   describe('error cases', () => {
     it('should error when --schema is not provided', async () => {
-      const { migratePlan } = await import('../commands/migrate.js');
+      const { migratePlan } = await import('../src/commands/migrate.js');
 
       await expect(migratePlan([])).rejects.toThrow('--schema is required');
     });
 
     it('should error with unsupported dialect', async () => {
-      const { migratePlan } = await import('../commands/migrate.js');
+      const { migratePlan } = await import('../src/commands/migrate.js');
 
       await expect(
         migratePlan(['--schema', './schema.ts', '--dialect', 'oracle'])
@@ -623,7 +623,7 @@ describe('migrate plan command', () => {
         errors: ['File not found: ./schema.ts'],
       });
 
-      const { migratePlan } = await import('../commands/migrate.js');
+      const { migratePlan } = await import('../src/commands/migrate.js');
 
       await expect(migratePlan(['--schema', './schema.ts'])).rejects.toThrow(
         'File not found'
@@ -643,7 +643,7 @@ describe('migrate plan command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migratePlan } = await import('../commands/migrate.js');
+      const { migratePlan } = await import('../src/commands/migrate.js');
 
       await migratePlan(['--schema', './schema.ts']);
 
@@ -665,7 +665,7 @@ describe('migrate plan command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migratePlan } = await import('../commands/migrate.js');
+      const { migratePlan } = await import('../src/commands/migrate.js');
 
       await migratePlan(['--schema', './schema.ts', '--format', 'json', '--quiet']);
 
@@ -690,7 +690,7 @@ describe('migrate plan command', () => {
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { migratePlan } = await import('../commands/migrate.js');
+      const { migratePlan } = await import('../src/commands/migrate.js');
 
       await migratePlan(['--schema', './schema.ts', '--output', './plan.sql']);
 
@@ -714,7 +714,7 @@ describe('migrate plan command', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([userSchema, postSchema]));
 
-      const { migratePlan } = await import('../commands/migrate.js');
+      const { migratePlan } = await import('../src/commands/migrate.js');
 
       await migratePlan(['--schema', './schema.ts']);
 
@@ -742,7 +742,7 @@ describe('migrate command router', () => {
   });
 
   it('should show help when no subcommand is provided', async () => {
-    const { migrate } = await import('../commands/migrate.js');
+    const { migrate } = await import('../src/commands/migrate.js');
 
     try {
       await migrate([]);
@@ -758,7 +758,7 @@ describe('migrate command router', () => {
   });
 
   it('should show help with --help flag', async () => {
-    const { migrate } = await import('../commands/migrate.js');
+    const { migrate } = await import('../src/commands/migrate.js');
 
     try {
       await migrate(['--help']);
@@ -771,7 +771,7 @@ describe('migrate command router', () => {
   });
 
   it('should error on unknown subcommand', async () => {
-    const { migrate } = await import('../commands/migrate.js');
+    const { migrate } = await import('../src/commands/migrate.js');
 
     try {
       await migrate(['unknown']);

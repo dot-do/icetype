@@ -194,12 +194,12 @@ describe('ice project command', () => {
 
   describe('projectGenerate', () => {
     it('should export project generate function', async () => {
-      const { projectGenerate } = await import('../commands/project.js');
+      const { projectGenerate } = await import('../src/commands/project.js');
       expect(typeof projectGenerate).toBe('function');
     });
 
     it('should error when --schema is missing', async () => {
-      const { projectGenerate } = await import('../commands/project.js');
+      const { projectGenerate } = await import('../src/commands/project.js');
       await expect(projectGenerate([])).rejects.toThrow('--schema is required');
     });
 
@@ -332,13 +332,13 @@ describe('ice project command', () => {
     });
 
     it('should use default output path when --output is not specified', async () => {
-      const { projectGenerate } = await import('../commands/project.js');
+      const { projectGenerate } = await import('../src/commands/project.js');
       // Verify function exists and can accept arguments without output
       expect(typeof projectGenerate).toBe('function');
     });
 
     it('should use iceberg as default format', async () => {
-      const { projectGenerate } = await import('../commands/project.js');
+      const { projectGenerate } = await import('../src/commands/project.js');
       // Verify function exists with default format handling
       expect(typeof projectGenerate).toBe('function');
     });
@@ -346,7 +346,7 @@ describe('ice project command', () => {
 
   describe('error handling', () => {
     it('should throw error when file not found', async () => {
-      const { projectGenerate } = await import('../commands/project.js');
+      const { projectGenerate } = await import('../src/commands/project.js');
 
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
@@ -354,7 +354,7 @@ describe('ice project command', () => {
     });
 
     it('should throw error for invalid format option', async () => {
-      const { projectGenerate } = await import('../commands/project.js');
+      const { projectGenerate } = await import('../src/commands/project.js');
 
       // Mock file exists but format is invalid
       vi.mocked(fs.existsSync).mockReturnValue(true);
@@ -365,7 +365,7 @@ describe('ice project command', () => {
     });
 
     it('should handle file write errors', async () => {
-      const { projectGenerate } = await import('../commands/project.js');
+      const { projectGenerate } = await import('../src/commands/project.js');
 
       vi.mocked(fs.writeFileSync).mockImplementation(() => {
         throw new Error('Permission denied');
@@ -378,12 +378,12 @@ describe('ice project command', () => {
 
   describe('project parent command', () => {
     it('should export project function', async () => {
-      const { project } = await import('../commands/project.js');
+      const { project } = await import('../src/commands/project.js');
       expect(typeof project).toBe('function');
     });
 
     it('should route to generate subcommand', async () => {
-      const { project } = await import('../commands/project.js');
+      const { project } = await import('../src/commands/project.js');
 
       // Verify function can handle generate subcommand routing
       expect(typeof project).toBe('function');
@@ -597,7 +597,7 @@ describe('CLI integration', () => {
   });
 
   it('should include usage hint in error when --schema is missing', async () => {
-    const { projectGenerate } = await import('../commands/project.js');
+    const { projectGenerate } = await import('../src/commands/project.js');
 
     try {
       await projectGenerate([]);
@@ -609,7 +609,7 @@ describe('CLI integration', () => {
   });
 
   it('should validate format option values', async () => {
-    const { projectGenerate } = await import('../commands/project.js');
+    const { projectGenerate } = await import('../src/commands/project.js');
 
     try {
       await projectGenerate(['--schema', './schema.ts', '--format', 'xml']);

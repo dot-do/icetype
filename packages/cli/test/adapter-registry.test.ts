@@ -20,19 +20,19 @@ describe('CLI Adapter Registry Integration', () => {
   beforeEach(async () => {
     // Reset the adapter registry before each test to ensure isolation
     // This clears both the global registry and the initialized flag
-    const { resetAdapterRegistry } = await import('../utils/adapter-registry.js');
+    const { resetAdapterRegistry } = await import('../src/utils/adapter-registry.js');
     resetAdapterRegistry();
   });
 
   afterEach(async () => {
     // Clean up the adapter registry after each test
-    const { resetAdapterRegistry } = await import('../utils/adapter-registry.js');
+    const { resetAdapterRegistry } = await import('../src/utils/adapter-registry.js');
     resetAdapterRegistry();
   });
 
   describe('adapter registration at CLI startup', () => {
     it('should register all adapters when initializeAdapterRegistry is called', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
       const { globalRegistry } = await import('@icetype/adapters');
 
       // Call the initialization function
@@ -46,7 +46,7 @@ describe('CLI Adapter Registry Integration', () => {
     });
 
     it('should return the list of registered adapter names', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
       const { globalRegistry } = await import('@icetype/adapters');
 
       initializeAdapterRegistry();
@@ -60,7 +60,7 @@ describe('CLI Adapter Registry Integration', () => {
     });
 
     it('should not throw when called multiple times (idempotent)', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
 
       // Should not throw when called multiple times
       expect(() => {
@@ -72,7 +72,7 @@ describe('CLI Adapter Registry Integration', () => {
 
   describe('adapter retrieval from registry', () => {
     it('should retrieve postgres adapter from registry', async () => {
-      const { initializeAdapterRegistry, getAdapter } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry, getAdapter } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
@@ -83,7 +83,7 @@ describe('CLI Adapter Registry Integration', () => {
     });
 
     it('should retrieve duckdb adapter from registry', async () => {
-      const { initializeAdapterRegistry, getAdapter } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry, getAdapter } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
@@ -94,7 +94,7 @@ describe('CLI Adapter Registry Integration', () => {
     });
 
     it('should retrieve clickhouse adapter from registry', async () => {
-      const { initializeAdapterRegistry, getAdapter } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry, getAdapter } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
@@ -105,7 +105,7 @@ describe('CLI Adapter Registry Integration', () => {
     });
 
     it('should retrieve iceberg adapter from registry', async () => {
-      const { initializeAdapterRegistry, getAdapter } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry, getAdapter } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
@@ -116,7 +116,7 @@ describe('CLI Adapter Registry Integration', () => {
     });
 
     it('should return undefined for unknown adapter names', async () => {
-      const { initializeAdapterRegistry, getAdapter } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry, getAdapter } = await import('../src/utils/adapter-registry.js');
 
       initializeAdapterRegistry();
 
@@ -128,7 +128,7 @@ describe('CLI Adapter Registry Integration', () => {
 
   describe('registry.has() verification', () => {
     it('should return true for postgres adapter', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
       const { globalRegistry } = await import('@icetype/adapters');
 
       initializeAdapterRegistry();
@@ -137,7 +137,7 @@ describe('CLI Adapter Registry Integration', () => {
     });
 
     it('should return true for duckdb adapter', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
       const { globalRegistry } = await import('@icetype/adapters');
 
       initializeAdapterRegistry();
@@ -146,7 +146,7 @@ describe('CLI Adapter Registry Integration', () => {
     });
 
     it('should return true for clickhouse adapter', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
       const { globalRegistry } = await import('@icetype/adapters');
 
       initializeAdapterRegistry();
@@ -155,7 +155,7 @@ describe('CLI Adapter Registry Integration', () => {
     });
 
     it('should return true for iceberg adapter', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
       const { globalRegistry } = await import('@icetype/adapters');
 
       initializeAdapterRegistry();
@@ -164,7 +164,7 @@ describe('CLI Adapter Registry Integration', () => {
     });
 
     it('should return false for non-existent adapters', async () => {
-      const { initializeAdapterRegistry } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry } = await import('../src/utils/adapter-registry.js');
       const { globalRegistry } = await import('@icetype/adapters');
 
       initializeAdapterRegistry();
@@ -176,7 +176,7 @@ describe('CLI Adapter Registry Integration', () => {
 
   describe('adapter functionality verification', () => {
     it('should be able to transform schemas with retrieved postgres adapter', async () => {
-      const { initializeAdapterRegistry, getAdapter } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry, getAdapter } = await import('../src/utils/adapter-registry.js');
       const { parseSchema } = await import('@icetype/core');
 
       initializeAdapterRegistry();
@@ -197,7 +197,7 @@ describe('CLI Adapter Registry Integration', () => {
     });
 
     it('should be able to transform schemas with retrieved duckdb adapter', async () => {
-      const { initializeAdapterRegistry, getAdapter } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry, getAdapter } = await import('../src/utils/adapter-registry.js');
       const { parseSchema } = await import('@icetype/core');
 
       initializeAdapterRegistry();
@@ -216,7 +216,7 @@ describe('CLI Adapter Registry Integration', () => {
     });
 
     it('should be able to transform schemas with retrieved clickhouse adapter', async () => {
-      const { initializeAdapterRegistry, getAdapter } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry, getAdapter } = await import('../src/utils/adapter-registry.js');
       const { parseSchema } = await import('@icetype/core');
 
       initializeAdapterRegistry();
@@ -235,7 +235,7 @@ describe('CLI Adapter Registry Integration', () => {
     });
 
     it('should be able to serialize transformed output', async () => {
-      const { initializeAdapterRegistry, getAdapter } = await import('../utils/adapter-registry.js');
+      const { initializeAdapterRegistry, getAdapter } = await import('../src/utils/adapter-registry.js');
       const { parseSchema } = await import('@icetype/core');
 
       initializeAdapterRegistry();

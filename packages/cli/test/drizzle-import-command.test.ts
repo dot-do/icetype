@@ -185,7 +185,7 @@ describe('fieldToIceTypeString', () => {
   });
 
   it('should convert required uuid field', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'id',
@@ -202,7 +202,7 @@ describe('fieldToIceTypeString', () => {
   });
 
   it('should convert optional string field', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'nickname',
@@ -219,7 +219,7 @@ describe('fieldToIceTypeString', () => {
   });
 
   it('should convert indexed string field', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'email',
@@ -236,7 +236,7 @@ describe('fieldToIceTypeString', () => {
   });
 
   it('should convert array field', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'tags',
@@ -253,7 +253,7 @@ describe('fieldToIceTypeString', () => {
   });
 
   it('should handle decimal with precision and scale', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'price',
@@ -272,7 +272,7 @@ describe('fieldToIceTypeString', () => {
   });
 
   it('should handle string with length', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'code',
@@ -290,7 +290,7 @@ describe('fieldToIceTypeString', () => {
   });
 
   it('should handle field with unique flag', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'email',
@@ -321,7 +321,7 @@ describe('generateTypeScriptOutput', () => {
   });
 
   it('should generate TypeScript import statement', async () => {
-    const { generateTypeScriptOutput } = await import('../commands/drizzle-import.js');
+    const { generateTypeScriptOutput } = await import('../src/commands/drizzle-import.js');
 
     const schemas = [createValidSchema('User')];
     const output = generateTypeScriptOutput(schemas);
@@ -330,7 +330,7 @@ describe('generateTypeScriptOutput', () => {
   });
 
   it('should generate schema export with $type directive', async () => {
-    const { generateTypeScriptOutput } = await import('../commands/drizzle-import.js');
+    const { generateTypeScriptOutput } = await import('../src/commands/drizzle-import.js');
 
     const schemas = [createValidSchema('User')];
     const output = generateTypeScriptOutput(schemas);
@@ -340,7 +340,7 @@ describe('generateTypeScriptOutput', () => {
   });
 
   it('should include all fields', async () => {
-    const { generateTypeScriptOutput } = await import('../commands/drizzle-import.js');
+    const { generateTypeScriptOutput } = await import('../src/commands/drizzle-import.js');
 
     const schemas = [createValidSchema('User')];
     const output = generateTypeScriptOutput(schemas);
@@ -351,7 +351,7 @@ describe('generateTypeScriptOutput', () => {
   });
 
   it('should generate multiple schemas', async () => {
-    const { generateTypeScriptOutput } = await import('../commands/drizzle-import.js');
+    const { generateTypeScriptOutput } = await import('../src/commands/drizzle-import.js');
 
     const schemas = [
       createValidSchema('User'),
@@ -364,7 +364,7 @@ describe('generateTypeScriptOutput', () => {
   });
 
   it('should include directives if present', async () => {
-    const { generateTypeScriptOutput } = await import('../commands/drizzle-import.js');
+    const { generateTypeScriptOutput } = await import('../src/commands/drizzle-import.js');
 
     const schema = createValidSchema('User');
     schema.directives = {
@@ -393,7 +393,7 @@ describe('generateJsonOutput', () => {
   });
 
   it('should generate valid JSON', async () => {
-    const { generateJsonOutput } = await import('../commands/drizzle-import.js');
+    const { generateJsonOutput } = await import('../src/commands/drizzle-import.js');
 
     const schemas = [createValidSchema('User')];
     const output = generateJsonOutput(schemas);
@@ -402,7 +402,7 @@ describe('generateJsonOutput', () => {
   });
 
   it('should include $type in JSON output', async () => {
-    const { generateJsonOutput } = await import('../commands/drizzle-import.js');
+    const { generateJsonOutput } = await import('../src/commands/drizzle-import.js');
 
     const schemas = [createValidSchema('User')];
     const output = generateJsonOutput(schemas);
@@ -412,7 +412,7 @@ describe('generateJsonOutput', () => {
   });
 
   it('should include all fields in JSON output', async () => {
-    const { generateJsonOutput } = await import('../commands/drizzle-import.js');
+    const { generateJsonOutput } = await import('../src/commands/drizzle-import.js');
 
     const schemas = [createValidSchema('User')];
     const output = generateJsonOutput(schemas);
@@ -424,7 +424,7 @@ describe('generateJsonOutput', () => {
   });
 
   it('should handle multiple schemas in JSON', async () => {
-    const { generateJsonOutput } = await import('../commands/drizzle-import.js');
+    const { generateJsonOutput } = await import('../src/commands/drizzle-import.js');
 
     const schemas = [
       createValidSchema('User'),
@@ -453,7 +453,7 @@ describe('generateOutput', () => {
   });
 
   it('should generate TypeScript output for ts format', async () => {
-    const { generateOutput } = await import('../commands/drizzle-import.js');
+    const { generateOutput } = await import('../src/commands/drizzle-import.js');
 
     const schemas = [createValidSchema('User')];
     const output = generateOutput(schemas, 'ts');
@@ -462,7 +462,7 @@ describe('generateOutput', () => {
   });
 
   it('should generate JSON output for json format', async () => {
-    const { generateOutput } = await import('../commands/drizzle-import.js');
+    const { generateOutput } = await import('../src/commands/drizzle-import.js');
 
     const schemas = [createValidSchema('User')];
     const output = generateOutput(schemas, 'json');
@@ -471,7 +471,7 @@ describe('generateOutput', () => {
   });
 
   it('should throw for unknown format due to exhaustive type checking', async () => {
-    const { generateOutput } = await import('../commands/drizzle-import.js');
+    const { generateOutput } = await import('../src/commands/drizzle-import.js');
 
     const schemas = [createValidSchema('User')];
     // Cast to any to test exhaustive type checking
@@ -496,7 +496,7 @@ describe('ice drizzle import command', () => {
 
   describe('argument parsing', () => {
     it('should error when --input is missing', async () => {
-      const { drizzleImport } = await import('../commands/drizzle-import.js');
+      const { drizzleImport } = await import('../src/commands/drizzle-import.js');
 
       await expect(drizzleImport([])).rejects.toThrow('--input is required');
     });
@@ -581,7 +581,7 @@ describe('ice drizzle import command', () => {
 
   describe('format validation', () => {
     it('should reject invalid format values', async () => {
-      const { drizzleImport } = await import('../commands/drizzle-import.js');
+      const { drizzleImport } = await import('../src/commands/drizzle-import.js');
 
       // Mock the file read to fail before format validation
       const fsMock = await import('node:fs/promises');
@@ -608,7 +608,7 @@ describe('edge cases and error handling', () => {
   });
 
   it('should handle empty schema name gracefully', async () => {
-    const { generateTypeScriptOutput } = await import('../commands/drizzle-import.js');
+    const { generateTypeScriptOutput } = await import('../src/commands/drizzle-import.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('id', {
@@ -636,7 +636,7 @@ describe('edge cases and error handling', () => {
   });
 
   it('should handle schema with no fields', async () => {
-    const { generateTypeScriptOutput } = await import('../commands/drizzle-import.js');
+    const { generateTypeScriptOutput } = await import('../src/commands/drizzle-import.js');
 
     const schema: IceTypeSchema = {
       name: 'EmptyEntity',
@@ -654,7 +654,7 @@ describe('edge cases and error handling', () => {
 
   it('should handle empty schemas array', async () => {
     const { generateTypeScriptOutput, generateJsonOutput } = await import(
-      '../commands/drizzle-import.js'
+      '../src/commands/drizzle-import.js'
     );
 
     const tsOutput = generateTypeScriptOutput([]);
@@ -665,7 +665,7 @@ describe('edge cases and error handling', () => {
   });
 
   it('should handle field with all modifiers', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'complexField',
@@ -684,7 +684,7 @@ describe('edge cases and error handling', () => {
   });
 
   it('should handle special characters in field names', async () => {
-    const { generateTypeScriptOutput } = await import('../commands/drizzle-import.js');
+    const { generateTypeScriptOutput } = await import('../src/commands/drizzle-import.js');
 
     const fields = new Map<string, FieldDefinition>();
     fields.set('user_id', {
@@ -726,7 +726,7 @@ describe('schema directives handling', () => {
   });
 
   it('should include partitionBy directive', async () => {
-    const { generateTypeScriptOutput } = await import('../commands/drizzle-import.js');
+    const { generateTypeScriptOutput } = await import('../src/commands/drizzle-import.js');
 
     const schema = createValidSchema('User');
     schema.directives = {
@@ -740,7 +740,7 @@ describe('schema directives handling', () => {
   });
 
   it('should include index directive', async () => {
-    const { generateTypeScriptOutput } = await import('../commands/drizzle-import.js');
+    const { generateTypeScriptOutput } = await import('../src/commands/drizzle-import.js');
 
     const schema = createValidSchema('User');
     schema.directives = {
@@ -756,7 +756,7 @@ describe('schema directives handling', () => {
   });
 
   it('should include fts directive', async () => {
-    const { generateTypeScriptOutput } = await import('../commands/drizzle-import.js');
+    const { generateTypeScriptOutput } = await import('../src/commands/drizzle-import.js');
 
     const schema = createValidSchema('User');
     schema.directives = {
@@ -770,7 +770,7 @@ describe('schema directives handling', () => {
   });
 
   it('should include vector directive', async () => {
-    const { generateTypeScriptOutput } = await import('../commands/drizzle-import.js');
+    const { generateTypeScriptOutput } = await import('../src/commands/drizzle-import.js');
 
     const schema = createValidSchema('User');
     schema.directives = {
@@ -783,7 +783,7 @@ describe('schema directives handling', () => {
   });
 
   it('should include directives in JSON output', async () => {
-    const { generateJsonOutput } = await import('../commands/drizzle-import.js');
+    const { generateJsonOutput } = await import('../src/commands/drizzle-import.js');
 
     const schema = createValidSchema('User');
     schema.directives = {
@@ -813,7 +813,7 @@ describe('various field types', () => {
   });
 
   it('should handle timestamp type', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'createdAt',
@@ -830,7 +830,7 @@ describe('various field types', () => {
   });
 
   it('should handle json type', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'metadata',
@@ -847,7 +847,7 @@ describe('various field types', () => {
   });
 
   it('should handle boolean type', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'isActive',
@@ -864,7 +864,7 @@ describe('various field types', () => {
   });
 
   it('should handle binary type', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'data',
@@ -881,7 +881,7 @@ describe('various field types', () => {
   });
 
   it('should handle long type', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'bigNumber',
@@ -898,7 +898,7 @@ describe('various field types', () => {
   });
 
   it('should handle float type', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'ratio',
@@ -915,7 +915,7 @@ describe('various field types', () => {
   });
 
   it('should handle date type', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'birthday',
@@ -932,7 +932,7 @@ describe('various field types', () => {
   });
 
   it('should handle text type', async () => {
-    const { fieldToIceTypeString } = await import('../commands/drizzle-import.js');
+    const { fieldToIceTypeString } = await import('../src/commands/drizzle-import.js');
 
     const field: FieldDefinition = {
       name: 'content',

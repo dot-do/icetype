@@ -20,7 +20,7 @@ describe('SchemaDirectivesExtended export', () => {
   it('should export SchemaDirectivesExtended type', async () => {
     // This test verifies that SchemaDirectivesExtended is exported from the package
     // Currently this type is defined in parser.ts but not exported
-    const module = await import('../index.js');
+    const module = await import('../src/index.js');
 
     // The type should be available for import
     // At runtime we can only check if it's documented, but TypeScript
@@ -29,7 +29,7 @@ describe('SchemaDirectivesExtended export', () => {
 
     // To verify type export, we attempt to use it
     // This will fail at compile time if the type is not exported
-    type SchemaDirectivesExtendedTest = import('../index.js').SchemaDirectivesExtended;
+    type SchemaDirectivesExtendedTest = import('../src/index.js').SchemaDirectivesExtended;
 
     // Runtime check - verify related types exist
     // SchemaDirectivesExtended extends SchemaDirectives
@@ -41,7 +41,7 @@ describe('SchemaDirectivesExtended export', () => {
     // The type includes projection-specific fields: projection, from, expand, flatten
 
     // Import the type (will fail if not exported)
-    type SchemaDirectivesExtended = import('../index.js').SchemaDirectivesExtended;
+    type SchemaDirectivesExtended = import('../src/index.js').SchemaDirectivesExtended;
 
     // Create a conforming object
     const directives: SchemaDirectivesExtended = {
@@ -68,7 +68,7 @@ describe('Parser internal types export', () => {
   it('should export ParseTypeOptions type', async () => {
     // ParseTypeOptions is used internally in parser.ts for parseTypeString
     // It should be exported for consumers who want to customize parsing
-    type ParseTypeOptions = import('../index.js').ParseTypeOptions;
+    type ParseTypeOptions = import('../src/index.js').ParseTypeOptions;
 
     const options: ParseTypeOptions = {
       throwOnUnknownType: false,
@@ -83,7 +83,7 @@ describe('Parser internal types export', () => {
 
   it('should export ParseRelationOptions type', async () => {
     // ParseRelationOptions is used internally for parseRelationString
-    type ParseRelationOptions = import('../index.js').ParseRelationOptions;
+    type ParseRelationOptions = import('../src/index.js').ParseRelationOptions;
 
     const options: ParseRelationOptions = {
       fieldName: 'posts',
@@ -96,7 +96,7 @@ describe('Parser internal types export', () => {
 
   it('should export PRIMITIVE_TYPES constant', async () => {
     // The set of primitive types should be accessible for validation
-    const module = await import('../index.js');
+    const module = await import('../src/index.js');
 
     // Check if PRIMITIVE_TYPES is exported
     expect((module as Record<string, unknown>).PRIMITIVE_TYPES).toBeDefined();
@@ -108,7 +108,7 @@ describe('Parser internal types export', () => {
   });
 
   it('should export PARAMETRIC_TYPES constant', async () => {
-    const module = await import('../index.js');
+    const module = await import('../src/index.js');
 
     expect((module as Record<string, unknown>).PARAMETRIC_TYPES).toBeDefined();
 
@@ -118,7 +118,7 @@ describe('Parser internal types export', () => {
   });
 
   it('should export GENERIC_TYPES constant', async () => {
-    const module = await import('../index.js');
+    const module = await import('../src/index.js');
 
     expect((module as Record<string, unknown>).GENERIC_TYPES).toBeDefined();
 
@@ -128,7 +128,7 @@ describe('Parser internal types export', () => {
   });
 
   it('should export RELATION_OPERATORS constant', async () => {
-    const module = await import('../index.js');
+    const module = await import('../src/index.js');
 
     expect((module as Record<string, unknown>).RELATION_OPERATORS).toBeDefined();
 
@@ -140,7 +140,7 @@ describe('Parser internal types export', () => {
   });
 
   it('should export KNOWN_DIRECTIVES constant', async () => {
-    const module = await import('../index.js');
+    const module = await import('../src/index.js');
 
     expect((module as Record<string, unknown>).KNOWN_DIRECTIVES).toBeDefined();
 
@@ -158,7 +158,7 @@ describe('Parser internal types export', () => {
 describe('Type utilities export', () => {
   it('should export TYPE_ALIASES constant', async () => {
     // TYPE_ALIASES maps type aliases to canonical forms (e.g., bool -> boolean)
-    const module = await import('../index.js');
+    const module = await import('../src/index.js');
 
     expect((module as Record<string, unknown>).TYPE_ALIASES).toBeDefined();
 
@@ -168,7 +168,7 @@ describe('Type utilities export', () => {
 
   it('should export parseTypeString function', async () => {
     // parseTypeString is the core type parsing function
-    const module = await import('../index.js');
+    const module = await import('../src/index.js');
 
     expect((module as Record<string, unknown>).parseTypeString).toBeDefined();
     expect(typeof (module as Record<string, unknown>).parseTypeString).toBe('function');
@@ -186,7 +186,7 @@ describe('Type utilities export', () => {
 
   it('should export parseRelationString function', async () => {
     // parseRelationString parses relation definitions
-    const module = await import('../index.js');
+    const module = await import('../src/index.js');
 
     expect((module as Record<string, unknown>).parseRelationString).toBeDefined();
     expect(typeof (module as Record<string, unknown>).parseRelationString).toBe('function');
@@ -202,7 +202,7 @@ describe('Type utilities export', () => {
 
   it('should export isRelationString function', async () => {
     // isRelationString checks if a string contains a relation operator
-    const module = await import('../index.js');
+    const module = await import('../src/index.js');
 
     expect((module as Record<string, unknown>).isRelationString).toBeDefined();
     expect(typeof (module as Record<string, unknown>).isRelationString).toBe('function');
@@ -217,7 +217,7 @@ describe('Type utilities export', () => {
 
   it('should export parseDefaultValue function', async () => {
     // parseDefaultValue parses default values in field definitions
-    const module = await import('../index.js');
+    const module = await import('../src/index.js');
 
     expect((module as Record<string, unknown>).parseDefaultValue).toBeDefined();
     expect(typeof (module as Record<string, unknown>).parseDefaultValue).toBe('function');
@@ -233,7 +233,7 @@ describe('Type utilities export', () => {
 
   it('should export splitGenericParams function', async () => {
     // splitGenericParams splits generic type parameters respecting nesting
-    const module = await import('../index.js');
+    const module = await import('../src/index.js');
 
     expect((module as Record<string, unknown>).splitGenericParams).toBeDefined();
     expect(typeof (module as Record<string, unknown>).splitGenericParams).toBe('function');
@@ -255,13 +255,13 @@ describe('No runtime errors on import', () => {
   it('should import all public types without runtime errors', async () => {
     // This test ensures that importing the module does not throw
     expect(async () => {
-      const module = await import('../index.js');
+      const module = await import('../src/index.js');
       return module;
     }).not.toThrow();
   });
 
   it('should have all documented public exports', async () => {
-    const module = await import('../index.js');
+    const module = await import('../src/index.js');
 
     // Core types
     expect(module.parseSchema).toBeDefined();
@@ -308,7 +308,7 @@ describe('No runtime errors on import', () => {
   });
 
   it('should export type mapping utilities', async () => {
-    const module = await import('../index.js');
+    const module = await import('../src/index.js');
 
     // Type mappings
     expect(module.TYPE_MAPPINGS).toBeDefined();
@@ -323,7 +323,7 @@ describe('No runtime errors on import', () => {
   });
 
   it('should export branded type creators', async () => {
-    const module = await import('../index.js');
+    const module = await import('../src/index.js');
 
     expect(module.createSchemaId).toBeDefined();
     expect(module.createFieldId).toBeDefined();
@@ -333,7 +333,7 @@ describe('No runtime errors on import', () => {
   it('should export Brand type utility for creating custom branded types', () => {
     // The Brand<T, B> type utility should be exported for users to create
     // their own branded types following the same pattern as SchemaId, FieldId, etc.
-    type Brand<T, B extends string> = import('../index.js').Brand<T, B>;
+    type Brand<T, B extends string> = import('../src/index.js').Brand<T, B>;
 
     // Users can create custom branded types
     type CustomId = Brand<string, 'CustomId'>;
@@ -356,13 +356,13 @@ describe('No runtime errors on import', () => {
 describe('Type compatibility', () => {
   it('should allow using exported types in type annotations', () => {
     // These type imports will fail at compile time if types are not exported
-    type SchemaDefinition = import('../index.js').SchemaDefinition;
-    type IceTypeSchema = import('../index.js').IceTypeSchema;
-    type FieldDefinition = import('../index.js').FieldDefinition;
-    type RelationDefinition = import('../index.js').RelationDefinition;
-    type ParsedType = import('../index.js').ParsedType;
-    type ValidationResult = import('../index.js').ValidationResult;
-    type ValidationError = import('../index.js').ValidationError;
+    type SchemaDefinition = import('../src/index.js').SchemaDefinition;
+    type IceTypeSchema = import('../src/index.js').IceTypeSchema;
+    type FieldDefinition = import('../src/index.js').FieldDefinition;
+    type RelationDefinition = import('../src/index.js').RelationDefinition;
+    type ParsedType = import('../src/index.js').ParsedType;
+    type ValidationResult = import('../src/index.js').ValidationResult;
+    type ValidationError = import('../src/index.js').ValidationError;
 
     // Create objects using these types
     const schema: SchemaDefinition = {
@@ -375,8 +375,8 @@ describe('Type compatibility', () => {
 
   it('should allow using SchemaDirectivesExtended in complex type annotations', () => {
     // This specifically tests the issue: SchemaDirectivesExtended should be exported
-    type SchemaDirectivesExtended = import('../index.js').SchemaDirectivesExtended;
-    type SchemaDirectives = import('../index.js').SchemaDirectives;
+    type SchemaDirectivesExtended = import('../src/index.js').SchemaDirectivesExtended;
+    type SchemaDirectives = import('../src/index.js').SchemaDirectives;
 
     // SchemaDirectivesExtended should extend SchemaDirectives
     const baseDirectives: SchemaDirectives = {

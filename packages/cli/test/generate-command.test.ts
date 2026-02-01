@@ -256,14 +256,14 @@ describe('runGeneration function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { runGeneration } = await import('../commands/generate.js');
+      const { runGeneration } = await import('../src/commands/generate.js');
 
       await runGeneration({
         schema: './schema.ts',
@@ -288,14 +288,14 @@ describe('runGeneration function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { runGeneration } = await import('../commands/generate.js');
+      const { runGeneration } = await import('../src/commands/generate.js');
 
       await runGeneration({
         schema: './schema.ts',
@@ -320,14 +320,14 @@ describe('runGeneration function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { runGeneration } = await import('../commands/generate.js');
+      const { runGeneration } = await import('../src/commands/generate.js');
 
       await runGeneration({
         schema: './schema.js',
@@ -350,14 +350,14 @@ describe('runGeneration function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { runGeneration } = await import('../commands/generate.js');
+      const { runGeneration } = await import('../src/commands/generate.js');
 
       await runGeneration({
         schema: './schema.mjs',
@@ -380,14 +380,14 @@ describe('runGeneration function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { runGeneration } = await import('../commands/generate.js');
+      const { runGeneration } = await import('../src/commands/generate.js');
 
       await runGeneration({
         schema: './schema.json',
@@ -410,14 +410,14 @@ describe('runGeneration function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { runGeneration } = await import('../commands/generate.js');
+      const { runGeneration } = await import('../src/commands/generate.js');
 
       await runGeneration({
         schema: './schema.ts',
@@ -440,14 +440,14 @@ describe('runGeneration function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [],
           errors: ['File not found: ./missing-schema.ts'],
         }),
       }));
 
-      const { runGeneration } = await import('../commands/generate.js');
+      const { runGeneration } = await import('../src/commands/generate.js');
 
       await expect(
         runGeneration({
@@ -466,14 +466,14 @@ describe('runGeneration function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [],
           errors: [],
         }),
       }));
 
-      const { runGeneration } = await import('../commands/generate.js');
+      const { runGeneration } = await import('../src/commands/generate.js');
 
       await expect(
         runGeneration({
@@ -496,14 +496,14 @@ describe('runGeneration function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { runGeneration } = await import('../commands/generate.js');
+      const { runGeneration } = await import('../src/commands/generate.js');
 
       await expect(
         runGeneration({
@@ -527,14 +527,14 @@ describe('runGeneration function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { runGeneration } = await import('../commands/generate.js');
+      const { runGeneration } = await import('../src/commands/generate.js');
 
       await expect(
         runGeneration({
@@ -553,14 +553,14 @@ describe('runGeneration function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [],
           errors: ['Error 1: Invalid syntax', 'Error 2: Missing field'],
         }),
       }));
 
-      const { runGeneration } = await import('../commands/generate.js');
+      const { runGeneration } = await import('../src/commands/generate.js');
 
       // Both errors should be included in the thrown error message
       try {
@@ -601,15 +601,15 @@ describe('generate CLI function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn(),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Commands now throw errors (main CLI catches and exits)
       await expect(generate([])).rejects.toThrow('--schema is required');
@@ -630,15 +630,15 @@ describe('generate CLI function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: mockLoadSchemaFile,
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await generate(['-s', './schema.ts', '-q']);
 
@@ -657,18 +657,18 @@ describe('generate CLI function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await generate(['-s', './schema.ts', '-o', './custom.ts', '-q']);
 
@@ -688,18 +688,18 @@ describe('generate CLI function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Reset mock before this specific test
       mockConsoleLog.mockClear();
@@ -721,18 +721,18 @@ describe('generate CLI function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await generate(['--schema', './schema.ts', '--verbose']);
 
@@ -752,18 +752,18 @@ describe('generate CLI function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await generate(['--schema', './my-schema.ts', '-q']);
 
@@ -785,18 +785,18 @@ describe('generate CLI function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: mockWatchGenerate,
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Note: watchGenerate never resolves normally, so we mock it to resolve immediately
       await generate(['--schema', './schema.ts', '--watch', '-q']);
@@ -822,18 +822,18 @@ describe('generate CLI function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema() }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: mockWatchGenerate,
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await generate(['-s', './schema.ts', '-w', '-q']);
 
@@ -851,18 +851,18 @@ describe('generate CLI function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [],
           errors: ['File not found'],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Commands now throw errors (main CLI catches and exits)
       await expect(generate(['--schema', './missing.ts'])).rejects.toThrow();
@@ -877,18 +877,18 @@ describe('generate CLI function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [],
           errors: ['Schema syntax error'],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await expect(generate(['--schema', './invalid.ts'])).rejects.toThrow('Schema syntax error');
     });
@@ -904,18 +904,18 @@ describe('generate CLI function', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema() }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/watcher.js', () => ({
+      vi.doMock('../src/utils/watcher.js', () => ({
         watchGenerate: vi.fn(),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await expect(generate(['--schema', './schema.ts'])).rejects.toThrow('string exception');
     });
@@ -949,7 +949,7 @@ describe('multiple schema generation', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [
           { name: 'User', schema: userSchema },
@@ -959,7 +959,7 @@ describe('multiple schema generation', () => {
       }),
     }));
 
-    const { runGeneration } = await import('../commands/generate.js');
+    const { runGeneration } = await import('../src/commands/generate.js');
 
     await runGeneration({
       schema: './schema.ts',
@@ -988,14 +988,14 @@ describe('multiple schema generation', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'User', schema: mockSchema }],
         errors: [],
       }),
     }));
 
-    const { runGeneration } = await import('../commands/generate.js');
+    const { runGeneration } = await import('../src/commands/generate.js');
 
     await runGeneration({
       schema: './schema.ts',
@@ -1023,14 +1023,14 @@ describe('multiple schema generation', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'Post', schema: mockSchema }],
         errors: [],
       }),
     }));
 
-    const { runGeneration } = await import('../commands/generate.js');
+    const { runGeneration } = await import('../src/commands/generate.js');
 
     await runGeneration({
       schema: './schema.ts',
@@ -1098,11 +1098,11 @@ describe('help flag', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn(),
     }));
 
-    vi.doMock('../utils/watcher.js', () => ({
+    vi.doMock('../src/utils/watcher.js', () => ({
       watchGenerate: vi.fn(),
     }));
 
@@ -1110,7 +1110,7 @@ describe('help flag', () => {
       throw new Error('process.exit called');
     });
 
-    const { generate } = await import('../commands/generate.js');
+    const { generate } = await import('../src/commands/generate.js');
 
     try {
       await generate(['--help']);
@@ -1135,11 +1135,11 @@ describe('help flag', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn(),
     }));
 
-    vi.doMock('../utils/watcher.js', () => ({
+    vi.doMock('../src/utils/watcher.js', () => ({
       watchGenerate: vi.fn(),
     }));
 
@@ -1147,7 +1147,7 @@ describe('help flag', () => {
       throw new Error('process.exit called');
     });
 
-    const { generate } = await import('../commands/generate.js');
+    const { generate } = await import('../src/commands/generate.js');
 
     try {
       await generate(['-h']);
@@ -1188,21 +1188,21 @@ describe('watch mode callback execution', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'User', schema: mockSchema }],
         errors: [],
       }),
     }));
 
-    vi.doMock('../utils/watcher.js', () => ({
+    vi.doMock('../src/utils/watcher.js', () => ({
       watchGenerate: vi.fn().mockImplementation((options: { runGeneration: () => Promise<void> }) => {
         capturedRunGeneration = options.runGeneration;
         return Promise.resolve();
       }),
     }));
 
-    const { generate } = await import('../commands/generate.js');
+    const { generate } = await import('../src/commands/generate.js');
 
     await generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -1261,14 +1261,14 @@ describe('additional type mappings', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'Entity', schema }],
         errors: [],
       }),
     }));
 
-    const { runGeneration } = await import('../commands/generate.js');
+    const { runGeneration } = await import('../src/commands/generate.js');
 
     await runGeneration({
       schema: './schema.ts',
@@ -1311,14 +1311,14 @@ describe('additional type mappings', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'Event', schema }],
         errors: [],
       }),
     }));
 
-    const { runGeneration } = await import('../commands/generate.js');
+    const { runGeneration } = await import('../src/commands/generate.js');
 
     await runGeneration({
       schema: './schema.ts',
@@ -1361,14 +1361,14 @@ describe('additional type mappings', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'User', schema }],
         errors: [],
       }),
     }));
 
-    const { runGeneration } = await import('../commands/generate.js');
+    const { runGeneration } = await import('../src/commands/generate.js');
 
     await runGeneration({
       schema: './schema.ts',
@@ -1411,14 +1411,14 @@ describe('additional type mappings', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'Collection', schema }],
         errors: [],
       }),
     }));
 
-    const { runGeneration } = await import('../commands/generate.js');
+    const { runGeneration } = await import('../src/commands/generate.js');
 
     await runGeneration({
       schema: './schema.ts',
@@ -1461,14 +1461,14 @@ describe('additional type mappings', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'Storage', schema }],
         errors: [],
       }),
     }));
 
-    const { runGeneration } = await import('../commands/generate.js');
+    const { runGeneration } = await import('../src/commands/generate.js');
 
     await runGeneration({
       schema: './schema.ts',
@@ -1526,14 +1526,14 @@ describe('nullable style configuration', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'User', schema }],
         errors: [],
       }),
     }));
 
-    const { runGeneration } = await import('../commands/generate.js');
+    const { runGeneration } = await import('../src/commands/generate.js');
 
     await runGeneration({
       schema: './schema.ts',
@@ -1576,14 +1576,14 @@ describe('nullable style configuration', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'User', schema }],
         errors: [],
       }),
     }));
 
-    const { runGeneration } = await import('../commands/generate.js');
+    const { runGeneration } = await import('../src/commands/generate.js');
 
     await runGeneration({
       schema: './schema.ts',
@@ -1628,14 +1628,14 @@ describe('nullable style configuration', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'User', schema }],
         errors: [],
       }),
     }));
 
-    const { runGeneration } = await import('../commands/generate.js');
+    const { runGeneration } = await import('../src/commands/generate.js');
 
     await runGeneration({
       schema: './schema.ts',
@@ -1684,14 +1684,14 @@ describe('nullable style configuration', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'Post', schema }],
         errors: [],
       }),
     }));
 
-    const { runGeneration } = await import('../commands/generate.js');
+    const { runGeneration } = await import('../src/commands/generate.js');
 
     await runGeneration({
       schema: './schema.ts',
@@ -1735,14 +1735,14 @@ describe('nullable style configuration', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'User', schema }],
         errors: [],
       }),
     }));
 
-    const { runGeneration } = await import('../commands/generate.js');
+    const { runGeneration } = await import('../src/commands/generate.js');
 
     await runGeneration({
       schema: './schema.ts',
@@ -1788,18 +1788,18 @@ describe('nullable style configuration', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn().mockResolvedValue({
         schemas: [{ name: 'User', schema }],
         errors: [],
       }),
     }));
 
-    vi.doMock('../utils/watcher.js', () => ({
+    vi.doMock('../src/utils/watcher.js', () => ({
       watchGenerate: vi.fn(),
     }));
 
-    const { generate } = await import('../commands/generate.js');
+    const { generate } = await import('../src/commands/generate.js');
 
     await generate(['--schema', './schema.ts', '--nullable-style', 'optional', '-q']);
 
@@ -1816,15 +1816,15 @@ describe('nullable style configuration', () => {
       };
     });
 
-    vi.doMock('../utils/schema-loader.js', () => ({
+    vi.doMock('../src/utils/schema-loader.js', () => ({
       loadSchemaFile: vi.fn(),
     }));
 
-    vi.doMock('../utils/watcher.js', () => ({
+    vi.doMock('../src/utils/watcher.js', () => ({
       watchGenerate: vi.fn(),
     }));
 
-    const { generate } = await import('../commands/generate.js');
+    const { generate } = await import('../src/commands/generate.js');
 
     await expect(
       generate(['--schema', './schema.ts', '--nullable-style', 'invalid', '-q'])

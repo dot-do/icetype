@@ -410,7 +410,7 @@ describe('ice prisma export command', () => {
 
   describe('argument parsing', () => {
     it('should error when --schema is missing', async () => {
-      const { prismaExport } = await import('../commands/prisma.js');
+      const { prismaExport } = await import('../src/commands/prisma.js');
 
       // Commands now throw errors (main CLI catches and exits)
       await expect(prismaExport([])).rejects.toThrow('--schema is required');
@@ -642,7 +642,7 @@ describe('ice prisma export command', () => {
   describe('output handling', () => {
     it('should output to stdout by default when no --output specified', async () => {
       // Create a simple mock for loadSchemaFile
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'TestSchema', schema: createValidSchema('TestSchema') }],
           errors: [],
@@ -650,7 +650,7 @@ describe('ice prisma export command', () => {
       }));
 
       // Re-import to get mocked version
-      const { prismaExport } = await import('../commands/prisma.js');
+      const { prismaExport } = await import('../src/commands/prisma.js');
 
       // Mock fs.existsSync to return true for schema file
       vi.mocked(fs.existsSync).mockReturnValue(true);
@@ -689,7 +689,7 @@ describe('ice prisma export command', () => {
     it('should throw error when file not found', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
-      const { prismaExport } = await import('../commands/prisma.js');
+      const { prismaExport } = await import('../src/commands/prisma.js');
 
       // Commands now throw errors (main CLI catches and exits)
       await expect(prismaExport(['--schema', './nonexistent.ts'])).rejects.toThrow();

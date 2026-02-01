@@ -274,7 +274,7 @@ describe('Coverage Configuration Verification', () => {
    * Verify that vitest.config.ts has proper per-file thresholds configured.
    */
   it('should have vitest.config.ts with per-file thresholds', () => {
-    const configPath = path.resolve(__dirname, '../../vitest.config.ts');
+    const configPath = path.resolve(__dirname, '../vitest.config.ts');
     const configContent = fs.readFileSync(configPath, 'utf-8');
 
     // Verify parser threshold is configured

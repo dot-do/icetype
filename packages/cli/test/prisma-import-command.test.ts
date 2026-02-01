@@ -126,7 +126,7 @@ describe('ice prisma import command', () => {
 
   describe('formatAsTypeScript', () => {
     it('should generate valid TypeScript code with import statement', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
       const schemas = createSampleSchemas();
 
       const output = _testHelpers.formatAsTypeScript(schemas);
@@ -136,7 +136,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should include all schema names in the output', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
       const schemas = createSampleSchemas();
 
       const output = _testHelpers.formatAsTypeScript(schemas);
@@ -146,7 +146,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should include field definitions for each schema', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
       const schemas = createSampleSchemas();
 
       const output = _testHelpers.formatAsTypeScript(schemas);
@@ -157,7 +157,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should export individual schema types', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
       const schemas = createSampleSchemas();
 
       const output = _testHelpers.formatAsTypeScript(schemas);
@@ -167,7 +167,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should include header comment', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
       const schemas = createSampleSchemas();
 
       const output = _testHelpers.formatAsTypeScript(schemas);
@@ -177,7 +177,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should handle empty schemas array', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const output = _testHelpers.formatAsTypeScript([]);
 
@@ -186,7 +186,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should escape single quotes in field values', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
       const schemas: IceTypeSchemaDefinition[] = [
         {
           $type: 'Test',
@@ -206,7 +206,7 @@ describe('ice prisma import command', () => {
 
   describe('formatAsJson', () => {
     it('should generate valid JSON output', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
       const schemas = createSampleSchemas();
 
       const output = _testHelpers.formatAsJson(schemas);
@@ -217,7 +217,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should include all schema properties in JSON', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
       const schemas = createSampleSchemas();
 
       const output = _testHelpers.formatAsJson(schemas);
@@ -229,7 +229,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should pretty-print JSON with indentation', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
       const schemas = createSampleSchemas();
 
       const output = _testHelpers.formatAsJson(schemas);
@@ -240,7 +240,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should handle empty schemas array', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const output = _testHelpers.formatAsJson([]);
       const parsed = JSON.parse(output);
@@ -255,7 +255,7 @@ describe('ice prisma import command', () => {
 
   describe('formatSchemas', () => {
     it('should format as TypeScript when format is ts', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
       const schemas = createSampleSchemas();
 
       const output = _testHelpers.formatSchemas(schemas, 'ts');
@@ -264,7 +264,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should format as JSON when format is json', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
       const schemas = createSampleSchemas();
 
       const output = _testHelpers.formatSchemas(schemas, 'json');
@@ -273,7 +273,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should throw InvalidOptionError for invalid format', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
       const schemas = createSampleSchemas();
 
       expect(() => {
@@ -289,7 +289,7 @@ describe('ice prisma import command', () => {
 
   describe('parseCliArgs', () => {
     it('should parse --input option', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const result = _testHelpers.parseCliArgs(['--input', './schema.prisma']);
 
@@ -297,7 +297,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should parse -i shorthand for input', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const result = _testHelpers.parseCliArgs(['-i', './schema.prisma']);
 
@@ -305,7 +305,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should parse --output option', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const result = _testHelpers.parseCliArgs(['-i', 'in.prisma', '--output', './out.ts']);
 
@@ -313,7 +313,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should parse -o shorthand for output', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const result = _testHelpers.parseCliArgs(['-i', 'in.prisma', '-o', './out.ts']);
 
@@ -321,7 +321,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should parse --format option', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const result = _testHelpers.parseCliArgs(['-i', 'in.prisma', '--format', 'json']);
 
@@ -329,7 +329,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should parse -f shorthand for format', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const result = _testHelpers.parseCliArgs(['-i', 'in.prisma', '-f', 'ts']);
 
@@ -337,7 +337,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should parse --quiet option', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const result = _testHelpers.parseCliArgs(['-i', 'in.prisma', '--quiet']);
 
@@ -345,7 +345,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should parse -q shorthand for quiet', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const result = _testHelpers.parseCliArgs(['-i', 'in.prisma', '-q']);
 
@@ -353,7 +353,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should parse --verbose option', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const result = _testHelpers.parseCliArgs(['-i', 'in.prisma', '--verbose']);
 
@@ -361,7 +361,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should parse -v shorthand for verbose', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const result = _testHelpers.parseCliArgs(['-i', 'in.prisma', '-v']);
 
@@ -369,7 +369,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should parse --no-relations option', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const result = _testHelpers.parseCliArgs(['-i', 'in.prisma', '--no-relations']);
 
@@ -377,7 +377,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should parse --no-unique-to-indexed option', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const result = _testHelpers.parseCliArgs(['-i', 'in.prisma', '--no-unique-to-indexed']);
 
@@ -385,7 +385,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should default boolean options to false', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const result = _testHelpers.parseCliArgs(['-i', 'in.prisma']);
 
@@ -396,7 +396,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should handle combined options', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       const result = _testHelpers.parseCliArgs([
         '-i',
@@ -423,7 +423,7 @@ describe('ice prisma import command', () => {
 
   describe('prismaImport', () => {
     it('should error when --input is missing', async () => {
-      const { prismaImport } = await import('../commands/prisma-import.js');
+      const { prismaImport } = await import('../src/commands/prisma-import.js');
 
       await expect(prismaImport([])).rejects.toThrow('--input is required');
     });
@@ -432,7 +432,7 @@ describe('ice prisma import command', () => {
       vi.mocked(fsPromises.readFile).mockResolvedValue(SIMPLE_PRISMA_SCHEMA);
       mockConsoleLog.mockClear();
 
-      const { prismaImport } = await import('../commands/prisma-import.js');
+      const { prismaImport } = await import('../src/commands/prisma-import.js');
 
       await prismaImport(['-i', './schema.prisma', '-q']);
 
@@ -450,7 +450,7 @@ describe('ice prisma import command', () => {
       vi.mocked(fsPromises.readFile).mockResolvedValue(SIMPLE_PRISMA_SCHEMA);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { prismaImport } = await import('../commands/prisma-import.js');
+      const { prismaImport } = await import('../src/commands/prisma-import.js');
 
       await prismaImport(['-i', './schema.prisma', '-o', './output.ts', '-q']);
 
@@ -464,7 +464,7 @@ describe('ice prisma import command', () => {
       vi.mocked(fsPromises.readFile).mockResolvedValue(SIMPLE_PRISMA_SCHEMA);
       mockConsoleLog.mockClear();
 
-      const { prismaImport } = await import('../commands/prisma-import.js');
+      const { prismaImport } = await import('../src/commands/prisma-import.js');
 
       await prismaImport(['-i', './schema.prisma', '-f', 'json', '-q']);
 
@@ -486,7 +486,7 @@ describe('ice prisma import command', () => {
     it('should throw error for non-existent input file', async () => {
       vi.mocked(fsPromises.readFile).mockRejectedValue(new Error('ENOENT: no such file'));
 
-      const { prismaImport } = await import('../commands/prisma-import.js');
+      const { prismaImport } = await import('../src/commands/prisma-import.js');
 
       await expect(prismaImport(['-i', './nonexistent.prisma', '-q'])).rejects.toThrow(
         'Failed to parse Prisma schema'
@@ -494,7 +494,7 @@ describe('ice prisma import command', () => {
     });
 
     it('should throw error for invalid format option', async () => {
-      const { prismaImport } = await import('../commands/prisma-import.js');
+      const { prismaImport } = await import('../src/commands/prisma-import.js');
 
       await expect(prismaImport(['-i', './schema.prisma', '-f', 'yaml', '-q'])).rejects.toThrow(
         'Invalid value'
@@ -505,7 +505,7 @@ describe('ice prisma import command', () => {
       vi.mocked(fsPromises.readFile).mockResolvedValue(SAMPLE_PRISMA_SCHEMA);
       mockConsoleLog.mockClear();
 
-      const { prismaImport } = await import('../commands/prisma-import.js');
+      const { prismaImport } = await import('../src/commands/prisma-import.js');
 
       await prismaImport(['-i', './schema.prisma', '--no-relations', '-q']);
 
@@ -527,7 +527,7 @@ describe('ice prisma import command', () => {
         throw new Error('Permission denied');
       });
 
-      const { prismaImport } = await import('../commands/prisma-import.js');
+      const { prismaImport } = await import('../src/commands/prisma-import.js');
 
       await expect(
         prismaImport(['-i', './schema.prisma', '-o', '/root/output.ts', '-q'])
@@ -542,7 +542,7 @@ describe('ice prisma import command', () => {
         }) as never);
       mockConsoleLog.mockClear();
 
-      const { prismaImport } = await import('../commands/prisma-import.js');
+      const { prismaImport } = await import('../src/commands/prisma-import.js');
 
       await expect(prismaImport(['--help'])).rejects.toThrow('process.exit called');
 
@@ -562,7 +562,7 @@ describe('ice prisma import command', () => {
         }) as never);
       mockConsoleLog.mockClear();
 
-      const { prismaImport } = await import('../commands/prisma-import.js');
+      const { prismaImport } = await import('../src/commands/prisma-import.js');
 
       await expect(prismaImport(['-h'])).rejects.toThrow('process.exit called');
 
@@ -575,7 +575,7 @@ describe('ice prisma import command', () => {
       vi.mocked(fsPromises.readFile).mockResolvedValue(SAMPLE_PRISMA_SCHEMA);
       mockConsoleLog.mockClear();
 
-      const { prismaImport } = await import('../commands/prisma-import.js');
+      const { prismaImport } = await import('../src/commands/prisma-import.js');
 
       await prismaImport(['-i', './schema.prisma', '-q']);
 
@@ -603,7 +603,7 @@ model User {
       vi.mocked(fsPromises.readFile).mockResolvedValue(schemaWithEnum);
       mockConsoleLog.mockClear();
 
-      const { prismaImport } = await import('../commands/prisma-import.js');
+      const { prismaImport } = await import('../src/commands/prisma-import.js');
 
       await prismaImport(['-i', './schema.prisma', '-q']);
 
@@ -622,7 +622,7 @@ model Event {
       vi.mocked(fsPromises.readFile).mockResolvedValue(schemaWithDateTime);
       mockConsoleLog.mockClear();
 
-      const { prismaImport } = await import('../commands/prisma-import.js');
+      const { prismaImport } = await import('../src/commands/prisma-import.js');
 
       await prismaImport(['-i', './schema.prisma', '-q']);
 
@@ -645,7 +645,7 @@ model Event {
 
   describe('VALID_FORMATS', () => {
     it('should include ts and json formats', async () => {
-      const { _testHelpers } = await import('../commands/prisma-import.js');
+      const { _testHelpers } = await import('../src/commands/prisma-import.js');
 
       expect(_testHelpers.VALID_FORMATS).toContain('ts');
       expect(_testHelpers.VALID_FORMATS).toContain('json');

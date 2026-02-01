@@ -44,7 +44,7 @@ vi.mock('node:fs', async () => {
 });
 
 // Mock the schema loader
-vi.mock('../utils/schema-loader.js', () => ({
+vi.mock('../src/utils/schema-loader.js', () => ({
   loadSchemaFile: vi.fn(),
 }));
 
@@ -116,7 +116,7 @@ function createLoadResult(schemas: IceTypeSchema[], errors: string[] = []): Load
  * Get the mocked loadSchemaFile function
  */
 async function getMockedLoadSchemaFile() {
-  const module = await import('../utils/schema-loader.js');
+  const module = await import('../src/utils/schema-loader.js');
   return vi.mocked(module.loadSchemaFile);
 }
 
@@ -143,14 +143,14 @@ describe('migrate status command', () => {
   describe('command existence', () => {
     it('should export migrateStatus function', async () => {
       // This test verifies the migrate status command exists
-      const migrateModule = await import('../commands/migrate.js');
+      const migrateModule = await import('../src/commands/migrate.js');
 
       expect(migrateModule.migrateStatus).toBeDefined();
       expect(typeof migrateModule.migrateStatus).toBe('function');
     });
 
     it('should be registered as a subcommand in migrate router', async () => {
-      const { migrate } = await import('../commands/migrate.js');
+      const { migrate } = await import('../src/commands/migrate.js');
 
       try {
         await migrate(['status', '--help']);
@@ -186,7 +186,7 @@ describe('migrate status command', () => {
         '20240121_add_age.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -215,7 +215,7 @@ describe('migrate status command', () => {
         '20240119_add_name.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -252,7 +252,7 @@ describe('migrate status command', () => {
         '20240120_add_email.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -281,7 +281,7 @@ describe('migrate status command', () => {
         '20240119_add_name.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -317,7 +317,7 @@ describe('migrate status command', () => {
         '20240119_add_name.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -345,7 +345,7 @@ describe('migrate status command', () => {
         '20240118_init.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -379,7 +379,7 @@ describe('migrate status command', () => {
         '20240118_init.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -409,7 +409,7 @@ describe('migrate status command', () => {
         '20240118_init.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -440,7 +440,7 @@ describe('migrate status command', () => {
         '20240120_add_email.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -476,7 +476,7 @@ describe('migrate status command', () => {
         '20240120_add_email.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -514,7 +514,7 @@ describe('migrate status command', () => {
         '20240121_add_age.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -548,7 +548,7 @@ describe('migrate status command', () => {
         '20240118_init.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -584,7 +584,7 @@ describe('migrate status command', () => {
 
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -608,7 +608,7 @@ describe('migrate status command', () => {
 
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -640,7 +640,7 @@ describe('migrate status command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readdirSync).mockReturnValue([]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -666,7 +666,7 @@ describe('migrate status command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readdirSync).mockReturnValue([]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -695,7 +695,7 @@ describe('migrate status command', () => {
 
   describe('error handling', () => {
     it('should require --schema option', async () => {
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await expect(migrateStatus(['--migrations-dir', './migrations'])).rejects.toThrow(
         '--schema is required'
@@ -709,7 +709,7 @@ describe('migrate status command', () => {
         errors: ['File not found: ./schema.ts'],
       });
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await expect(
         migrateStatus(['--schema', './schema.ts', '--migrations-dir', './migrations'])
@@ -723,7 +723,7 @@ describe('migrate status command', () => {
         errors: [],
       });
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await expect(
         migrateStatus(['--schema', './schema.ts', '--migrations-dir', './migrations'])
@@ -737,7 +737,7 @@ describe('migrate status command', () => {
 
   describe('help text', () => {
     it('should show help when --help flag is provided', async () => {
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       try {
         await migrateStatus(['--help']);
@@ -752,7 +752,7 @@ describe('migrate status command', () => {
     });
 
     it('should show usage examples in help', async () => {
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       try {
         await migrateStatus(['--help']);
@@ -784,7 +784,7 @@ describe('migrate status command', () => {
         '20240118_init.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -814,7 +814,7 @@ describe('migrate status command', () => {
         '20240121_add_age.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       await migrateStatus([
         '--schema',
@@ -862,7 +862,7 @@ describe('migrate command router - status subcommand', () => {
       '20240118_init.sql',
     ] as unknown as fs.Dirent[]);
 
-    const { migrate } = await import('../commands/migrate.js');
+    const { migrate } = await import('../src/commands/migrate.js');
 
     await migrate([
       'status',
@@ -877,7 +877,7 @@ describe('migrate command router - status subcommand', () => {
   });
 
   it('should list status in migrate help', async () => {
-    const { migrate } = await import('../commands/migrate.js');
+    const { migrate } = await import('../src/commands/migrate.js');
 
     try {
       await migrate(['--help']);

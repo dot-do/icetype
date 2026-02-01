@@ -216,7 +216,7 @@ describe('ice drizzle command', () => {
     it('should generate Drizzle schema from IceType schema', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateCodeFromSchema(mockSchema, {});
@@ -230,7 +230,7 @@ describe('ice drizzle command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateCodeFromSchema(mockSchema, {});
@@ -240,7 +240,7 @@ describe('ice drizzle command', () => {
     });
 
     it('should output to stdout by default', async () => {
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateCodeFromSchema(mockSchema, {});
@@ -251,13 +251,13 @@ describe('ice drizzle command', () => {
     });
 
     it('should error when --schema is missing', async () => {
-      const { drizzleExport } = await import('../commands/drizzle.js');
+      const { drizzleExport } = await import('../src/commands/drizzle.js');
 
       await expect(drizzleExport([])).rejects.toThrow('--schema is required');
     });
 
     it('should handle multiple schemas in a file', async () => {
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const schemas = [
         createValidSchema('User'),
@@ -272,7 +272,7 @@ describe('ice drizzle command', () => {
     });
 
     it('should generate valid TypeScript syntax', async () => {
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateCodeFromSchema(mockSchema, {});
@@ -285,7 +285,7 @@ describe('ice drizzle command', () => {
     });
 
     it('should support PostgreSQL dialect by default', async () => {
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateCodeFromSchema(mockSchema, {});
@@ -295,7 +295,7 @@ describe('ice drizzle command', () => {
     });
 
     it('should support MySQL dialect', async () => {
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateCodeFromSchema(mockSchema, { dialect: 'mysql' });
@@ -305,7 +305,7 @@ describe('ice drizzle command', () => {
     });
 
     it('should support SQLite dialect', async () => {
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateCodeFromSchema(mockSchema, { dialect: 'sqlite' });
@@ -315,7 +315,7 @@ describe('ice drizzle command', () => {
     });
 
     it('should include proper imports for each dialect', async () => {
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
       const mockSchema = createSchemaWithVariousTypes('Test');
 
       // PostgreSQL
@@ -332,7 +332,7 @@ describe('ice drizzle command', () => {
     });
 
     it('should use camelCase for column names by default', async () => {
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateCodeFromSchema(mockSchema, {});
@@ -342,7 +342,7 @@ describe('ice drizzle command', () => {
     });
 
     it('should support custom table name option', async () => {
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateCodeFromSchema(mockSchema, { tableName: 'custom_users' });
@@ -351,7 +351,7 @@ describe('ice drizzle command', () => {
     });
 
     it('should generate type exports for inference', async () => {
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateCodeFromSchema(mockSchema, {});
@@ -363,7 +363,7 @@ describe('ice drizzle command', () => {
     });
 
     it('should handle uuid fields correctly for PostgreSQL', async () => {
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateCodeFromSchema(mockSchema, { dialect: 'pg' });
@@ -372,7 +372,7 @@ describe('ice drizzle command', () => {
     });
 
     it('should handle uuid fields correctly for MySQL (as varchar)', async () => {
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateCodeFromSchema(mockSchema, { dialect: 'mysql' });
@@ -382,7 +382,7 @@ describe('ice drizzle command', () => {
     });
 
     it('should handle uuid fields correctly for SQLite (as text)', async () => {
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateCodeFromSchema(mockSchema, { dialect: 'sqlite' });
@@ -392,7 +392,7 @@ describe('ice drizzle command', () => {
     });
 
     it('should handle optional fields with nullable modifier', async () => {
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateCodeFromSchema(mockSchema, {});
@@ -403,7 +403,7 @@ describe('ice drizzle command', () => {
     });
 
     it('should handle required fields with notNull modifier', async () => {
-      const { _testHelpers } = await import('../commands/drizzle.js');
+      const { _testHelpers } = await import('../src/commands/drizzle.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateCodeFromSchema(mockSchema, {});
@@ -424,7 +424,7 @@ describe('drizzle command argument parsing', () => {
   });
 
   it('should parse --schema option', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const args = ['--schema', './schema.ts'];
     const parsed = _testHelpers.parseArgs(args);
@@ -433,7 +433,7 @@ describe('drizzle command argument parsing', () => {
   });
 
   it('should parse -s short option for schema', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const args = ['-s', './schema.ts'];
     const parsed = _testHelpers.parseArgs(args);
@@ -442,7 +442,7 @@ describe('drizzle command argument parsing', () => {
   });
 
   it('should parse --output option', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const args = ['--schema', './schema.ts', '--output', './drizzle-schema.ts'];
     const parsed = _testHelpers.parseArgs(args);
@@ -451,7 +451,7 @@ describe('drizzle command argument parsing', () => {
   });
 
   it('should parse -o short option for output', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const args = ['-s', './schema.ts', '-o', './drizzle-schema.ts'];
     const parsed = _testHelpers.parseArgs(args);
@@ -460,7 +460,7 @@ describe('drizzle command argument parsing', () => {
   });
 
   it('should parse --dialect option', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const args = ['--schema', './schema.ts', '--dialect', 'mysql'];
     const parsed = _testHelpers.parseArgs(args);
@@ -469,7 +469,7 @@ describe('drizzle command argument parsing', () => {
   });
 
   it('should parse -d short option for dialect', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const args = ['-s', './schema.ts', '-d', 'sqlite'];
     const parsed = _testHelpers.parseArgs(args);
@@ -478,7 +478,7 @@ describe('drizzle command argument parsing', () => {
   });
 
   it('should parse --camel-case option', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const args = ['--schema', './schema.ts', '--camel-case'];
     const parsed = _testHelpers.parseArgs(args);
@@ -487,7 +487,7 @@ describe('drizzle command argument parsing', () => {
   });
 
   it('should parse --table-name option', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const args = ['--schema', './schema.ts', '--table-name', 'custom_table'];
     const parsed = _testHelpers.parseArgs(args);
@@ -496,7 +496,7 @@ describe('drizzle command argument parsing', () => {
   });
 
   it('should parse --quiet option', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const args = ['--schema', './schema.ts', '--quiet'];
     const parsed = _testHelpers.parseArgs(args);
@@ -505,7 +505,7 @@ describe('drizzle command argument parsing', () => {
   });
 
   it('should parse -q short option for quiet', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const args = ['-s', './schema.ts', '-q'];
     const parsed = _testHelpers.parseArgs(args);
@@ -514,7 +514,7 @@ describe('drizzle command argument parsing', () => {
   });
 
   it('should parse --verbose option', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const args = ['--schema', './schema.ts', '--verbose'];
     const parsed = _testHelpers.parseArgs(args);
@@ -523,7 +523,7 @@ describe('drizzle command argument parsing', () => {
   });
 
   it('should parse -v short option for verbose', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const args = ['-s', './schema.ts', '-v'];
     const parsed = _testHelpers.parseArgs(args);
@@ -532,7 +532,7 @@ describe('drizzle command argument parsing', () => {
   });
 
   it('should parse all options together', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const args = [
       '--schema', './schema.ts',
@@ -557,25 +557,25 @@ describe('drizzle command argument parsing', () => {
 
 describe('drizzle dialect validation', () => {
   it('should accept pg dialect', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     expect(_testHelpers.VALID_DIALECTS).toContain('pg');
   });
 
   it('should accept mysql dialect', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     expect(_testHelpers.VALID_DIALECTS).toContain('mysql');
   });
 
   it('should accept sqlite dialect', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     expect(_testHelpers.VALID_DIALECTS).toContain('sqlite');
   });
 
   it('should have exactly 3 valid dialects', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     expect(_testHelpers.VALID_DIALECTS).toHaveLength(3);
   });
@@ -591,7 +591,7 @@ describe('drizzle code generation details', () => {
   });
 
   it('should generate table with snake_case name from PascalCase schema', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const mockSchema = createValidSchema('UserProfile');
     const result = _testHelpers.generateCodeFromSchema(mockSchema, {});
@@ -600,7 +600,7 @@ describe('drizzle code generation details', () => {
   });
 
   it('should generate proper primary key for id field', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const mockSchema = createValidSchema('User');
     const result = _testHelpers.generateCodeFromSchema(mockSchema, {});
@@ -609,7 +609,7 @@ describe('drizzle code generation details', () => {
   });
 
   it('should handle unique constraint for unique fields', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const mockSchema = createSchemaWithIndexes('User');
     const result = _testHelpers.generateCodeFromSchema(mockSchema, {});
@@ -618,7 +618,7 @@ describe('drizzle code generation details', () => {
   });
 
   it('should convert string type to varchar for PostgreSQL', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const mockSchema = createValidSchema('User');
     const result = _testHelpers.generateCodeFromSchema(mockSchema, { dialect: 'pg' });
@@ -627,7 +627,7 @@ describe('drizzle code generation details', () => {
   });
 
   it('should convert int type to integer', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const mockSchema = createValidSchema('User');
     const result = _testHelpers.generateCodeFromSchema(mockSchema, {});
@@ -636,7 +636,7 @@ describe('drizzle code generation details', () => {
   });
 
   it('should handle timestamp types', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const mockSchema = createSchemaWithVariousTypes('Test');
     const result = _testHelpers.generateCodeFromSchema(mockSchema, {});
@@ -645,7 +645,7 @@ describe('drizzle code generation details', () => {
   });
 
   it('should handle boolean types', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const mockSchema = createSchemaWithVariousTypes('Test');
     const result = _testHelpers.generateCodeFromSchema(mockSchema, {});
@@ -654,7 +654,7 @@ describe('drizzle code generation details', () => {
   });
 
   it('should handle float types', async () => {
-    const { _testHelpers } = await import('../commands/drizzle.js');
+    const { _testHelpers } = await import('../src/commands/drizzle.js');
 
     const mockSchema = createSchemaWithVariousTypes('Test');
     const result = _testHelpers.generateCodeFromSchema(mockSchema, { dialect: 'pg' });

@@ -328,7 +328,7 @@ describe('Very Long Identifiers', () => {
 
   describe('validate identifier length function', () => {
     it('should validate identifier length for PostgreSQL (max 63 bytes)', async () => {
-      const { validateIdentifier, IdentifierTooLongError } = await import('../index.js');
+      const { validateIdentifier, IdentifierTooLongError } = await import('../src/index.js');
 
       // Exactly 63 bytes should be valid
       const maxIdentifier = 'a'.repeat(63);
@@ -340,7 +340,7 @@ describe('Very Long Identifiers', () => {
     });
 
     it('should validate identifier length for MySQL (max 64 characters)', async () => {
-      const { validateIdentifier, IdentifierTooLongError } = await import('../index.js');
+      const { validateIdentifier, IdentifierTooLongError } = await import('../src/index.js');
 
       // Exactly 64 characters should be valid
       const maxIdentifier = 'a'.repeat(64);
@@ -352,7 +352,7 @@ describe('Very Long Identifiers', () => {
     });
 
     it('should handle multibyte UTF-8 in length validation', async () => {
-      const { validateIdentifier, IdentifierTooLongError } = await import('../index.js');
+      const { validateIdentifier, IdentifierTooLongError } = await import('../src/index.js');
 
       // Each emoji is 4 bytes in UTF-8
       // 16 emojis = 64 bytes (exceeds PostgreSQL's 63 byte limit)
@@ -364,7 +364,7 @@ describe('Very Long Identifiers', () => {
     });
 
     it('should provide appropriate error messages for too-long identifiers', async () => {
-      const { validateIdentifier, IdentifierTooLongError } = await import('../index.js');
+      const { validateIdentifier, IdentifierTooLongError } = await import('../src/index.js');
 
       const longIdentifier = 'a'.repeat(100);
       try {
@@ -677,13 +677,13 @@ describe('validateIdentifier function', () => {
   describe('empty identifier validation', () => {
     it('should throw InvalidIdentifierError for empty string', async () => {
       // This import should fail until validateIdentifier is implemented
-      const { validateIdentifier, InvalidIdentifierError } = await import('../index.js');
+      const { validateIdentifier, InvalidIdentifierError } = await import('../src/index.js');
 
       expect(() => validateIdentifier('', 'postgres')).toThrow(InvalidIdentifierError);
     });
 
     it('should throw InvalidIdentifierError for whitespace-only string', async () => {
-      const { validateIdentifier, InvalidIdentifierError } = await import('../index.js');
+      const { validateIdentifier, InvalidIdentifierError } = await import('../src/index.js');
 
       expect(() => validateIdentifier('   ', 'postgres')).toThrow(InvalidIdentifierError);
       expect(() => validateIdentifier('\t', 'postgres')).toThrow(InvalidIdentifierError);
@@ -693,28 +693,28 @@ describe('validateIdentifier function', () => {
 
   describe('identifier length validation by dialect', () => {
     it('should throw IdentifierTooLongError for PostgreSQL identifiers > 63 bytes', async () => {
-      const { validateIdentifier, IdentifierTooLongError } = await import('../index.js');
+      const { validateIdentifier, IdentifierTooLongError } = await import('../src/index.js');
 
       const longIdentifier = 'a'.repeat(64);
       expect(() => validateIdentifier(longIdentifier, 'postgres')).toThrow(IdentifierTooLongError);
     });
 
     it('should accept PostgreSQL identifiers of exactly 63 bytes', async () => {
-      const { validateIdentifier } = await import('../index.js');
+      const { validateIdentifier } = await import('../src/index.js');
 
       const maxIdentifier = 'a'.repeat(63);
       expect(() => validateIdentifier(maxIdentifier, 'postgres')).not.toThrow();
     });
 
     it('should throw IdentifierTooLongError for MySQL identifiers > 64 characters', async () => {
-      const { validateIdentifier, IdentifierTooLongError } = await import('../index.js');
+      const { validateIdentifier, IdentifierTooLongError } = await import('../src/index.js');
 
       const longIdentifier = 'a'.repeat(65);
       expect(() => validateIdentifier(longIdentifier, 'mysql')).toThrow(IdentifierTooLongError);
     });
 
     it('should count bytes not characters for PostgreSQL multibyte UTF-8', async () => {
-      const { validateIdentifier, IdentifierTooLongError } = await import('../index.js');
+      const { validateIdentifier, IdentifierTooLongError } = await import('../src/index.js');
 
       // Each emoji is 4 bytes, so 16 emojis = 64 bytes (exceeds 63 byte limit)
       const emojiIdentifier = '\u{1F600}'.repeat(16);
@@ -722,7 +722,7 @@ describe('validateIdentifier function', () => {
     });
 
     it('should count characters not bytes for MySQL', async () => {
-      const { validateIdentifier } = await import('../index.js');
+      const { validateIdentifier } = await import('../src/index.js');
 
       // 64 emoji characters should be valid for MySQL (counts chars not bytes)
       const emojiIdentifier = '\u{1F600}'.repeat(64);
@@ -759,20 +759,20 @@ describe('validateIdentifier function', () => {
 
   describe('dangerous character validation', () => {
     it('should throw InvalidIdentifierError for null bytes', async () => {
-      const { validateIdentifier, InvalidIdentifierError } = await import('../index.js');
+      const { validateIdentifier, InvalidIdentifierError } = await import('../src/index.js');
 
       expect(() => validateIdentifier('user\x00name', 'postgres')).toThrow(InvalidIdentifierError);
     });
 
     it('should throw InvalidIdentifierError for control characters', async () => {
-      const { validateIdentifier, InvalidIdentifierError } = await import('../index.js');
+      const { validateIdentifier, InvalidIdentifierError } = await import('../src/index.js');
 
       expect(() => validateIdentifier('user\x01name', 'postgres')).toThrow(InvalidIdentifierError);
       expect(() => validateIdentifier('user\x7fname', 'postgres')).toThrow(InvalidIdentifierError);
     });
 
     it('should throw InvalidIdentifierError for bidirectional override characters', async () => {
-      const { validateIdentifier, InvalidIdentifierError } = await import('../index.js');
+      const { validateIdentifier, InvalidIdentifierError } = await import('../src/index.js');
 
       // Right-to-left override - known security risk
       expect(() => validateIdentifier('user\u202ename', 'postgres')).toThrow(InvalidIdentifierError);
@@ -783,7 +783,7 @@ describe('validateIdentifier function', () => {
 
   describe('validateIdentifier return type', () => {
     it('should return validation result object with details', async () => {
-      const { validateIdentifier } = await import('../index.js');
+      const { validateIdentifier } = await import('../src/index.js');
 
       const result = validateIdentifier('valid_identifier', 'postgres');
 
@@ -799,7 +799,7 @@ describe('validateIdentifier function', () => {
     });
 
     it('should return needsQuoting: true for special identifiers', async () => {
-      const { validateIdentifier } = await import('../index.js');
+      const { validateIdentifier } = await import('../src/index.js');
 
       const result = validateIdentifier('user-name', 'postgres');
 
@@ -808,7 +808,7 @@ describe('validateIdentifier function', () => {
     });
 
     it('should return isReservedKeyword: true for SQL keywords', async () => {
-      const { validateIdentifier } = await import('../index.js');
+      const { validateIdentifier } = await import('../src/index.js');
 
       const result = validateIdentifier('select', 'postgres');
 

@@ -115,10 +115,10 @@ describe('ice clickhouse command', () => {
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
       // Import the command module
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Create a mock module loader by mocking the schema-loader
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
@@ -133,7 +133,7 @@ describe('ice clickhouse command', () => {
     });
 
     it('should support --engine option for MergeTree variants', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Test that the function accepts engine options
       // The actual engine options are:
@@ -149,56 +149,56 @@ describe('ice clickhouse command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Verify function exists and can receive output option
       expect(typeof clickhouseExport).toBe('function');
     });
 
     it('should output to stdout by default', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // When no --output is specified, should print to console
       expect(typeof clickhouseExport).toBe('function');
     });
 
     it('should error when --schema is missing', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Commands now throw errors (main CLI catches and exits)
       await expect(clickhouseExport([])).rejects.toThrow('--schema is required');
     });
 
     it('should support --database option', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Verify function can receive database option
       expect(typeof clickhouseExport).toBe('function');
     });
 
     it('should support -s short flag for schema', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Verify function exists
       expect(typeof clickhouseExport).toBe('function');
     });
 
     it('should support -o short flag for output', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Verify function exists
       expect(typeof clickhouseExport).toBe('function');
     });
 
     it('should support -e short flag for engine', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Verify function exists
       expect(typeof clickhouseExport).toBe('function');
     });
 
     it('should support -d short flag for database', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Verify function exists
       expect(typeof clickhouseExport).toBe('function');
@@ -207,7 +207,7 @@ describe('ice clickhouse command', () => {
 
   describe('CLI argument parsing', () => {
     it('should parse --schema argument correctly', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Mock file not found
       vi.mocked(fs.existsSync).mockReturnValue(false);
@@ -217,7 +217,7 @@ describe('ice clickhouse command', () => {
     });
 
     it('should parse --engine argument correctly', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // The engine should be one of the valid MergeTree variants
       const validEngines = [
@@ -234,7 +234,7 @@ describe('ice clickhouse command', () => {
     });
 
     it('should parse --database argument correctly', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Verify function handles database argument
       expect(typeof clickhouseExport).toBe('function');
@@ -243,35 +243,35 @@ describe('ice clickhouse command', () => {
 
   describe('DDL generation', () => {
     it('should generate CREATE TABLE statement', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Verify the function is available for DDL generation
       expect(typeof clickhouseExport).toBe('function');
     });
 
     it('should include column definitions in DDL', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // The generated DDL should contain column definitions
       expect(typeof clickhouseExport).toBe('function');
     });
 
     it('should include ENGINE clause in DDL', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // The generated DDL should contain ENGINE specification
       expect(typeof clickhouseExport).toBe('function');
     });
 
     it('should include ORDER BY clause in DDL', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // The generated DDL should contain ORDER BY clause
       expect(typeof clickhouseExport).toBe('function');
     });
 
     it('should include database prefix when --database is specified', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // When database is specified, table name should be prefixed
       expect(typeof clickhouseExport).toBe('function');
@@ -280,7 +280,7 @@ describe('ice clickhouse command', () => {
 
   describe('error handling', () => {
     it('should throw error when file not found', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
@@ -289,14 +289,14 @@ describe('ice clickhouse command', () => {
     });
 
     it('should throw error for invalid schema file', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Should throw when schema is invalid
       await expect(clickhouseExport(['--schema', './invalid-schema.ts'])).rejects.toThrow();
     });
 
     it('should handle file write errors gracefully', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Mock writeFileSync to throw an error
       vi.mocked(fs.writeFileSync).mockImplementation(() => {
@@ -310,14 +310,14 @@ describe('ice clickhouse command', () => {
 
   describe('quiet and verbose modes', () => {
     it('should support --quiet flag to suppress output', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Verify function exists
       expect(typeof clickhouseExport).toBe('function');
     });
 
     it('should support --verbose flag for detailed output', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       // Verify function exists
       expect(typeof clickhouseExport).toBe('function');

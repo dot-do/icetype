@@ -142,7 +142,7 @@ describe('ice duckdb command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
       // Import the command
-      const { duckdbExport } = await import('../commands/duckdb.js');
+      const { duckdbExport } = await import('../src/commands/duckdb.js');
 
       // Create a mock schema loader that returns our test schema
       const mockSchema = createValidSchema('User');
@@ -162,7 +162,7 @@ describe('ice duckdb command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { _testHelpers } = await import('../commands/duckdb.js');
+      const { _testHelpers } = await import('../src/commands/duckdb.js');
 
       // Use test helper to bypass schema loading
       const mockSchema = createValidSchema('User');
@@ -175,7 +175,7 @@ describe('ice duckdb command', () => {
     });
 
     it('should output to stdout by default', async () => {
-      const { _testHelpers } = await import('../commands/duckdb.js');
+      const { _testHelpers } = await import('../src/commands/duckdb.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {});
@@ -186,14 +186,14 @@ describe('ice duckdb command', () => {
     });
 
     it('should error when --schema is missing', async () => {
-      const { duckdbExport } = await import('../commands/duckdb.js');
+      const { duckdbExport } = await import('../src/commands/duckdb.js');
 
       // Should throw or exit when no schema provided
       await expect(duckdbExport([])).rejects.toThrow('--schema is required');
     });
 
     it('should include indexes when schema has indexed fields', async () => {
-      const { _testHelpers } = await import('../commands/duckdb.js');
+      const { _testHelpers } = await import('../src/commands/duckdb.js');
 
       const mockSchema = createSchemaWithIndexes('IndexedEntity');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {
@@ -206,7 +206,7 @@ describe('ice duckdb command', () => {
     });
 
     it('should support --schema-name option for DuckDB schema', async () => {
-      const { _testHelpers } = await import('../commands/duckdb.js');
+      const { _testHelpers } = await import('../src/commands/duckdb.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {
@@ -219,7 +219,7 @@ describe('ice duckdb command', () => {
     });
 
     it('should handle multiple schemas in a file', async () => {
-      const { _testHelpers } = await import('../commands/duckdb.js');
+      const { _testHelpers } = await import('../src/commands/duckdb.js');
 
       const schemas = [
         createValidSchema('User'),
@@ -234,7 +234,7 @@ describe('ice duckdb command', () => {
     });
 
     it('should generate valid DuckDB SQL syntax', async () => {
-      const { _testHelpers } = await import('../commands/duckdb.js');
+      const { _testHelpers } = await import('../src/commands/duckdb.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {});
@@ -248,7 +248,7 @@ describe('ice duckdb command', () => {
     });
 
     it('should include system columns by default', async () => {
-      const { _testHelpers } = await import('../commands/duckdb.js');
+      const { _testHelpers } = await import('../src/commands/duckdb.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {});
@@ -262,7 +262,7 @@ describe('ice duckdb command', () => {
     });
 
     it('should support IF NOT EXISTS option', async () => {
-      const { _testHelpers } = await import('../commands/duckdb.js');
+      const { _testHelpers } = await import('../src/commands/duckdb.js');
 
       const mockSchema = createValidSchema('User');
       const result = _testHelpers.generateDDLFromSchema(mockSchema, {
@@ -284,7 +284,7 @@ describe('duckdb command argument parsing', () => {
   });
 
   it('should parse --schema option', async () => {
-    const { _testHelpers } = await import('../commands/duckdb.js');
+    const { _testHelpers } = await import('../src/commands/duckdb.js');
 
     const args = ['--schema', './schema.ts'];
     const parsed = _testHelpers.parseArgs(args);
@@ -293,7 +293,7 @@ describe('duckdb command argument parsing', () => {
   });
 
   it('should parse -s short option for schema', async () => {
-    const { _testHelpers } = await import('../commands/duckdb.js');
+    const { _testHelpers } = await import('../src/commands/duckdb.js');
 
     const args = ['-s', './schema.ts'];
     const parsed = _testHelpers.parseArgs(args);
@@ -302,7 +302,7 @@ describe('duckdb command argument parsing', () => {
   });
 
   it('should parse --output option', async () => {
-    const { _testHelpers } = await import('../commands/duckdb.js');
+    const { _testHelpers } = await import('../src/commands/duckdb.js');
 
     const args = ['--schema', './schema.ts', '--output', './tables.sql'];
     const parsed = _testHelpers.parseArgs(args);
@@ -311,7 +311,7 @@ describe('duckdb command argument parsing', () => {
   });
 
   it('should parse -o short option for output', async () => {
-    const { _testHelpers } = await import('../commands/duckdb.js');
+    const { _testHelpers } = await import('../src/commands/duckdb.js');
 
     const args = ['-s', './schema.ts', '-o', './tables.sql'];
     const parsed = _testHelpers.parseArgs(args);
@@ -320,7 +320,7 @@ describe('duckdb command argument parsing', () => {
   });
 
   it('should parse --schema-name option', async () => {
-    const { _testHelpers } = await import('../commands/duckdb.js');
+    const { _testHelpers } = await import('../src/commands/duckdb.js');
 
     const args = ['--schema', './schema.ts', '--schema-name', 'analytics'];
     const parsed = _testHelpers.parseArgs(args);

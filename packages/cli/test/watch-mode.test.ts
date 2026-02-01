@@ -117,14 +117,14 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Start watch mode (runs forever, so don't await)
       const watchPromise = generate(['--schema', './schema.ts', '--watch', '-q']);
@@ -154,14 +154,14 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Start watch mode with -w flag
       generate(['-s', './schema.ts', '-w', '-q']);
@@ -192,11 +192,11 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: mockLoadSchemaFile,
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -233,11 +233,11 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: mockLoadSchemaFile,
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -296,11 +296,11 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: mockLoadSchemaFile,
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -359,11 +359,11 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: mockLoadSchemaFile,
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -412,14 +412,14 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -466,7 +466,7 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockImplementation(() => {
           callCount++;
           if (callCount === 2) {
@@ -482,7 +482,7 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         }),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Should not throw
       generate(['--schema', './schema.ts', '--watch', '-q']);
@@ -541,14 +541,14 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -575,14 +575,14 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -612,14 +612,14 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -654,11 +654,11 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: mockLoadSchemaFile,
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -702,14 +702,14 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -750,11 +750,11 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: mockLoadSchemaFile,
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -802,11 +802,11 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: mockLoadSchemaFile,
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -859,11 +859,11 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: mockLoadSchemaFile,
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -906,11 +906,11 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: mockLoadSchemaFile,
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -948,7 +948,7 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
@@ -957,7 +957,7 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
 
       mockConsoleLog.mockClear();
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '--quiet']);
 
@@ -987,7 +987,7 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
@@ -996,7 +996,7 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
 
       mockConsoleLog.mockClear();
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '--verbose']);
 
@@ -1026,14 +1026,14 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--output', './custom/types.ts', '--watch', '-q']);
 
@@ -1095,14 +1095,14 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '--nullable-style', 'strict', '-q']);
 
@@ -1165,11 +1165,11 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: mockLoadSchemaFile,
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Use --debounce flag to set custom debounce time of 500ms
       // Currently this throws "Unknown option '--debounce'" - when implemented, it should NOT throw
@@ -1214,14 +1214,14 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: createValidSchema('User') }],
           errors: [],
         }),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Negative debounce should throw a validation error with specific message
       // NOT "Unknown option" - the error should mention the invalid value
@@ -1250,14 +1250,14 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Use glob pattern to watch multiple schema files
       generate(['--schema', './schemas/*.ts', '--watch', '-q']);
@@ -1298,11 +1298,11 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         errors: [],
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: mockLoadSchemaFile,
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schemas/*.ts', '--watch', '-q']);
 
@@ -1345,14 +1345,14 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       // Start watch mode
       generate(['--schema', './schema.ts', '--watch', '-q']);
@@ -1398,11 +1398,11 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         errors: [],
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: mockLoadSchemaFile,
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -1441,14 +1441,14 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { watchGenerate } = await import('../utils/watcher.js');
+      const { watchGenerate } = await import('../src/utils/watcher.js');
 
       const onReady = vi.fn();
 
@@ -1488,14 +1488,14 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 
@@ -1535,14 +1535,14 @@ describe('Watch Mode CLI Flag (--watch / -w)', () => {
         };
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'User', schema: mockSchema }],
           errors: [],
         }),
       }));
 
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       generate(['--schema', './schema.ts', '--watch', '-q']);
 

@@ -60,7 +60,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Path to packages directory (from packages/core/src/__tests__ -> packages/)
-const packagesDir = join(__dirname, '..', '..', '..');
+const packagesDir = join(__dirname, '..', '..');
 
 // Required sections that must be present in each README
 const REQUIRED_SECTIONS = [

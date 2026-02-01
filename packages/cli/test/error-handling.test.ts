@@ -102,20 +102,20 @@ describe('CLI Error Handling: Commands Throw Errors for Central Handling', () =>
 
   describe('validate command', () => {
     it('should throw error when --schema is missing', async () => {
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       await expect(validate([])).rejects.toThrow('--schema is required');
     });
 
     it('should throw error when schema file is not found', async () => {
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [],
           errors: ['File not found: /path/to/missing.ts'],
         }),
       }));
 
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       await expect(validate(['--schema', '/path/to/missing.ts'])).rejects.toThrow();
     });
@@ -123,7 +123,7 @@ describe('CLI Error Handling: Commands Throw Errors for Central Handling', () =>
 
   describe('generate command', () => {
     it('should throw error when --schema is missing', async () => {
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await expect(generate([])).rejects.toThrow('--schema is required');
     });
@@ -131,19 +131,19 @@ describe('CLI Error Handling: Commands Throw Errors for Central Handling', () =>
 
   describe('diff command', () => {
     it('should throw error when --old is missing', async () => {
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await expect(diff(['--new', '/path/to/new.ts'])).rejects.toThrow('--old is required');
     });
 
     it('should throw error when --new is missing', async () => {
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await expect(diff(['--old', '/path/to/old.ts'])).rejects.toThrow('--new is required');
     });
 
     it('should throw error when dialect is invalid', async () => {
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await expect(
         diff(['--old', '/path/to/old.ts', '--new', '/path/to/new.ts', '--dialect', 'invalid'])
@@ -153,13 +153,13 @@ describe('CLI Error Handling: Commands Throw Errors for Central Handling', () =>
 
   describe('clickhouse export command', () => {
     it('should throw error when --schema is missing', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       await expect(clickhouseExport([])).rejects.toThrow('--schema is required');
     });
 
     it('should throw error when engine is invalid', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       await expect(
         clickhouseExport(['--schema', '/path/to/schema.ts', '--engine', 'InvalidEngine'])
@@ -169,7 +169,7 @@ describe('CLI Error Handling: Commands Throw Errors for Central Handling', () =>
 
   describe('duckdb export command', () => {
     it('should throw error when --schema is missing', async () => {
-      const { duckdbExport } = await import('../commands/duckdb.js');
+      const { duckdbExport } = await import('../src/commands/duckdb.js');
 
       await expect(duckdbExport([])).rejects.toThrow('--schema is required');
     });
@@ -177,7 +177,7 @@ describe('CLI Error Handling: Commands Throw Errors for Central Handling', () =>
 
   describe('postgres export command', () => {
     it('should throw error when --schema is missing', async () => {
-      const { postgresExport } = await import('../commands/postgres.js');
+      const { postgresExport } = await import('../src/commands/postgres.js');
 
       await expect(postgresExport([])).rejects.toThrow('--schema is required');
     });
@@ -185,7 +185,7 @@ describe('CLI Error Handling: Commands Throw Errors for Central Handling', () =>
 
   describe('iceberg export command', () => {
     it('should throw error when --schema is missing', async () => {
-      const { icebergExport } = await import('../commands/iceberg.js');
+      const { icebergExport } = await import('../src/commands/iceberg.js');
 
       await expect(icebergExport([])).rejects.toThrow('--schema is required');
     });
@@ -214,7 +214,7 @@ describe('CLI Error Handling: Error Message Content', () => {
 
   describe('validate command error messages', () => {
     it('should include option name in error when --schema is missing', async () => {
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       try {
         await validate([]);
@@ -226,7 +226,7 @@ describe('CLI Error Handling: Error Message Content', () => {
 
   describe('diff command error messages', () => {
     it('should include option name in error when --old is missing', async () => {
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       try {
         await diff(['--new', '/path/to/new.ts']);
@@ -238,7 +238,7 @@ describe('CLI Error Handling: Error Message Content', () => {
 
   describe('clickhouse export command error messages', () => {
     it('should include option name in error when --schema is missing', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       try {
         await clickhouseExport([]);
@@ -272,7 +272,7 @@ describe('CLI Error Handling: IceTypeError Subclass Formatting', () => {
         context: { field: 'testField' },
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockRejectedValue(error),
       }));
 
@@ -285,7 +285,7 @@ describe('CLI Error Handling: IceTypeError Subclass Formatting', () => {
         throw new Error('process.exit called');
       });
 
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       try {
         await validate(['--schema', '/path/to/schema.ts']);
@@ -305,7 +305,7 @@ describe('CLI Error Handling: IceTypeError Subclass Formatting', () => {
         code: ErrorCodes.FILE_NOT_FOUND,
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockRejectedValue(error),
       }));
 
@@ -318,7 +318,7 @@ describe('CLI Error Handling: IceTypeError Subclass Formatting', () => {
         throw new Error('process.exit called');
       });
 
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       try {
         await validate(['--schema', '/path/to/schema.ts']);
@@ -337,7 +337,7 @@ describe('CLI Error Handling: IceTypeError Subclass Formatting', () => {
         code: ErrorCodes.PARSE_ERROR,
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockRejectedValue(error),
       }));
 
@@ -350,7 +350,7 @@ describe('CLI Error Handling: IceTypeError Subclass Formatting', () => {
         throw new Error('process.exit called');
       });
 
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       try {
         await validate(['--schema', '/path/to/schema.ts']);
@@ -368,14 +368,14 @@ describe('CLI Error Handling: IceTypeError Subclass Formatting', () => {
         code: ErrorCodes.MISSING_ADAPTER_OPTION,
       });
 
-      vi.doMock('../utils/schema-loader.js', () => ({
+      vi.doMock('../src/utils/schema-loader.js', () => ({
         loadSchemaFile: vi.fn().mockResolvedValue({
           schemas: [{ name: 'Test', schema: {} }],
           errors: [],
         }),
       }));
 
-      vi.doMock('../utils/adapter-registry.js', () => ({
+      vi.doMock('../src/utils/adapter-registry.js', () => ({
         getAdapter: vi.fn().mockImplementation(() => {
           throw error;
         }),
@@ -412,43 +412,43 @@ describe('CLI Error Handling: Consistent Error Message Format', () => {
 
   describe('required option errors have consistent format', () => {
     it('validate: throws with "--schema is required" message', async () => {
-      const { validate } = await import('../commands/validate.js');
+      const { validate } = await import('../src/commands/validate.js');
 
       await expect(validate([])).rejects.toThrow('--schema is required');
     });
 
     it('generate: throws with "--schema is required" message', async () => {
-      const { generate } = await import('../commands/generate.js');
+      const { generate } = await import('../src/commands/generate.js');
 
       await expect(generate([])).rejects.toThrow('--schema is required');
     });
 
     it('diff: throws with "--old is required" message', async () => {
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await expect(diff([])).rejects.toThrow('--old is required');
     });
 
     it('clickhouse: throws with "--schema is required" message', async () => {
-      const { clickhouseExport } = await import('../commands/clickhouse.js');
+      const { clickhouseExport } = await import('../src/commands/clickhouse.js');
 
       await expect(clickhouseExport([])).rejects.toThrow('--schema is required');
     });
 
     it('postgres: throws with "--schema is required" message', async () => {
-      const { postgresExport } = await import('../commands/postgres.js');
+      const { postgresExport } = await import('../src/commands/postgres.js');
 
       await expect(postgresExport([])).rejects.toThrow('--schema is required');
     });
 
     it('iceberg: throws with "--schema is required" message', async () => {
-      const { icebergExport } = await import('../commands/iceberg.js');
+      const { icebergExport } = await import('../src/commands/iceberg.js');
 
       await expect(icebergExport([])).rejects.toThrow('--schema is required');
     });
 
     it('duckdb: throws with "--schema is required" message', async () => {
-      const { duckdbExport } = await import('../commands/duckdb.js');
+      const { duckdbExport } = await import('../src/commands/duckdb.js');
 
       await expect(duckdbExport([])).rejects.toThrow('--schema is required');
     });
@@ -472,7 +472,7 @@ describe('CLI Error Handling: formatCliError Utility', () => {
   });
 
   it('should format IceTypeError with error code', async () => {
-    const { formatCliError, MissingOptionError } = await import('../utils/cli-error.js');
+    const { formatCliError, MissingOptionError } = await import('../src/utils/cli-error.js');
 
     const error = new MissingOptionError('schema', 'test');
     const formatted = formatCliError(error);
@@ -482,7 +482,7 @@ describe('CLI Error Handling: formatCliError Utility', () => {
   });
 
   it('should format regular Error with "Error:" prefix', async () => {
-    const { formatCliError } = await import('../utils/cli-error.js');
+    const { formatCliError } = await import('../src/utils/cli-error.js');
 
     const error = new Error('Something went wrong');
     const formatted = formatCliError(error);
@@ -491,7 +491,7 @@ describe('CLI Error Handling: formatCliError Utility', () => {
   });
 
   it('should format non-Error values as strings', async () => {
-    const { formatCliError } = await import('../utils/cli-error.js');
+    const { formatCliError } = await import('../src/utils/cli-error.js');
 
     const formatted = formatCliError('A string error');
 

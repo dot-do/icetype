@@ -225,14 +225,14 @@ describe('ice iceberg command', () => {
 
   describe('icebergExport', () => {
     it('should export schema to Iceberg metadata JSON', async () => {
-      const { icebergExport } = await import('../commands/iceberg.js');
+      const { icebergExport } = await import('../src/commands/iceberg.js');
 
       // Verify the function exists and is a function
       expect(typeof icebergExport).toBe('function');
     });
 
     it('should error when --schema is missing', async () => {
-      const { icebergExport } = await import('../commands/iceberg.js');
+      const { icebergExport } = await import('../src/commands/iceberg.js');
 
       // Commands now throw errors (main CLI catches and exits)
       await expect(icebergExport([])).rejects.toThrow('--schema is required');
@@ -242,14 +242,14 @@ describe('ice iceberg command', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { icebergExport } = await import('../commands/iceberg.js');
+      const { icebergExport } = await import('../src/commands/iceberg.js');
 
       // Verify function can accept output option
       expect(typeof icebergExport).toBe('function');
     });
 
     it('should support --location option for table location', async () => {
-      const { icebergExport } = await import('../commands/iceberg.js');
+      const { icebergExport } = await import('../src/commands/iceberg.js');
 
       // Verify function can accept location option
       expect(typeof icebergExport).toBe('function');
@@ -301,14 +301,14 @@ describe('ice iceberg command', () => {
     });
 
     it('should use default output path when --output is not specified', async () => {
-      const { icebergExport } = await import('../commands/iceberg.js');
+      const { icebergExport } = await import('../src/commands/iceberg.js');
 
       // Default output should be metadata.json
       expect(typeof icebergExport).toBe('function');
     });
 
     it('should use default location when --location is not specified', async () => {
-      const { icebergExport } = await import('../commands/iceberg.js');
+      const { icebergExport } = await import('../src/commands/iceberg.js');
 
       // Default location should be s3://bucket/table
       expect(typeof icebergExport).toBe('function');
@@ -317,7 +317,7 @@ describe('ice iceberg command', () => {
 
   describe('error handling', () => {
     it('should throw error when file not found', async () => {
-      const { icebergExport } = await import('../commands/iceberg.js');
+      const { icebergExport } = await import('../src/commands/iceberg.js');
 
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
@@ -326,14 +326,14 @@ describe('ice iceberg command', () => {
     });
 
     it('should throw error for invalid schema file', async () => {
-      const { icebergExport } = await import('../commands/iceberg.js');
+      const { icebergExport } = await import('../src/commands/iceberg.js');
 
       // Should throw when schema is invalid
       await expect(icebergExport(['--schema', './invalid-schema.ts'])).rejects.toThrow();
     });
 
     it('should handle file write errors by throwing', async () => {
-      const { icebergExport } = await import('../commands/iceberg.js');
+      const { icebergExport } = await import('../src/commands/iceberg.js');
 
       // Mock writeFileSync to throw an error
       vi.mocked(fs.writeFileSync).mockImplementation(() => {
@@ -345,7 +345,7 @@ describe('ice iceberg command', () => {
     });
 
     it('should throw error for empty schema file', async () => {
-      const { icebergExport } = await import('../commands/iceberg.js');
+      const { icebergExport } = await import('../src/commands/iceberg.js');
 
       // Should throw when schema file is empty
       await expect(icebergExport(['--schema', './empty.ts'])).rejects.toThrow();
@@ -354,14 +354,14 @@ describe('ice iceberg command', () => {
 
   describe('multiple schemas handling', () => {
     it('should use first schema when multiple schemas are in file', async () => {
-      const { icebergExport } = await import('../commands/iceberg.js');
+      const { icebergExport } = await import('../src/commands/iceberg.js');
 
       // The command currently uses the first schema found
       expect(typeof icebergExport).toBe('function');
     });
 
     it('should log the number of schemas found', async () => {
-      const { icebergExport } = await import('../commands/iceberg.js');
+      const { icebergExport } = await import('../src/commands/iceberg.js');
 
       // Verify function logs schema count
       expect(typeof icebergExport).toBe('function');
@@ -766,7 +766,7 @@ describe('CLI integration', () => {
   });
 
   it('should include usage hint in error when --schema is missing', async () => {
-    const { icebergExport } = await import('../commands/iceberg.js');
+    const { icebergExport } = await import('../src/commands/iceberg.js');
 
     // Commands now throw errors with usage hint in message
     try {
@@ -779,35 +779,35 @@ describe('CLI integration', () => {
   });
 
   it('should log export progress', async () => {
-    const { icebergExport } = await import('../commands/iceberg.js');
+    const { icebergExport } = await import('../src/commands/iceberg.js');
 
     // Verify function logs progress
     expect(typeof icebergExport).toBe('function');
   });
 
   it('should log schema count when loading', async () => {
-    const { icebergExport } = await import('../commands/iceberg.js');
+    const { icebergExport } = await import('../src/commands/iceberg.js');
 
     // Verify function logs schema information
     expect(typeof icebergExport).toBe('function');
   });
 
   it('should log table location in output', async () => {
-    const { icebergExport } = await import('../commands/iceberg.js');
+    const { icebergExport } = await import('../src/commands/iceberg.js');
 
     // Verify function logs table location
     expect(typeof icebergExport).toBe('function');
   });
 
   it('should log field count in schema', async () => {
-    const { icebergExport } = await import('../commands/iceberg.js');
+    const { icebergExport } = await import('../src/commands/iceberg.js');
 
     // Verify function logs field count
     expect(typeof icebergExport).toBe('function');
   });
 
   it('should log partition field count', async () => {
-    const { icebergExport } = await import('../commands/iceberg.js');
+    const { icebergExport } = await import('../src/commands/iceberg.js');
 
     // Verify function logs partition count
     expect(typeof icebergExport).toBe('function');

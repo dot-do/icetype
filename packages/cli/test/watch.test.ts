@@ -48,7 +48,7 @@ describe('Watch Mode', () => {
       const fs = await import('node:fs');
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
-      const { createWatcher } = await import('../utils/watcher.js');
+      const { createWatcher } = await import('../src/utils/watcher.js');
 
       const onGenerate = vi.fn().mockResolvedValue(undefined);
       const watcher = createWatcher('./schema.ts', { onGenerate });
@@ -65,7 +65,7 @@ describe('Watch Mode', () => {
         return mockWatcher as FSWatcher;
       });
 
-      const { createWatcher } = await import('../utils/watcher.js');
+      const { createWatcher } = await import('../src/utils/watcher.js');
 
       const onGenerate = vi.fn().mockResolvedValue(undefined);
       createWatcher('./schema.ts', { onGenerate });
@@ -89,7 +89,7 @@ describe('Watch Mode', () => {
         return mockWatcher as FSWatcher;
       });
 
-      const { createWatcher } = await import('../utils/watcher.js');
+      const { createWatcher } = await import('../src/utils/watcher.js');
 
       const onGenerate = vi.fn().mockResolvedValue(undefined);
       createWatcher('./schema.ts', { onGenerate, debounceMs: 100 });
@@ -116,7 +116,7 @@ describe('Watch Mode', () => {
         return mockWatcher as FSWatcher;
       });
 
-      const { createWatcher } = await import('../utils/watcher.js');
+      const { createWatcher } = await import('../src/utils/watcher.js');
 
       const error = new Error('Generation failed');
       const onGenerate = vi.fn().mockRejectedValue(error);
@@ -140,7 +140,7 @@ describe('Watch Mode', () => {
         return mockWatcher as FSWatcher;
       });
 
-      const { createWatcher } = await import('../utils/watcher.js');
+      const { createWatcher } = await import('../src/utils/watcher.js');
 
       const onGenerate = vi.fn().mockResolvedValue(undefined);
       createWatcher('./schema.ts', { onGenerate, debounceMs: 200 });
@@ -166,7 +166,7 @@ describe('Watch Mode', () => {
         return mockWatcher as FSWatcher;
       });
 
-      const { createWatcher } = await import('../utils/watcher.js');
+      const { createWatcher } = await import('../src/utils/watcher.js');
 
       const onGenerate = vi.fn().mockResolvedValue(undefined);
       createWatcher('./schema.ts', { onGenerate });
@@ -186,7 +186,7 @@ describe('Watch Mode', () => {
       const fs = await import('node:fs');
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
-      const { createWatcher } = await import('../utils/watcher.js');
+      const { createWatcher } = await import('../src/utils/watcher.js');
 
       const onGenerate = vi.fn().mockResolvedValue(undefined);
       const watcher = createWatcher('./schema.ts', { onGenerate });
@@ -201,7 +201,7 @@ describe('Watch Mode', () => {
       const fs = await import('node:fs');
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
-      const { createWatcher } = await import('../utils/watcher.js');
+      const { createWatcher } = await import('../src/utils/watcher.js');
 
       const onGenerate = vi.fn().mockResolvedValue(undefined);
       const watcher = createWatcher('./schema.ts', { onGenerate });
@@ -218,7 +218,7 @@ describe('Watch Mode', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
-      const { watchGenerate } = await import('../utils/watcher.js');
+      const { watchGenerate } = await import('../src/utils/watcher.js');
 
       const runGeneration = vi.fn().mockResolvedValue(undefined);
 
@@ -245,7 +245,7 @@ describe('Watch Mode', () => {
         return mockWatcher as FSWatcher;
       });
 
-      const { watchGenerate } = await import('../utils/watcher.js');
+      const { watchGenerate } = await import('../src/utils/watcher.js');
 
       let callCount = 0;
       const runGeneration = vi.fn().mockImplementation(() => {
@@ -282,7 +282,7 @@ describe('Watch Mode', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
-      const { watchGenerate } = await import('../utils/watcher.js');
+      const { watchGenerate } = await import('../src/utils/watcher.js');
 
       const runGeneration = vi.fn().mockResolvedValue(undefined);
 
@@ -304,7 +304,7 @@ describe('Watch Mode', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
-      const { watchGenerate } = await import('../utils/watcher.js');
+      const { watchGenerate } = await import('../src/utils/watcher.js');
 
       const runGeneration = vi.fn().mockResolvedValue(undefined);
 
@@ -328,7 +328,7 @@ describe('Watch Mode', () => {
         return mockWatcher as FSWatcher;
       });
 
-      const { createWatcher } = await import('../utils/watcher.js');
+      const { createWatcher } = await import('../src/utils/watcher.js');
 
       const onGenerate = vi.fn().mockResolvedValue(undefined);
       createWatcher('./schema.ts', { onGenerate });
@@ -378,7 +378,7 @@ describe('Watch Mode', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
-      const { watchGenerate } = await import('../utils/watcher.js');
+      const { watchGenerate } = await import('../src/utils/watcher.js');
 
       const runGeneration = vi.fn().mockResolvedValue(undefined);
 
@@ -397,7 +397,7 @@ describe('Watch Mode', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
-      const { watchGenerate } = await import('../utils/watcher.js');
+      const { watchGenerate } = await import('../src/utils/watcher.js');
 
       const runGeneration = vi.fn().mockResolvedValue(undefined);
 
@@ -418,7 +418,7 @@ describe('Watch Mode', () => {
       mockWatcher.close = vi.fn(() => { closeCalled = true; });
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
-      const { watchGenerate } = await import('../utils/watcher.js');
+      const { watchGenerate } = await import('../src/utils/watcher.js');
 
       const runGeneration = vi.fn().mockResolvedValue(undefined);
 
@@ -445,7 +445,7 @@ describe('Watch Mode', () => {
       mockWatcher.close = vi.fn(() => { closeCalled = true; });
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
-      const { watchGenerate } = await import('../utils/watcher.js');
+      const { watchGenerate } = await import('../src/utils/watcher.js');
 
       const runGeneration = vi.fn().mockResolvedValue(undefined);
 
@@ -470,7 +470,7 @@ describe('Watch Mode', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
-      const { watchGenerate } = await import('../utils/watcher.js');
+      const { watchGenerate } = await import('../src/utils/watcher.js');
 
       const runGeneration = vi.fn().mockResolvedValue(undefined);
 
@@ -493,7 +493,7 @@ describe('Watch Mode', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
-      const { watchGenerate } = await import('../utils/watcher.js');
+      const { watchGenerate } = await import('../src/utils/watcher.js');
 
       const runGeneration = vi.fn().mockResolvedValue(undefined);
 
@@ -524,7 +524,7 @@ describe('Watch Mode', () => {
       // Clear any previous logs
       mockConsoleLog.mockClear();
 
-      const { watchGenerate } = await import('../utils/watcher.js');
+      const { watchGenerate } = await import('../src/utils/watcher.js');
 
       const runGeneration = vi.fn().mockResolvedValue(undefined);
 
@@ -559,7 +559,7 @@ describe('Watch Mode', () => {
       mockWatcher.close = vi.fn(() => { closeCallCount++; });
       vi.mocked(fs.watch).mockReturnValue(mockWatcher as FSWatcher);
 
-      const { watchGenerate } = await import('../utils/watcher.js');
+      const { watchGenerate } = await import('../src/utils/watcher.js');
 
       const runGeneration = vi.fn().mockResolvedValue(undefined);
 

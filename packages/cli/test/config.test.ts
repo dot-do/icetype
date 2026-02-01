@@ -57,12 +57,12 @@ async function cleanupTempDir(dir: string): Promise<void> {
 describe('IceTypeConfig Interface', () => {
   it('should export IceTypeConfig type', async () => {
     // Type checking is done at compile time - this test verifies the module exports
-    const configModule = await import('../utils/config.js');
+    const configModule = await import('../src/utils/config.js');
     expect(configModule).toBeDefined();
   });
 
   it('should accept valid config with all options', async () => {
-    const configModule = await import('../utils/config.js');
+    const configModule = await import('../src/utils/config.js');
     const { defineConfig } = configModule;
 
     const config = {
@@ -92,7 +92,7 @@ describe('IceTypeConfig Interface', () => {
   });
 
   it('should accept minimal config with just schema path', async () => {
-    const { defineConfig } = await import('../utils/config.js');
+    const { defineConfig } = await import('../src/utils/config.js');
 
     const config = {
       schema: './schemas/**/*.ts',
@@ -118,7 +118,7 @@ describe('loadConfig', () => {
 
   describe('config file discovery', () => {
     it('should find icetype.config.ts from cwd', async () => {
-      const { findConfigFile } = await import('../utils/config.js');
+      const { findConfigFile } = await import('../src/utils/config.js');
 
       // Mock that icetype.config.ts exists
       vi.mocked(fs.existsSync).mockImplementation((p) => {
@@ -132,7 +132,7 @@ describe('loadConfig', () => {
     });
 
     it('should fall back to icetype.config.js if .ts not found', async () => {
-      const { findConfigFile } = await import('../utils/config.js');
+      const { findConfigFile } = await import('../src/utils/config.js');
 
       // Mock that only .js exists
       vi.mocked(fs.existsSync).mockImplementation((p) => {
@@ -147,7 +147,7 @@ describe('loadConfig', () => {
     });
 
     it('should fall back to icetype.config.mjs if .ts and .js not found', async () => {
-      const { findConfigFile } = await import('../utils/config.js');
+      const { findConfigFile } = await import('../src/utils/config.js');
 
       // Mock that only .mjs exists
       vi.mocked(fs.existsSync).mockImplementation((p) => {
@@ -163,7 +163,7 @@ describe('loadConfig', () => {
     });
 
     it('should return empty config when no config file exists', async () => {
-      const { loadConfig } = await import('../utils/config.js');
+      const { loadConfig } = await import('../src/utils/config.js');
 
       // Mock that no config files exist
       vi.mocked(fs.existsSync).mockReturnValue(false);
@@ -175,7 +175,7 @@ describe('loadConfig', () => {
     });
 
     it('should check explicit config path when provided', async () => {
-      const { loadConfig } = await import('../utils/config.js');
+      const { loadConfig } = await import('../src/utils/config.js');
 
       // Mock that explicit config file does NOT exist (will throw error)
       vi.mocked(fs.existsSync).mockReturnValue(false);
@@ -193,7 +193,7 @@ describe('loadConfig', () => {
 
   describe('config parsing and validation', () => {
     it('should throw error for invalid config file path', async () => {
-      const { loadConfig } = await import('../utils/config.js');
+      const { loadConfig } = await import('../src/utils/config.js');
 
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
@@ -206,7 +206,7 @@ describe('loadConfig', () => {
     });
 
     it('should validate config schema and reject invalid configs', async () => {
-      const { validateConfig } = await import('../utils/config.js');
+      const { validateConfig } = await import('../src/utils/config.js');
 
       // Invalid config - schema should be string, not number
       const invalidConfig = {
@@ -221,7 +221,7 @@ describe('loadConfig', () => {
     });
 
     it('should validate output paths are strings', async () => {
-      const { validateConfig } = await import('../utils/config.js');
+      const { validateConfig } = await import('../src/utils/config.js');
 
       const invalidConfig = {
         schema: './schema.ts',
@@ -238,7 +238,7 @@ describe('loadConfig', () => {
     });
 
     it('should pass validation for valid config', async () => {
-      const { validateConfig } = await import('../utils/config.js');
+      const { validateConfig } = await import('../src/utils/config.js');
 
       const validConfig = {
         schema: './schemas/**/*.ts',
@@ -264,7 +264,7 @@ describe('loadConfig', () => {
 
 describe('mergeConfig', () => {
   it('should merge config file with CLI options', async () => {
-    const { mergeConfig } = await import('../utils/config.js');
+    const { mergeConfig } = await import('../src/utils/config.js');
 
     const fileConfig = {
       schema: './schemas/default.ts',
@@ -284,7 +284,7 @@ describe('mergeConfig', () => {
   });
 
   it('should let CLI options take precedence over config file', async () => {
-    const { mergeConfig } = await import('../utils/config.js');
+    const { mergeConfig } = await import('../src/utils/config.js');
 
     const fileConfig = {
       schema: './from-config.ts',
@@ -310,7 +310,7 @@ describe('mergeConfig', () => {
   });
 
   it('should handle empty CLI options', async () => {
-    const { mergeConfig } = await import('../utils/config.js');
+    const { mergeConfig } = await import('../src/utils/config.js');
 
     const fileConfig = {
       schema: './schemas/default.ts',
@@ -326,7 +326,7 @@ describe('mergeConfig', () => {
   });
 
   it('should handle empty config file', async () => {
-    const { mergeConfig } = await import('../utils/config.js');
+    const { mergeConfig } = await import('../src/utils/config.js');
 
     const cliOptions = {
       schema: './schemas/from-cli.ts',
@@ -340,7 +340,7 @@ describe('mergeConfig', () => {
   });
 
   it('should deep merge adapter options', async () => {
-    const { mergeConfig } = await import('../utils/config.js');
+    const { mergeConfig } = await import('../src/utils/config.js');
 
     const fileConfig = {
       schema: './schema.ts',
@@ -374,7 +374,7 @@ describe('config error handling', () => {
   });
 
   it('should provide helpful error message for syntax errors in config', async () => {
-    const { loadConfig } = await import('../utils/config.js');
+    const { loadConfig } = await import('../src/utils/config.js');
 
     // Mock that config file exists but import fails
     vi.mocked(fs.existsSync).mockReturnValue(true);
@@ -385,7 +385,7 @@ describe('config error handling', () => {
   });
 
   it('should provide helpful error message for missing default export', async () => {
-    const { validateConfigExport } = await import('../utils/config.js');
+    const { validateConfigExport } = await import('../src/utils/config.js');
 
     const moduleWithNoDefault = {
       someOtherExport: {},
@@ -395,7 +395,7 @@ describe('config error handling', () => {
   });
 
   it('should handle config file that exports a function', async () => {
-    const { resolveConfig } = await import('../utils/config.js');
+    const { resolveConfig } = await import('../src/utils/config.js');
 
     const configFn = () => ({
       schema: './dynamic-schema.ts',
@@ -407,7 +407,7 @@ describe('config error handling', () => {
   });
 
   it('should handle async config function', async () => {
-    const { resolveConfig } = await import('../utils/config.js');
+    const { resolveConfig } = await import('../src/utils/config.js');
 
     const asyncConfigFn = async () => ({
       schema: './async-schema.ts',
@@ -425,7 +425,7 @@ describe('config error handling', () => {
 
 describe('defineConfig', () => {
   it('should return the config unchanged (type helper)', async () => {
-    const { defineConfig } = await import('../utils/config.js');
+    const { defineConfig } = await import('../src/utils/config.js');
 
     const config = {
       schema: './schema.ts',
@@ -441,7 +441,7 @@ describe('defineConfig', () => {
   });
 
   it('should provide type checking for config object', async () => {
-    const { defineConfig } = await import('../utils/config.js');
+    const { defineConfig } = await import('../src/utils/config.js');
 
     // This is mainly a compile-time check, but we verify it works at runtime
     const config = defineConfig({
@@ -473,7 +473,7 @@ describe('findConfigFile', () => {
   });
 
   it('should search for config files in priority order', async () => {
-    const { findConfigFile } = await import('../utils/config.js');
+    const { findConfigFile } = await import('../src/utils/config.js');
 
     // Track the order of existsSync calls
     const callOrder: string[] = [];
@@ -491,7 +491,7 @@ describe('findConfigFile', () => {
   });
 
   it('should return first found config file', async () => {
-    const { findConfigFile } = await import('../utils/config.js');
+    const { findConfigFile } = await import('../src/utils/config.js');
 
     vi.mocked(fs.existsSync).mockImplementation((p) => {
       return String(p).endsWith('icetype.config.ts');
@@ -503,7 +503,7 @@ describe('findConfigFile', () => {
   });
 
   it('should return undefined when no config file found', async () => {
-    const { findConfigFile } = await import('../utils/config.js');
+    const { findConfigFile } = await import('../src/utils/config.js');
 
     vi.mocked(fs.existsSync).mockReturnValue(false);
 
@@ -519,7 +519,7 @@ describe('findConfigFile', () => {
 
 describe('resolveFullConfig', () => {
   it('should resolve config with CLI overrides', async () => {
-    const { resolveFullConfig } = await import('../utils/config.js');
+    const { resolveFullConfig } = await import('../src/utils/config.js');
 
     vi.mocked(fs.existsSync).mockReturnValue(false);
 
@@ -536,7 +536,7 @@ describe('resolveFullConfig', () => {
   });
 
   it('should merge file config with CLI options', async () => {
-    const { resolveFullConfig, loadConfig } = await import('../utils/config.js');
+    const { resolveFullConfig, loadConfig } = await import('../src/utils/config.js');
 
     // For this test, we'll verify the merge behavior in isolation
     // since dynamic import mocking is complex
@@ -560,7 +560,7 @@ describe('resolveFullConfig', () => {
 
 describe('GenerateConfig', () => {
   it('should accept generate config with nullableStyle option', async () => {
-    const { defineConfig } = await import('../utils/config.js');
+    const { defineConfig } = await import('../src/utils/config.js');
 
     const config = defineConfig({
       schema: './schema.ts',
@@ -573,7 +573,7 @@ describe('GenerateConfig', () => {
   });
 
   it('should accept all valid nullableStyle values', async () => {
-    const { defineConfig } = await import('../utils/config.js');
+    const { defineConfig } = await import('../src/utils/config.js');
 
     const unionConfig = defineConfig({
       schema: './schema.ts',
@@ -595,7 +595,7 @@ describe('GenerateConfig', () => {
   });
 
   it('should merge generate config with CLI options', async () => {
-    const { mergeConfig } = await import('../utils/config.js');
+    const { mergeConfig } = await import('../src/utils/config.js');
 
     const fileConfig = {
       schema: './schema.ts',

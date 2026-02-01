@@ -24,7 +24,7 @@ vi.mock('node:fs', async () => {
 });
 
 // Mock the schema loader
-vi.mock('../utils/schema-loader.js', () => ({
+vi.mock('../src/utils/schema-loader.js', () => ({
   loadSchemaFile: vi.fn(),
 }));
 
@@ -98,7 +98,7 @@ function createLoadResult(schemas: IceTypeSchema[], errors: string[] = []): Load
  * Get the mocked loadSchemaFile function
  */
 async function getMockedLoadSchemaFile() {
-  const module = await import('../utils/schema-loader.js');
+  const module = await import('../src/utils/schema-loader.js');
   return vi.mocked(module.loadSchemaFile);
 }
 
@@ -124,20 +124,20 @@ describe('diff command', () => {
 
   describe('error cases - missing arguments', () => {
     it('should error when --old is not provided', async () => {
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       // Commands now throw errors (main CLI catches and exits)
       await expect(diff(['--new', './new-schema.ts'])).rejects.toThrow('--old is required');
     });
 
     it('should error when --new is not provided', async () => {
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await expect(diff(['--old', './old-schema.ts'])).rejects.toThrow('--new is required');
     });
 
     it('should error with unsupported dialect', async () => {
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await expect(
         diff(['--old', './old.ts', '--new', './new.ts', '--dialect', 'mysql'])
@@ -157,7 +157,7 @@ describe('diff command', () => {
         errors: ['File not found: ./old-schema.ts'],
       });
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await expect(
         diff(['--old', './old-schema.ts', '--new', './new-schema.ts'])
@@ -171,7 +171,7 @@ describe('diff command', () => {
         errors: [],
       });
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await expect(
         diff(['--old', './old-schema.ts', '--new', './new-schema.ts'])
@@ -192,7 +192,7 @@ describe('diff command', () => {
           errors: ['Failed to parse new-schema.ts'],
         });
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await expect(
         diff(['--old', './old-schema.ts', '--new', './new-schema.ts'])
@@ -210,7 +210,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce({ schemas: [], errors: [] });
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await expect(
         diff(['--old', './old-schema.ts', '--new', './new-schema.ts'])
@@ -241,7 +241,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -271,7 +271,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -304,7 +304,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -338,7 +338,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -367,7 +367,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -396,7 +396,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -429,7 +429,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([userSchema]))
         .mockResolvedValueOnce(createLoadResult([userSchema, postSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -454,7 +454,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([userSchema, postSchema]))
         .mockResolvedValueOnce(createLoadResult([userSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -485,7 +485,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -509,7 +509,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts', '--dialect', 'postgres']);
 
@@ -544,7 +544,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema2]))
         .mockResolvedValueOnce(createLoadResult([newSchema2]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts', '--dialect', 'clickhouse']);
 
@@ -570,7 +570,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts', '--dialect', 'duckdb']);
 
@@ -594,7 +594,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts', '-d', 'clickhouse']);
 
@@ -626,7 +626,7 @@ describe('diff command', () => {
 
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff([
         '--old',
@@ -664,7 +664,7 @@ describe('diff command', () => {
 
       vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff([
         '--old',
@@ -697,7 +697,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -728,7 +728,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -755,7 +755,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -780,7 +780,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts', '--dialect', 'postgres']);
 
@@ -805,7 +805,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([oldSchema]))
         .mockResolvedValueOnce(createLoadResult([newSchema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 
@@ -824,7 +824,7 @@ describe('diff command', () => {
       const loadSchemaFile = await getMockedLoadSchemaFile();
       loadSchemaFile.mockRejectedValue(new Error('Unexpected error occurred'));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       // Commands now throw errors, main CLI catches and handles them
       await expect(
@@ -836,7 +836,7 @@ describe('diff command', () => {
       const loadSchemaFile = await getMockedLoadSchemaFile();
       loadSchemaFile.mockRejectedValue('String error');
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await expect(
         diff(['--old', './old-schema.ts', '--new', './new-schema.ts'])
@@ -860,7 +860,7 @@ describe('diff command', () => {
         .mockResolvedValueOnce(createLoadResult([schema]))
         .mockResolvedValueOnce(createLoadResult([schema]));
 
-      const { diff } = await import('../commands/diff.js');
+      const { diff } = await import('../src/commands/diff.js');
 
       await diff(['--old', './old-schema.ts', '--new', './new-schema.ts']);
 

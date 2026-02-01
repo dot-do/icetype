@@ -427,13 +427,13 @@ describe('SYSTEM_COLUMN_NAMES', () => {
   // This tests an optional exported array of system column names
   // which can be useful for iteration and validation
   it('should export SYSTEM_COLUMN_NAMES array', async () => {
-    const { SYSTEM_COLUMN_NAMES } = await import('../index.js');
+    const { SYSTEM_COLUMN_NAMES } = await import('../src/index.js');
     expect(SYSTEM_COLUMN_NAMES).toBeDefined();
     expect(Array.isArray(SYSTEM_COLUMN_NAMES)).toBe(true);
   });
 
   it('SYSTEM_COLUMN_NAMES should contain all system column names', async () => {
-    const { SYSTEM_COLUMN_NAMES } = await import('../index.js');
+    const { SYSTEM_COLUMN_NAMES } = await import('../src/index.js');
     expect(SYSTEM_COLUMN_NAMES).toHaveLength(5);
     expect(SYSTEM_COLUMN_NAMES).toContain('$id');
     expect(SYSTEM_COLUMN_NAMES).toContain('$type');
@@ -443,7 +443,7 @@ describe('SYSTEM_COLUMN_NAMES', () => {
   });
 
   it('SYSTEM_COLUMN_NAMES should be frozen', async () => {
-    const { SYSTEM_COLUMN_NAMES } = await import('../index.js');
+    const { SYSTEM_COLUMN_NAMES } = await import('../src/index.js');
     expect(Object.isFrozen(SYSTEM_COLUMN_NAMES)).toBe(true);
   });
 });

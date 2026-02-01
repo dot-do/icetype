@@ -94,7 +94,7 @@ describe('PostgreSQL identifier escaping', () => {
 
   describe('table names', () => {
     it('should escape table names with spaces', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       const schema = createSchemaWithName('User Profile');
 
       const ddl = generatePostgresDDL(schema);
@@ -105,7 +105,7 @@ describe('PostgreSQL identifier escaping', () => {
     });
 
     it('should escape table names with special characters', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       const schema = createSchemaWithName('user-data');
 
       const ddl = generatePostgresDDL(schema);
@@ -115,7 +115,7 @@ describe('PostgreSQL identifier escaping', () => {
     });
 
     it('should escape SQL keywords as table names', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       const schema = createSchemaWithName('select');
 
       const ddl = generatePostgresDDL(schema);
@@ -126,7 +126,7 @@ describe('PostgreSQL identifier escaping', () => {
     });
 
     it('should escape table names starting with numbers', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       const schema = createSchemaWithName('123users');
 
       const ddl = generatePostgresDDL(schema);
@@ -136,7 +136,7 @@ describe('PostgreSQL identifier escaping', () => {
     });
 
     it('should escape double quotes in table names', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       const schema = createSchemaWithName('User"Profile');
 
       const ddl = generatePostgresDDL(schema);
@@ -148,7 +148,7 @@ describe('PostgreSQL identifier escaping', () => {
 
   describe('schema names', () => {
     it('should escape schema names with special characters', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       const schema = createSchemaWithName('User');
 
       const ddl = generatePostgresDDL(schema, { schemaName: 'my-schema' });
@@ -158,7 +158,7 @@ describe('PostgreSQL identifier escaping', () => {
     });
 
     it('should escape SQL keywords as schema names', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       const schema = createSchemaWithName('User');
 
       const ddl = generatePostgresDDL(schema, { schemaName: 'select' });
@@ -168,7 +168,7 @@ describe('PostgreSQL identifier escaping', () => {
     });
 
     it('should escape schema names with spaces', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       const schema = createSchemaWithName('User');
 
       const ddl = generatePostgresDDL(schema, { schemaName: 'my schema' });
@@ -180,7 +180,7 @@ describe('PostgreSQL identifier escaping', () => {
 
   describe('field/column names', () => {
     it('should escape field names with spaces', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       const schema = createSchemaWithFieldName('User', 'full name');
 
       const ddl = generatePostgresDDL(schema);
@@ -190,7 +190,7 @@ describe('PostgreSQL identifier escaping', () => {
     });
 
     it('should escape field names with special characters', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       const schema = createSchemaWithFieldName('User', 'user-email');
 
       const ddl = generatePostgresDDL(schema);
@@ -200,7 +200,7 @@ describe('PostgreSQL identifier escaping', () => {
     });
 
     it('should escape SQL keywords as field names', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       const schema = createSchemaWithFieldName('User', 'order');
 
       const ddl = generatePostgresDDL(schema);
@@ -212,7 +212,7 @@ describe('PostgreSQL identifier escaping', () => {
 
   describe('index names', () => {
     it('should escape index names for tables with special characters', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       const schema = createSchemaWithFieldName('User-Data', 'email');
 
       const ddl = generatePostgresDDL(schema);
@@ -225,7 +225,7 @@ describe('PostgreSQL identifier escaping', () => {
     });
 
     it('should handle index names with special characters in column name', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       const schema = createSchemaWithFieldName('User', 'user-email');
 
       const ddl = generatePostgresDDL(schema);
@@ -237,7 +237,7 @@ describe('PostgreSQL identifier escaping', () => {
 
   describe('SQL injection prevention', () => {
     it('should prevent SQL injection via table name', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       // Attempt SQL injection via table name
       const schema = createSchemaWithName('users; DROP TABLE users; --');
 
@@ -250,7 +250,7 @@ describe('PostgreSQL identifier escaping', () => {
     });
 
     it('should prevent SQL injection via schema name', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       const schema = createSchemaWithName('User');
 
       const ddl = generatePostgresDDL(schema, {
@@ -262,7 +262,7 @@ describe('PostgreSQL identifier escaping', () => {
     });
 
     it('should prevent SQL injection via field name', async () => {
-      const { generatePostgresDDL } = await import('../commands/postgres.js');
+      const { generatePostgresDDL } = await import('../src/commands/postgres.js');
       const schema = createSchemaWithFieldName(
         'User',
         'name; DROP TABLE users; --'

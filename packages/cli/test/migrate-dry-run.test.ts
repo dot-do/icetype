@@ -37,7 +37,7 @@ vi.mock('node:fs', async () => {
 });
 
 // Mock the schema loader
-vi.mock('../utils/schema-loader.js', () => ({
+vi.mock('../src/utils/schema-loader.js', () => ({
   loadSchemaFile: vi.fn(),
 }));
 
@@ -109,7 +109,7 @@ function createLoadResult(schemas: IceTypeSchema[], errors: string[] = []): Load
  * Get the mocked loadSchemaFile function
  */
 async function getMockedLoadSchemaFile() {
-  const module = await import('../utils/schema-loader.js');
+  const module = await import('../src/utils/schema-loader.js');
   return vi.mocked(module.loadSchemaFile);
 }
 
@@ -149,7 +149,7 @@ describe('--dry-run shows SQL without executing', () => {
         'ALTER TABLE User ADD COLUMN email TEXT NOT NULL;'
       );
 
-      const { migrateUp } = await import('../commands/migrate.js');
+      const { migrateUp } = await import('../src/commands/migrate.js');
 
       await migrateUp([
         '--schema', './schema.ts',
@@ -178,7 +178,7 @@ describe('--dry-run shows SQL without executing', () => {
       ] as unknown as fs.Dirent[]);
       vi.mocked(fs.readFileSync).mockReturnValue('CREATE TABLE User (id UUID PRIMARY KEY);');
 
-      const { migrateUp } = await import('../commands/migrate.js');
+      const { migrateUp } = await import('../src/commands/migrate.js');
 
       await migrateUp([
         '--schema', './schema.ts',
@@ -209,7 +209,7 @@ describe('--dry-run shows SQL without executing', () => {
         '20240120_add_email.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateUp } = await import('../commands/migrate.js');
+      const { migrateUp } = await import('../src/commands/migrate.js');
 
       await migrateUp([
         '--schema', './schema.ts',
@@ -243,7 +243,7 @@ describe('--dry-run shows SQL without executing', () => {
         '-- UP\nALTER TABLE User ADD COLUMN email TEXT;\n-- DOWN\nALTER TABLE User DROP COLUMN email;'
       );
 
-      const { migrateDown } = await import('../commands/migrate.js');
+      const { migrateDown } = await import('../src/commands/migrate.js');
 
       await migrateDown([
         '--schema', './schema.ts',
@@ -270,7 +270,7 @@ describe('--dry-run shows SQL without executing', () => {
         '20240118_init.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateDown } = await import('../commands/migrate.js');
+      const { migrateDown } = await import('../src/commands/migrate.js');
 
       await migrateDown([
         '--schema', './schema.ts',
@@ -319,7 +319,7 @@ describe('--dry-run shows migration plan', () => {
       '20240120_add_age.sql',
     ] as unknown as fs.Dirent[]);
 
-    const { migrateUp } = await import('../commands/migrate.js');
+    const { migrateUp } = await import('../src/commands/migrate.js');
 
     await migrateUp([
       '--schema', './schema.ts',
@@ -350,7 +350,7 @@ describe('--dry-run shows migration plan', () => {
       '20240120_add_email.sql',
     ] as unknown as fs.Dirent[]);
 
-    const { migrateUp } = await import('../commands/migrate.js');
+    const { migrateUp } = await import('../src/commands/migrate.js');
 
     await migrateUp([
       '--schema', './schema.ts',
@@ -391,7 +391,7 @@ describe('--dry-run shows migration plan', () => {
       'ALTER TABLE User ADD COLUMN email TEXT;\nALTER TABLE User ADD COLUMN age INTEGER;'
     );
 
-    const { migrateUp } = await import('../commands/migrate.js');
+    const { migrateUp } = await import('../src/commands/migrate.js');
 
     await migrateUp([
       '--schema', './schema.ts',
@@ -435,7 +435,7 @@ describe("--dry-run doesn't modify database", () => {
       '20240118_init.sql',
     ] as unknown as fs.Dirent[]);
 
-    const { migrateUp } = await import('../commands/migrate.js');
+    const { migrateUp } = await import('../src/commands/migrate.js');
 
     await migrateUp([
       '--schema', './schema.ts',
@@ -462,10 +462,10 @@ describe("--dry-run doesn't modify database", () => {
       '20240119_add_name.sql',
     ] as unknown as fs.Dirent[]);
 
-    const { migrateUp } = await import('../commands/migrate.js');
+    const { migrateUp } = await import('../src/commands/migrate.js');
 
     // First, check status before dry-run
-    const { migrateStatus } = await import('../commands/migrate.js');
+    const { migrateStatus } = await import('../src/commands/migrate.js');
 
     await migrateUp([
       '--schema', './schema.ts',
@@ -498,7 +498,7 @@ describe("--dry-run doesn't modify database", () => {
 
     vi.mocked(fs.existsSync).mockReturnValue(false);
 
-    const { migrateDev } = await import('../commands/migrate.js');
+    const { migrateDev } = await import('../src/commands/migrate.js');
 
     await migrateDev([
       '--schema', './schema.ts',
@@ -526,7 +526,7 @@ describe("--dry-run doesn't modify database", () => {
       '20240118_init.sql',
     ] as unknown as fs.Dirent[]);
 
-    const { migrateUp } = await import('../commands/migrate.js');
+    const { migrateUp } = await import('../src/commands/migrate.js');
 
     await migrateUp([
       '--schema', './schema.ts',
@@ -561,7 +561,7 @@ describe('--dry-run works with all subcommands', () => {
 
   describe('migrate up --dry-run', () => {
     it('should export migrateUp function', async () => {
-      const migrateModule = await import('../commands/migrate.js');
+      const migrateModule = await import('../src/commands/migrate.js');
       expect(migrateModule.migrateUp).toBeDefined();
       expect(typeof migrateModule.migrateUp).toBe('function');
     });
@@ -580,7 +580,7 @@ describe('--dry-run works with all subcommands', () => {
         '20240118_init.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateUp } = await import('../commands/migrate.js');
+      const { migrateUp } = await import('../src/commands/migrate.js');
 
       // Should not throw when --dry-run is provided
       await expect(
@@ -593,7 +593,7 @@ describe('--dry-run works with all subcommands', () => {
     });
 
     it('should show --dry-run in help text', async () => {
-      const { migrateUp } = await import('../commands/migrate.js');
+      const { migrateUp } = await import('../src/commands/migrate.js');
 
       try {
         await migrateUp(['--help']);
@@ -608,7 +608,7 @@ describe('--dry-run works with all subcommands', () => {
 
   describe('migrate down --dry-run', () => {
     it('should export migrateDown function', async () => {
-      const migrateModule = await import('../commands/migrate.js');
+      const migrateModule = await import('../src/commands/migrate.js');
       expect(migrateModule.migrateDown).toBeDefined();
       expect(typeof migrateModule.migrateDown).toBe('function');
     });
@@ -627,7 +627,7 @@ describe('--dry-run works with all subcommands', () => {
         '20240118_init.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateDown } = await import('../commands/migrate.js');
+      const { migrateDown } = await import('../src/commands/migrate.js');
 
       // Should not throw when --dry-run is provided
       await expect(
@@ -640,7 +640,7 @@ describe('--dry-run works with all subcommands', () => {
     });
 
     it('should show --dry-run in help text', async () => {
-      const { migrateDown } = await import('../commands/migrate.js');
+      const { migrateDown } = await import('../src/commands/migrate.js');
 
       try {
         await migrateDown(['--help']);
@@ -668,7 +668,7 @@ describe('--dry-run works with all subcommands', () => {
         '20240120_add_email.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateDown } = await import('../commands/migrate.js');
+      const { migrateDown } = await import('../src/commands/migrate.js');
 
       await migrateDown([
         '--schema', './schema.ts',
@@ -685,7 +685,7 @@ describe('--dry-run works with all subcommands', () => {
 
   describe('migrate status --dry-run', () => {
     it('should export migrateStatus function', async () => {
-      const migrateModule = await import('../commands/migrate.js');
+      const migrateModule = await import('../src/commands/migrate.js');
       expect(migrateModule.migrateStatus).toBeDefined();
       expect(typeof migrateModule.migrateStatus).toBe('function');
     });
@@ -704,7 +704,7 @@ describe('--dry-run works with all subcommands', () => {
         '20240118_init.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateStatus } = await import('../commands/migrate.js');
+      const { migrateStatus } = await import('../src/commands/migrate.js');
 
       // Should not throw when --dry-run is provided (status is already read-only)
       await expect(
@@ -728,7 +728,7 @@ describe('--dry-run works with all subcommands', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev([
         '--schema', './schema.ts',
@@ -756,7 +756,7 @@ describe('--dry-run works with all subcommands', () => {
         '20240118_init.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrate } = await import('../commands/migrate.js');
+      const { migrate } = await import('../src/commands/migrate.js');
 
       await migrate([
         'up',
@@ -785,7 +785,7 @@ describe('--dry-run works with all subcommands', () => {
         '20240118_init.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrate } = await import('../commands/migrate.js');
+      const { migrate } = await import('../src/commands/migrate.js');
 
       await migrate([
         'down',
@@ -838,7 +838,7 @@ describe('combine --dry-run with --verbose for more detail', () => {
         'ALTER TABLE User ADD COLUMN email TEXT NOT NULL;'
       );
 
-      const { migrateUp } = await import('../commands/migrate.js');
+      const { migrateUp } = await import('../src/commands/migrate.js');
 
       // First run without verbose
       await migrateUp([
@@ -881,7 +881,7 @@ describe('combine --dry-run with --verbose for more detail', () => {
         '-- Migration: init\nCREATE TABLE User (\n  id UUID PRIMARY KEY,\n  created_at TIMESTAMPTZ DEFAULT NOW()\n);'
       );
 
-      const { migrateUp } = await import('../commands/migrate.js');
+      const { migrateUp } = await import('../src/commands/migrate.js');
 
       await migrateUp([
         '--schema', './schema.ts',
@@ -911,7 +911,7 @@ describe('combine --dry-run with --verbose for more detail', () => {
         '20240119_add_name.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateUp } = await import('../commands/migrate.js');
+      const { migrateUp } = await import('../src/commands/migrate.js');
 
       await migrateUp([
         '--schema', './schema.ts',
@@ -939,7 +939,7 @@ describe('combine --dry-run with --verbose for more detail', () => {
         '20240118_init.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateUp } = await import('../commands/migrate.js');
+      const { migrateUp } = await import('../src/commands/migrate.js');
 
       await migrateUp([
         '--schema', './schema.ts',
@@ -973,7 +973,7 @@ describe('combine --dry-run with --verbose for more detail', () => {
         '-- UP\nALTER TABLE User ADD COLUMN email TEXT;\n-- DOWN\nALTER TABLE User DROP COLUMN email;'
       );
 
-      const { migrateDown } = await import('../commands/migrate.js');
+      const { migrateDown } = await import('../src/commands/migrate.js');
 
       await migrateDown([
         '--schema', './schema.ts',
@@ -1002,7 +1002,7 @@ describe('combine --dry-run with --verbose for more detail', () => {
         '20240119_add_fk.sql',
       ] as unknown as fs.Dirent[]);
 
-      const { migrateDown } = await import('../commands/migrate.js');
+      const { migrateDown } = await import('../src/commands/migrate.js');
 
       await migrateDown([
         '--schema', './schema.ts',
@@ -1029,7 +1029,7 @@ describe('combine --dry-run with --verbose for more detail', () => {
 
       loadSchemaFile.mockResolvedValue(createLoadResult([schema]));
 
-      const { migrateDev } = await import('../commands/migrate.js');
+      const { migrateDev } = await import('../src/commands/migrate.js');
 
       await migrateDev([
         '--schema', './schema.ts',
@@ -1075,7 +1075,7 @@ describe('--dry-run with --json output', () => {
       '20240118_init.sql',
     ] as unknown as fs.Dirent[]);
 
-    const { migrateUp } = await import('../commands/migrate.js');
+    const { migrateUp } = await import('../src/commands/migrate.js');
 
     await migrateUp([
       '--schema', './schema.ts',
@@ -1106,7 +1106,7 @@ describe('--dry-run with --json output', () => {
       '20240118_init.sql',
     ] as unknown as fs.Dirent[]);
 
-    const { migrateUp } = await import('../commands/migrate.js');
+    const { migrateUp } = await import('../src/commands/migrate.js');
 
     await migrateUp([
       '--schema', './schema.ts',
@@ -1139,7 +1139,7 @@ describe('--dry-run with --json output', () => {
       '20240119_add_name.sql',
     ] as unknown as fs.Dirent[]);
 
-    const { migrateUp } = await import('../commands/migrate.js');
+    const { migrateUp } = await import('../src/commands/migrate.js');
 
     await migrateUp([
       '--schema', './schema.ts',
@@ -1173,7 +1173,7 @@ describe('--dry-run with --json output', () => {
     ] as unknown as fs.Dirent[]);
     vi.mocked(fs.readFileSync).mockReturnValue('CREATE TABLE User (id UUID PRIMARY KEY);');
 
-    const { migrateUp } = await import('../commands/migrate.js');
+    const { migrateUp } = await import('../src/commands/migrate.js');
 
     await migrateUp([
       '--schema', './schema.ts',
@@ -1220,7 +1220,7 @@ describe('--dry-run edge cases', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readdirSync).mockReturnValue([]);
 
-    const { migrateUp } = await import('../commands/migrate.js');
+    const { migrateUp } = await import('../src/commands/migrate.js');
 
     await migrateUp([
       '--schema', './schema.ts',
@@ -1244,7 +1244,7 @@ describe('--dry-run edge cases', () => {
 
     vi.mocked(fs.existsSync).mockReturnValue(false);
 
-    const { migrateUp } = await import('../commands/migrate.js');
+    const { migrateUp } = await import('../src/commands/migrate.js');
 
     await migrateUp([
       '--schema', './schema.ts',
@@ -1273,7 +1273,7 @@ describe('--dry-run edge cases', () => {
       '20240120_add_email.sql',
     ] as unknown as fs.Dirent[]);
 
-    const { migrateUp } = await import('../commands/migrate.js');
+    const { migrateUp } = await import('../src/commands/migrate.js');
 
     await migrateUp([
       '--schema', './schema.ts',

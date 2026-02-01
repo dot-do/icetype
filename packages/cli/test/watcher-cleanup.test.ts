@@ -83,7 +83,7 @@ describe('Watcher Resource Cleanup', () => {
         return mockWatcher as FSWatcher;
       });
 
-      const { createWatcher } = await import('../utils/watcher.js');
+      const { createWatcher } = await import('../src/utils/watcher.js');
 
       const onGenerate = vi.fn().mockResolvedValue(undefined);
       const watcher = createWatcher('./schema.ts', {
@@ -122,7 +122,7 @@ describe('Watcher Resource Cleanup', () => {
         return mockWatcher as FSWatcher;
       });
 
-      const { createWatcher } = await import('../utils/watcher.js');
+      const { createWatcher } = await import('../src/utils/watcher.js');
 
       let callbackFiredAfterClose = false;
       let watcherClosed = false;
@@ -169,7 +169,7 @@ describe('Watcher Resource Cleanup', () => {
         return mockWatcher as FSWatcher;
       });
 
-      const { createWatcher } = await import('../utils/watcher.js');
+      const { createWatcher } = await import('../src/utils/watcher.js');
 
       const onGenerate = vi.fn().mockResolvedValue(undefined);
       const result = createWatcher('./schema.ts', {
@@ -216,7 +216,7 @@ describe('Watcher Resource Cleanup', () => {
         return freshMockWatcher as FSWatcher;
       });
 
-      const { createWatcher } = await import('../utils/watcher.js');
+      const { createWatcher } = await import('../src/utils/watcher.js');
 
       const callbacks: vi.Mock[] = [];
       const watchers: FSWatcher[] = [];
@@ -261,7 +261,7 @@ describe('Watcher Resource Cleanup', () => {
         return mockWatcher as FSWatcher;
       });
 
-      const { createWatcher } = await import('../utils/watcher.js');
+      const { createWatcher } = await import('../src/utils/watcher.js');
 
       const onGenerate = vi.fn().mockResolvedValue(undefined);
       const watcher = createWatcher('./schema.ts', {
@@ -317,7 +317,7 @@ describe('Watcher Resource Cleanup', () => {
           return mockWatcher as FSWatcher;
         });
 
-        const { watchGenerate } = await import('../utils/watcher.js');
+        const { watchGenerate } = await import('../src/utils/watcher.js');
 
         const runGeneration = vi.fn().mockResolvedValue(undefined);
 
@@ -369,7 +369,7 @@ describe('Watcher Resource Cleanup', () => {
         return mockWatcher as FSWatcher;
       });
 
-      const { createWatcher } = await import('../utils/watcher.js');
+      const { createWatcher } = await import('../src/utils/watcher.js');
 
       const onError = vi.fn();
       const onGenerate = vi.fn().mockRejectedValue(new Error('Generation failed'));

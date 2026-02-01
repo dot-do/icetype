@@ -1793,7 +1793,6 @@ exports[`Snapshot Tests: Parquet Schema Generation > should generate Parquet sch
               "name": "element",
               "repetition": "OPTIONAL",
               "type": "BYTE_ARRAY",
-              "typeLength": undefined,
             },
           ],
           "name": "list",
@@ -2407,7 +2406,6 @@ exports[`Snapshot Tests: Parquet Schema Generation > should generate Parquet sch
               "name": "element",
               "repetition": "OPTIONAL",
               "type": "BYTE_ARRAY",
-              "typeLength": undefined,
             },
           ],
           "name": "list",
@@ -2435,7 +2433,6 @@ exports[`Snapshot Tests: Parquet Schema Generation > should generate Parquet sch
               "name": "element",
               "repetition": "OPTIONAL",
               "type": "INT32",
-              "typeLength": undefined,
             },
           ],
           "name": "list",
@@ -2455,12 +2452,9 @@ exports[`Snapshot Tests: Parquet Schema Generation > should generate Parquet sch
         {
           "children": [
             {
-              "convertedType": undefined,
-              "logicalType": undefined,
               "name": "element",
               "repetition": "OPTIONAL",
               "type": "FLOAT",
-              "typeLength": undefined,
             },
           ],
           "name": "list",
@@ -2487,7 +2481,6 @@ exports[`Snapshot Tests: Parquet Schema Generation > should generate Parquet sch
               "name": "element",
               "repetition": "OPTIONAL",
               "type": "BYTE_ARRAY",
-              "typeLength": undefined,
             },
           ],
           "name": "list",
@@ -2507,12 +2500,9 @@ exports[`Snapshot Tests: Parquet Schema Generation > should generate Parquet sch
         {
           "children": [
             {
-              "convertedType": undefined,
-              "logicalType": undefined,
               "name": "element",
               "repetition": "OPTIONAL",
               "type": "FLOAT",
-              "typeLength": undefined,
             },
           ],
           "name": "list",
@@ -2532,12 +2522,9 @@ exports[`Snapshot Tests: Parquet Schema Generation > should generate Parquet sch
         {
           "children": [
             {
-              "convertedType": undefined,
-              "logicalType": undefined,
               "name": "element",
               "repetition": "OPTIONAL",
               "type": "FLOAT",
-              "typeLength": undefined,
             },
           ],
           "name": "list",
