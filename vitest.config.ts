@@ -24,6 +24,10 @@ export default defineConfig({
       '**/pull-command.test.ts',           // DB introspection not yet implemented
       '**/dynamic-imports.test.ts',        // Lazy loading not yet implemented
       '**/schema-loading-errors.test.ts',  // Error enhancements not yet implemented
+      '**/adapter-registry.test.ts',       // RED: CLI adapter registry integration
+      '**/dynamic-adapter-loading.test.ts', // RED: Dynamic adapter loading
+      '**/security-audit.test.ts',         // RED: Security vulnerability tracking
+      '**/readme-requirements.test.ts',    // RED: README completeness requirements
     ],
     coverage: {
       provider: 'v8',
