@@ -221,27 +221,22 @@ function fieldToDefinition(field: ParsedField): FieldDefinition {
     isIndexed,
   };
 
-  // Extract extended fields from ParsedField.
-  // GraphDL may not yet declare these in its type definition, so we access
-  // them via a Record cast for forward-compatibility.
-  const ext = field as unknown as Record<string, unknown>;
-
   // Parametric type fields
-  if (ext.precision != null) definition.precision = ext.precision as number;
-  if (ext.scale != null) definition.scale = ext.scale as number;
-  if (ext.length != null) definition.length = ext.length as number;
+  if (field.precision != null) definition.precision = field.precision;
+  if (field.scale != null) definition.scale = field.scale;
+  if (field.length != null) definition.length = field.length;
 
   // Generic type fields
-  if (ext.keyType != null) definition.keyType = ext.keyType as string;
-  if (ext.valueType != null) definition.valueType = ext.valueType as string;
-  if (ext.structName != null) definition.structName = ext.structName as string;
-  if (ext.enumName != null) definition.enumName = ext.enumName as string;
-  if (ext.refTarget != null) definition.refTarget = ext.refTarget as string;
-  if (ext.elementType != null) definition.elementType = ext.elementType as string;
+  if (field.keyType != null) definition.keyType = field.keyType;
+  if (field.valueType != null) definition.valueType = field.valueType;
+  if (field.structName != null) definition.structName = field.structName;
+  if (field.enumName != null) definition.enumName = field.enumName;
+  if (field.refTarget != null) definition.refTarget = field.refTarget;
+  if (field.elementType != null) definition.elementType = field.elementType;
 
   // Default value (field.default -> definition.defaultValue)
-  if ('default' in ext && ext.default !== undefined) {
-    definition.defaultValue = ext.default;
+  if (field.default !== undefined) {
+    definition.defaultValue = field.default;
   }
 
   // Handle relations
