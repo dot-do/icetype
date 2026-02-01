@@ -272,15 +272,39 @@ export interface PluginDependency {
 }
 
 /**
- * Valid hook names for plugins.
+ * Valid hook names for the plugin lifecycle.
  *
  * This type defines the string literal union of all valid hook names
- * that can be used with the plugin system.
+ * that can be used with the plugin system. Each hook serves a specific
+ * purpose in the plugin lifecycle:
+ *
+ * - `'init'` - Initialization hook, called once when plugin is initialized
+ * - `'validate'` - Validation hook, called to validate input before transformation
+ * - `'transform'` - Transformation hook (required), main plugin functionality
+ * - `'generate'` - Generation hook, for producing additional output
+ * - `'dispose'` - Cleanup hook, called when plugin is disposed
+ *
+ * @example Type-safe hook name handling
+ * ```typescript
+ * function executeHook(plugin: Plugin, hook: HookName, ...args: unknown[]) {
+ *   switch (hook) {
+ *     case 'init':
+ *       return plugin.hooks.init?.(args[0]);
+ *     case 'transform':
+ *       return plugin.hooks.transform(args[0], args[1]);
+ *     // ... other hooks
+ *   }
+ * }
+ * ```
+ *
+ * @see {@link PluginHooks} for hook function definitions
+ * @see {@link isValidHookName} for runtime validation
  */
 export type HookName = 'init' | 'validate' | 'transform' | 'generate' | 'dispose';
 
 /**
  * Array of valid hook names for runtime validation.
+ * @internal
  */
 const VALID_HOOK_NAMES: readonly HookName[] = ['init', 'validate', 'transform', 'generate', 'dispose'] as const;
 
@@ -417,16 +441,86 @@ export interface TypedPluginHooks<
 }
 
 /**
- * Plugin interface.
+ * Base plugin interface (non-generic version).
+ *
+ * Plugins are the core unit of extensibility in IceType. They provide
+ * transformation, validation, and generation capabilities through lifecycle hooks.
+ *
+ * For type-safe plugins with full generic support, use {@link TypedPlugin} instead.
+ *
+ * @example Basic plugin definition
+ * ```typescript
+ * const myPlugin: Plugin = {
+ *   name: 'my-plugin',
+ *   version: '1.0.0',
+ *   hooks: {
+ *     init: async (context) => {
+ *       console.log('Initializing plugin');
+ *     },
+ *     transform: async (schema) => {
+ *       return { sql: `CREATE TABLE ${schema.name}` };
+ *     },
+ *     dispose: async () => {
+ *       console.log('Cleaning up');
+ *     },
+ *   },
+ * };
+ * ```
+ *
+ * @example Plugin with dependencies
+ * ```typescript
+ * const dependentPlugin: Plugin = {
+ *   name: 'extended-plugin',
+ *   version: '1.0.0',
+ *   dependencies: [
+ *     { name: 'base-plugin', version: '^1.0.0' },
+ *   ],
+ *   hooks: {
+ *     transform: async (schema, options, deps) => {
+ *       const base = deps?.get('base-plugin');
+ *       // Use base plugin functionality
+ *       return { /* ... *\/ };
+ *     },
+ *   },
+ * };
+ * ```
+ *
+ * @see {@link TypedPlugin} for type-safe generic version
+ * @see {@link PluginHooks} for hook definitions
+ * @see {@link PluginDependency} for dependency specification
  */
 export interface Plugin {
-  /** Plugin name */
+  /**
+   * Unique plugin identifier.
+   *
+   * Used for registration, dependency resolution, and CLI commands.
+   * Should be lowercase with hyphens (e.g., 'my-plugin', 'iceberg-adapter').
+   */
   name: string;
-  /** Plugin version */
+
+  /**
+   * Plugin version following semantic versioning (semver).
+   *
+   * Used for dependency version checking and compatibility validation.
+   * Format: MAJOR.MINOR.PATCH (e.g., '1.0.0', '2.1.3')
+   */
   version: string;
-  /** Plugin dependencies */
+
+  /**
+   * Optional list of plugins this plugin depends on.
+   *
+   * Dependencies are resolved and initialized before this plugin.
+   * The PluginManager ensures all dependencies are available and
+   * their versions satisfy the specified constraints.
+   */
   dependencies?: PluginDependency[];
-  /** Plugin lifecycle hooks */
+
+  /**
+   * Lifecycle hooks implementing the plugin's functionality.
+   *
+   * At minimum, the `transform` hook must be defined.
+   * Optional hooks: `init`, `validate`, `generate`, `dispose`.
+   */
   hooks: PluginHooks;
 }
 
@@ -486,57 +580,137 @@ export interface TypedPlugin<
 }
 
 /**
- * Plugin manifest from package.json.
+ * Plugin manifest structure extracted from package.json.
+ *
+ * This interface describes the metadata that can be defined in a plugin
+ * package's package.json file. The PluginManager uses this to discover
+ * plugin capabilities, validate compatibility, and provide UI/CLI information.
+ *
+ * @example package.json for an adapter
+ * ```json
+ * {
+ *   "name": "icetype-adapter-postgres",
+ *   "version": "1.0.0",
+ *   "description": "PostgreSQL adapter for IceType",
+ *   "main": "./dist/index.js",
+ *   "icetype": {
+ *     "adapter": true,
+ *     "minCoreVersion": "1.0.0",
+ *     "displayName": "PostgreSQL Adapter",
+ *     "capabilities": ["transform", "validate", "serialize"]
+ *   },
+ *   "peerDependencies": {
+ *     "@icetype/core": "^1.0.0"
+ *   }
+ * }
+ * ```
+ *
+ * @example Loading and validating a manifest
+ * ```typescript
+ * const manager = createPluginManager();
+ * const manifest = await manager.loadManifest('icetype-adapter-postgres');
+ *
+ * manager.validateManifest(manifest); // Throws if invalid
+ *
+ * console.log(manifest.displayName); // "PostgreSQL Adapter"
+ * console.log(manifest.capabilities); // ["transform", "validate", "serialize"]
+ * ```
  */
 export interface PluginManifest {
-  /** Package name */
+  /** NPM package name (e.g., '@icetype/postgres', 'icetype-adapter-postgres') */
   name: string;
-  /** Package version */
+
+  /** Package version (semver format) */
   version: string;
-  /** Display name for UI */
+
+  /** Human-readable display name for UI/CLI help text */
   displayName?: string;
-  /** Package description */
+
+  /** Package description from package.json */
   description?: string;
-  /** Package author */
+
+  /** Package author (string or { name, email, url } object serialized) */
   author?: string;
-  /** License */
+
+  /** SPDX license identifier (e.g., 'MIT', 'Apache-2.0') */
   license?: string;
-  /** Homepage URL */
+
+  /** Homepage URL (documentation, project page) */
   homepage?: string;
-  /** Repository URL */
+
+  /** Repository URL (GitHub, GitLab, etc.) */
   repository?: string;
-  /** Package keywords */
+
+  /** NPM package keywords for discoverability */
   keywords?: string[];
-  /** Plugin capabilities */
+
+  /**
+   * List of capabilities this plugin provides.
+   * Common values: 'transform', 'validate', 'serialize', 'generate', 'migrate'
+   */
   capabilities?: string[];
-  /** Entry point */
+
+  /** Entry point file relative to package root (default: main field) */
   entry?: string;
-  /** Package dependencies */
+
+  /** Runtime dependencies (from package.json dependencies) */
   dependencies?: Record<string, string>;
-  /** Peer dependencies */
+
+  /** Peer dependencies (typically includes @icetype/core) */
   peerDependencies?: Record<string, string>;
-  /** Engine requirements */
+
+  /** Node.js engine requirements (e.g., { "node": ">=18.0.0" }) */
   engines?: Record<string, string>;
-  /** IceType adapter configuration */
+
+  /**
+   * IceType-specific configuration section.
+   * This is the primary field for IceType plugin metadata.
+   */
   icetype: {
-    /** Whether this is an adapter */
+    /** Whether this package is a schema adapter */
     adapter: boolean;
-    /** Minimum core version */
+    /** Minimum @icetype/core version required */
     minCoreVersion?: string;
   };
-  /** Configuration options schema */
+
+  /**
+   * JSON Schema for plugin configuration options.
+   * Used for validating plugin configuration in icetype.config.ts.
+   */
   options?: unknown;
-  /** Shorthand for icetype.adapter */
+
+  /** @deprecated Use icetype.adapter instead */
   adapter?: boolean;
 }
 
 /**
- * Plugin configuration.
+ * Plugin configuration entry (non-generic version).
+ *
+ * Used when configuring plugins programmatically or in configuration files.
+ * For type-safe configuration, use {@link TypedPluginConfig} instead.
+ *
+ * @example Programmatic configuration
+ * ```typescript
+ * const config: PluginConfig = {
+ *   pluginName: 'postgres',
+ *   options: {
+ *     schemaName: 'public',
+ *     ifNotExists: true,
+ *   },
+ * };
+ *
+ * const manager = createPluginManager();
+ * await manager.validateConfig(config);
+ * ```
+ *
+ * @see {@link TypedPluginConfig} for type-safe generic version
+ * @see {@link IceTypeConfig} for full configuration file structure
  */
 export interface PluginConfig {
-  /** Plugin name */
+  /** Plugin name as registered with the PluginManager */
   pluginName: string;
-  /** Plugin options */
+
+  /** Plugin-specific options passed to hooks */
   options: Record<string, unknown>;
 }
 
@@ -574,30 +748,117 @@ export interface TypedPluginConfig<TOptions extends Record<string, unknown> = Re
 }
 
 /**
- * Discovered adapter info.
+ * Information about a discovered adapter package.
+ *
+ * Returned by {@link discoverAdapters} when scanning node_modules
+ * for IceType adapter packages.
+ *
+ * @example Discovery usage
+ * ```typescript
+ * const adapters = await discoverAdapters({
+ *   patterns: ['icetype-adapter-*', '@icetype/*'],
+ * });
+ *
+ * for (const adapter of adapters) {
+ *   console.log(`Found: ${adapter.name} v${adapter.version}`);
+ *   console.log(`  Package: ${adapter.packageName}`);
+ * }
+ * ```
+ *
+ * @see {@link discoverAdapters} for discovery function
+ * @see {@link DiscoverOptions} for discovery configuration
  */
 export interface DiscoveredAdapter {
-  /** Adapter name (from package name) */
+  /**
+   * Extracted adapter name (without prefix).
+   * For 'icetype-adapter-postgres', this would be 'postgres'.
+   * For '@icetype/postgres', this would be 'postgres'.
+   */
   name: string;
-  /** Adapter version */
+
+  /** Adapter package version from package.json */
   version: string;
-  /** Full package name */
+
+  /** Full NPM package name (e.g., '@icetype/postgres', 'icetype-adapter-postgres') */
   packageName: string;
-  /** Plugin manifest (if icetype field present) */
+
+  /** Partial manifest with icetype field if present in package.json */
   manifest?: { icetype?: unknown };
 }
 
 /**
- * Plugin manager configuration.
+ * Configuration options for the PluginManager.
+ *
+ * These options control plugin discovery, loading behavior, and error handling.
+ *
+ * @example Full configuration
+ * ```typescript
+ * const manager = createPluginManager({
+ *   autoDiscover: true,
+ *   strictMode: true,
+ *   cacheEnabled: true,
+ *   discoverPatterns: ['icetype-adapter-*', '@icetype/*', '@myorg/icetype-*'],
+ * });
+ * ```
+ *
+ * @example Minimal configuration
+ * ```typescript
+ * // Uses defaults: autoDiscover=false, strictMode=false, cacheEnabled=true
+ * const manager = createPluginManager();
+ * ```
+ *
+ * @see {@link createPluginManager} for factory function
  */
 export interface PluginManagerConfig {
-  /** Auto-discover adapters on init */
+  /**
+   * Automatically discover adapters from node_modules on initialization.
+   *
+   * When enabled, the manager scans node_modules for packages matching
+   * the discovery patterns and registers lazy loaders for them.
+   *
+   * @default false
+   */
   autoDiscover?: boolean;
-  /** Strict mode - throw on validation errors */
+
+  /**
+   * Enable strict mode for stricter validation.
+   *
+   * When enabled:
+   * - Plugin validation errors throw instead of warn
+   * - Missing optional dependencies throw errors
+   * - Discovery errors are propagated instead of ignored
+   *
+   * @default false
+   */
   strictMode?: boolean;
-  /** Enable caching of loaded plugins */
+
+  /**
+   * Enable caching of loaded plugins.
+   *
+   * When enabled, plugin instances and manifests are cached
+   * to avoid repeated loading and parsing.
+   *
+   * @default true
+   */
   cacheEnabled?: boolean;
-  /** Patterns for adapter discovery */
+
+  /**
+   * Glob patterns for adapter/plugin discovery.
+   *
+   * These patterns are matched against package names in node_modules
+   * during auto-discovery or when calling discoverAll().
+   *
+   * @default ['icetype-adapter-*']
+   *
+   * @example Custom patterns
+   * ```typescript
+   * discoverPatterns: [
+   *   'icetype-adapter-*',    // Community adapters
+   *   '@icetype/*',           // Official scoped packages
+   *   '@myorg/icetype-*',     // Organization-specific adapters
+   * ]
+   * ```
+   */
   discoverPatterns?: string[];
 }
 
@@ -663,35 +924,154 @@ function satisfiesVersion(availableVersion: string, requiredRange: string): bool
 // =============================================================================
 
 /**
- * Schema adapter interface (compatible with @icetype/adapters).
- * This is a simplified version for plugin system integration.
+ * Compatibility interface for schema adapters within the plugin system.
+ *
+ * This interface bridges the SchemaAdapter interface from @icetype/adapters
+ * with the plugin system. It allows adapters to be registered and managed
+ * as plugins while maintaining their synchronous transform/serialize API.
+ *
+ * When an adapter is registered with {@link PluginManager.registerAdapter},
+ * it is wrapped to provide async plugin hooks while preserving the original
+ * adapter's synchronous methods.
+ *
+ * @typeParam TOutput - The output type produced by `transform()`
+ * @typeParam TOptions - The options type accepted by `transform()`
+ *
+ * @example Implementing a compatible adapter
+ * ```typescript
+ * const myAdapter: SchemaAdapterCompat<MyDDL, MyOptions> = {
+ *   name: 'my-adapter',
+ *   version: '1.0.0',
+ *
+ *   transform(schema, options) {
+ *     // Synchronous transformation
+ *     return { tableName: schema.name, columns: [...] };
+ *   },
+ *
+ *   serialize(output) {
+ *     return `CREATE TABLE ${output.tableName} (...)`;
+ *   },
+ *
+ *   validate(schema) {
+ *     const errors = [];
+ *     // Validation logic...
+ *     return { valid: errors.length === 0, errors };
+ *   },
+ * };
+ *
+ * // Register with plugin manager
+ * const manager = createPluginManager();
+ * manager.registerAdapter(myAdapter);
+ * ```
+ *
+ * @see {@link SchemaAdapter} in @icetype/core for the canonical adapter interface
+ * @see {@link PluginManager.registerAdapter} for registration
  */
 export interface SchemaAdapterCompat<TOutput = unknown, TOptions = unknown> {
-  /** Unique adapter name */
+  /**
+   * Unique adapter identifier.
+   *
+   * Must be unique within a PluginManager instance.
+   * Used as the key for retrieval via getAdapter().
+   */
   readonly name: string;
-  /** Adapter version */
+
+  /**
+   * Adapter version (semver format).
+   *
+   * Used for compatibility checking and debugging.
+   */
   readonly version: string;
-  /** Transform schema to output format */
+
+  /**
+   * Transform an IceType schema to the adapter's output format.
+   *
+   * This is the core transformation method. Unlike plugin hooks,
+   * this method is synchronous for performance.
+   *
+   * @param schema - The IceType schema to transform
+   * @param options - Adapter-specific options
+   * @returns The transformed output
+   */
   transform(schema: unknown, options?: TOptions): TOutput;
-  /** Serialize output to string */
+
+  /**
+   * Serialize the transform output to a string.
+   *
+   * @param output - The output from transform()
+   * @returns String representation (SQL, JSON, etc.)
+   */
   serialize(output: TOutput): string;
-  /** Optional: serialize with indexes */
+
+  /**
+   * Serialize output including index creation statements.
+   *
+   * Optional method for SQL adapters that generate CREATE INDEX
+   * statements separately from CREATE TABLE.
+   *
+   * @param output - The output from transform()
+   * @returns Full DDL string including indexes
+   */
   serializeWithIndexes?(output: TOutput): string;
-  /** Optional: initialize adapter */
+
+  /**
+   * Initialize the adapter with context.
+   *
+   * Called when the adapter is initialized as a plugin.
+   * Use for setup that requires async operations (e.g., database connections).
+   *
+   * @param context - Application context
+   */
   init?(context: unknown): Promise<void>;
-  /** Optional: dispose adapter */
+
+  /**
+   * Clean up adapter resources.
+   *
+   * Called when the adapter is disposed or the manager shuts down.
+   *
+   */
   dispose?(): Promise<void>;
-  /** Optional: validate schema */
+
+  /**
+   * Validate a schema before transformation.
+   *
+   * Optional method for pre-transformation validation.
+   * Returns validation errors instead of throwing.
+   *
+   * @param schema - The schema to validate
+   * @returns Validation result with any errors
+   */
   validate?(schema: unknown): { valid: boolean; errors: string[] };
 }
 
 /**
- * Discovered item type for unified discovery.
+ * Unified discovery result for plugins and adapters.
+ *
+ * Returned by {@link PluginManager.discoverAll} when scanning
+ * for both plugins and adapters in a single operation.
+ *
+ * @example
+ * ```typescript
+ * const manager = createPluginManager();
+ * const items = await manager.discoverAll({
+ *   patterns: ['icetype-*', '@icetype/*'],
+ * });
+ *
+ * const adapters = items.filter(i => i.type === 'adapter');
+ * const plugins = items.filter(i => i.type === 'plugin');
+ *
+ * console.log(`Found ${adapters.length} adapters and ${plugins.length} plugins`);
+ * ```
  */
 export interface DiscoveredItem {
-  /** Item name */
+  /** Extracted item name (without prefix) */
   name: string;
-  /** Item type - 'plugin' or 'adapter' */
+
+  /**
+   * Item classification.
+   * - 'adapter': Schema transformation adapter (has transform/serialize)
+   * - 'plugin': General plugin (has hooks)
+   */
   type: 'plugin' | 'adapter';
 }
 
@@ -700,66 +1080,371 @@ export interface DiscoveredItem {
 // =============================================================================
 
 /**
- * Plugin manager interface.
+ * Plugin Manager interface for managing plugins and adapters.
+ *
+ * The PluginManager provides a unified interface for:
+ * - Registering plugins and adapters
+ * - Managing plugin lifecycle (init, execute, dispose)
+ * - Lazy loading plugins on demand
+ * - Resolving and initializing dependencies
+ * - Discovering plugins from node_modules
+ *
+ * @example Basic usage
+ * ```typescript
+ * import { createPluginManager } from '@icetype/core';
+ *
+ * const manager = createPluginManager();
+ *
+ * // Register a plugin
+ * manager.register({
+ *   name: 'my-plugin',
+ *   version: '1.0.0',
+ *   hooks: {
+ *     transform: async (schema) => ({ sql: `CREATE TABLE ${schema.name}` }),
+ *   },
+ * });
+ *
+ * // Initialize and execute
+ * await manager.initialize('my-plugin', { appName: 'MyApp' });
+ * const result = await manager.execute('my-plugin', 'transform', schema);
+ *
+ * // Cleanup
+ * await manager.shutdown();
+ * ```
+ *
+ * @example Lazy loading
+ * ```typescript
+ * const manager = createPluginManager();
+ *
+ * // Register lazy loader - plugin isn't loaded yet
+ * manager.registerLazy('heavy-plugin', async () => {
+ *   const { HeavyPlugin } = await import('./heavy-plugin.js');
+ *   return new HeavyPlugin();
+ * });
+ *
+ * // Plugin loads on first use
+ * const plugin = await manager.load('heavy-plugin');
+ * ```
+ *
+ * @example Working with adapters
+ * ```typescript
+ * import { PostgresAdapter } from '@icetype/postgres';
+ *
+ * const manager = createPluginManager();
+ *
+ * // Register adapter (wraps as plugin internally)
+ * manager.registerAdapter(new PostgresAdapter());
+ *
+ * // Access original adapter
+ * const adapter = manager.getAdapter('postgres');
+ * const ddl = adapter?.transform(schema, { ifNotExists: true });
+ *
+ * // Or execute via plugin interface
+ * const result = await manager.execute('postgres', 'transform', schema);
+ * ```
+ *
+ * @see {@link createPluginManager} for factory function
+ * @see {@link Plugin} for plugin interface
+ * @see {@link SchemaAdapterCompat} for adapter interface
  */
 export interface PluginManager {
-  /** Register a plugin */
+  // ==========================================================================
+  // Registration Methods
+  // ==========================================================================
+
+  /**
+   * Register a plugin with the manager.
+   *
+   * @param plugin - The plugin to register
+   * @param options - Registration options
+   * @param options.force - If true, overwrite existing plugin with same name
+   * @throws {Error} If plugin name is empty or hooks are missing
+   * @throws {Error} If plugin with same name exists and force is false
+   */
   register(plugin: Plugin, options?: { force?: boolean }): void;
-  /** Register a schema adapter as a plugin */
+
+  /**
+   * Register a schema adapter as a plugin.
+   *
+   * The adapter is wrapped with async plugin hooks while preserving
+   * access to the original synchronous methods via getAdapter().
+   *
+   * @param adapter - The adapter to register
+   * @throws {Error} If adapter name is empty or methods are missing
+   * @throws {Error} If plugin/adapter with same name already exists
+   */
   registerAdapter(adapter: SchemaAdapterCompat): void;
-  /** Get the original adapter by name */
-  getAdapter<T = unknown, O = unknown>(name: string): SchemaAdapterCompat<T, O> | undefined;
-  /** Unregister a plugin by name */
-  unregister(name: string): boolean | Promise<boolean>;
-  /** Get a plugin by name */
-  get(name: string): Plugin | undefined;
-  /** Check if a plugin is registered */
-  has(name: string): boolean;
-  /** List all registered plugin names */
-  list(): string[];
-  /** List only plugins (not adapters) */
-  listPlugins(): string[];
-  /** List only adapters */
-  listAdapters(): string[];
-  /** Clear all registered plugins */
-  clear(): void;
-  /** Load a plugin manifest from package */
-  loadManifest(name: string): Promise<PluginManifest>;
-  /** Validate plugin configuration */
-  validateConfig(config: PluginConfig): Promise<{ valid: boolean; errors?: unknown[] }>;
-  /** Register a lazy-loaded plugin */
+
+  /**
+   * Register a lazy-loaded plugin.
+   *
+   * The loader function is only called when the plugin is first accessed
+   * via load() or when a hook is executed.
+   *
+   * @param name - Plugin name for later retrieval
+   * @param loader - Async function that returns the plugin instance
+   */
   registerLazy(name: string, loader: () => Promise<Plugin>): void;
-  /** Check if a plugin is loaded (not just registered) */
+
+  // ==========================================================================
+  // Retrieval Methods
+  // ==========================================================================
+
+  /**
+   * Get a registered plugin by name.
+   *
+   * @param name - The plugin name
+   * @returns The plugin or undefined if not registered
+   */
+  get(name: string): Plugin | undefined;
+
+  /**
+   * Get the original adapter instance by name.
+   *
+   * Use this to access synchronous adapter methods (transform, serialize)
+   * without going through the async plugin interface.
+   *
+   * @typeParam T - Expected output type of the adapter
+   * @typeParam O - Expected options type of the adapter
+   * @param name - The adapter name
+   * @returns The adapter or undefined if not found or not an adapter
+   */
+  getAdapter<T = unknown, O = unknown>(name: string): SchemaAdapterCompat<T, O> | undefined;
+
+  /**
+   * Check if a plugin or adapter is registered.
+   *
+   * Returns true for both loaded plugins and lazy-registered plugins.
+   *
+   * @param name - The plugin name
+   * @returns True if registered (loaded or lazy)
+   */
+  has(name: string): boolean;
+
+  /**
+   * Check if a plugin is fully loaded (not just lazy-registered).
+   *
+   * @param name - The plugin name
+   * @returns True if the plugin instance is loaded in memory
+   */
   isLoaded(name: string): boolean;
-  /** Load a lazy-registered plugin */
+
+  /**
+   * List all registered plugin and adapter names.
+   *
+   * @returns Array of names (includes both loaded and lazy-registered)
+   */
+  list(): string[];
+
+  /**
+   * List only plugin names (not adapters).
+   *
+   * @returns Array of plugin names
+   */
+  listPlugins(): string[];
+
+  /**
+   * List only adapter names.
+   *
+   * @returns Array of adapter names
+   */
+  listAdapters(): string[];
+
+  // ==========================================================================
+  // Loading Methods
+  // ==========================================================================
+
+  /**
+   * Load a lazy-registered plugin.
+   *
+   * If the plugin is already loaded, returns the cached instance.
+   * If the plugin is not registered, throws an error.
+   *
+   * @param name - The plugin name
+   * @returns The loaded plugin instance
+   * @throws {PluginLoadError} If plugin is not registered or loading fails
+   */
   load(name: string): Promise<Plugin>;
-  /** Preload multiple plugins */
+
+  /**
+   * Preload multiple plugins in parallel.
+   *
+   * Useful for warming up plugins before they're needed.
+   *
+   * @param names - Array of plugin names to preload
+   */
   preload(names: string[]): Promise<void>;
-  /** Unload a plugin */
+
+  /**
+   * Unload a plugin (remove from loaded cache).
+   *
+   * Does not unregister the plugin - a lazy-registered plugin can
+   * be loaded again. Use unregister() to fully remove.
+   *
+   * @param name - The plugin name
+   */
   unload(name: string): void;
-  /** Initialize a plugin with context */
-  initialize(name: string, context: unknown): Promise<void>;
-  /** Execute a plugin hook */
-  execute(name: string, hook: string, ...args: unknown[]): Promise<unknown>;
-  /** Dispose a plugin */
-  dispose(name: string): Promise<void>;
-  /** Shutdown the plugin manager */
-  shutdown(): Promise<void>;
-  /** Resolve plugin dependencies */
-  resolveDependencies(name: string): Promise<string[]>;
-  /** Initialize plugin with its dependencies */
-  initializeWithDependencies(name: string, context: unknown): Promise<void>;
-  /** Execute hook with dependencies available */
-  executeWithDependencies(name: string, hook: string, ...args: unknown[]): Promise<unknown>;
-  /** Validate a plugin manifest */
+
+  /**
+   * Load a plugin manifest from its package.json.
+   *
+   * Searches node_modules for the package and extracts metadata.
+   *
+   * @param name - Package name or plugin name
+   * @returns The plugin manifest
+   */
+  loadManifest(name: string): Promise<PluginManifest>;
+
+  /**
+   * Validate a plugin manifest structure.
+   *
+   * @param manifest - The manifest to validate
+   * @throws {Error} If manifest is missing required fields
+   */
   validateManifest(manifest: PluginManifest): void;
-  /** Wait for auto-discovery to complete */
+
+  /**
+   * Validate plugin configuration against its manifest's options schema.
+   *
+   * @param config - The configuration to validate
+   * @returns Validation result
+   * @throws {Error} If validation fails in strict mode
+   */
+  validateConfig(config: PluginConfig): Promise<{ valid: boolean; errors?: unknown[] }>;
+
+  // ==========================================================================
+  // Lifecycle Methods
+  // ==========================================================================
+
+  /**
+   * Initialize a plugin with context.
+   *
+   * Calls the plugin's init hook if defined.
+   *
+   * @param name - The plugin name
+   * @param context - Context object passed to the init hook
+   * @throws {PluginLifecycleError} If plugin not found or init fails
+   */
+  initialize(name: string, context: unknown): Promise<void>;
+
+  /**
+   * Execute a plugin hook.
+   *
+   * @param name - The plugin name
+   * @param hook - The hook name ('init', 'validate', 'transform', 'generate', 'dispose')
+   * @param args - Arguments to pass to the hook
+   * @returns The hook's return value
+   * @throws {PluginLifecycleError} If plugin not found or hook fails
+   */
+  execute(name: string, hook: string, ...args: unknown[]): Promise<unknown>;
+
+  /**
+   * Dispose a plugin (call its dispose hook).
+   *
+   * @param name - The plugin name
+   */
+  dispose(name: string): Promise<void>;
+
+  /**
+   * Shutdown the manager and dispose all plugins.
+   *
+   * Should be called during application shutdown for cleanup.
+   */
+  shutdown(): Promise<void>;
+
+  // ==========================================================================
+  // Dependency Methods
+  // ==========================================================================
+
+  /**
+   * Resolve a plugin's dependencies in initialization order.
+   *
+   * Returns dependencies in the order they should be initialized,
+   * with leaf dependencies first.
+   *
+   * @param name - The plugin name
+   * @returns Array of dependency names in init order
+   * @throws {PluginDependencyError} If circular dependency or missing dependency
+   */
+  resolveDependencies(name: string): Promise<string[]>;
+
+  /**
+   * Initialize a plugin and all its dependencies.
+   *
+   * Dependencies are initialized before the plugin itself.
+   *
+   * @param name - The plugin name
+   * @param context - Context passed to all init hooks
+   */
+  initializeWithDependencies(name: string, context: unknown): Promise<void>;
+
+  /**
+   * Execute a hook with dependency plugins available.
+   *
+   * The deps Map is passed as the third argument to the transform hook.
+   *
+   * @param name - The plugin name
+   * @param hook - The hook name
+   * @param args - Arguments to pass to the hook
+   * @returns The hook's return value
+   */
+  executeWithDependencies(name: string, hook: string, ...args: unknown[]): Promise<unknown>;
+
+  // ==========================================================================
+  // Discovery Methods
+  // ==========================================================================
+
+  /**
+   * Wait for auto-discovery to complete.
+   *
+   * Call this if autoDiscover is enabled to ensure all adapters
+   * are registered before accessing them.
+   */
   ready(): Promise<void>;
-  /** Discover all plugins and adapters */
+
+  /**
+   * Discover all plugins and adapters matching patterns.
+   *
+   * @param options - Discovery options
+   * @param options.patterns - Glob patterns to match package names
+   * @returns Array of discovered items
+   */
   discoverAll(options?: { patterns?: string[] }): Promise<DiscoveredItem[]>;
-  /** Create a unified registry that combines plugin and adapter interfaces */
+
+  // ==========================================================================
+  // Utility Methods
+  // ==========================================================================
+
+  /**
+   * Unregister a plugin by name.
+   *
+   * Calls dispose hook if defined before removing.
+   *
+   * @param name - The plugin name
+   * @returns True if plugin was unregistered, false if not found
+   */
+  unregister(name: string): boolean | Promise<boolean>;
+
+  /**
+   * Clear all registered plugins and adapters.
+   *
+   * Does not call dispose hooks - use shutdown() for graceful cleanup.
+   */
+  clear(): void;
+
+  /**
+   * Create a unified registry (returns this manager).
+   *
+   * For API compatibility - the PluginManager already supports
+   * both plugin and adapter interfaces.
+   *
+   * @returns This manager instance
+   */
   createUnifiedRegistry(): PluginManager;
-  /** Plugin manager configuration */
+
+  /**
+   * The manager's configuration.
+   */
   config: PluginManagerConfig;
 }
 
