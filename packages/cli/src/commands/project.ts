@@ -247,7 +247,7 @@ export async function projectGenerate(args: string[]): Promise<void> {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(PROJECT_GENERATE_HELP));
-    process.exit(0);
+    return;
   }
 
   const { values } = parseArgs({
@@ -388,7 +388,7 @@ export async function project(args: string[]): Promise<void> {
   // Check for help on the parent command
   if (hasHelpFlag(args) && args[0] !== 'generate') {
     console.log(generateHelpText(PROJECT_HELP));
-    process.exit(0);
+    return;
   }
 
   const subcommand = args[0];
@@ -401,10 +401,16 @@ export async function project(args: string[]): Promise<void> {
 
     default:
       if (subcommand) {
-        console.error(`Unknown project subcommand: ${subcommand}`);
+        throw new Error(
+          `Unknown project subcommand: ${subcommand}\n` +
+          'Available: ice project generate\n' +
+          'Use: ice project --help for more information'
+        );
       }
-      console.log('Available: ice project generate');
-      console.log('Use: ice project --help for more information');
-      process.exit(1);
+      throw new Error(
+        'Missing project subcommand\n' +
+        'Available: ice project generate\n' +
+        'Use: ice project --help for more information'
+      );
   }
 }

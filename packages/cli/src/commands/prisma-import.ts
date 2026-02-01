@@ -198,7 +198,7 @@ export async function prismaImport(args: string[]): Promise<void> {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(PRISMA_IMPORT_HELP));
-    process.exit(0);
+    return;
   }
 
   const options = parseCliArgs(args);

@@ -13,7 +13,7 @@
 
 import { createRequire } from 'node:module';
 import { generateHelpText, hasHelpFlag, type HelpCommand } from './utils/help.js';
-import { formatCliError } from './utils/cli-error.js';
+import { formatCliError, CliExitError } from './utils/cli-error.js';
 
 // Adapter registry is initialized lazily when an adapter command is invoked
 async function ensureAdapterRegistry(): Promise<void> {
@@ -203,17 +203,17 @@ const PROJECT_HELP: HelpCommand = {
   ],
 };
 
-async function main() {
+async function main(): Promise<number> {
   const args = process.argv.slice(2);
 
   if (args.length === 0 || args[0] === '-h' || args[0] === '--help') {
     console.log(HELP);
-    process.exit(0);
+    return 0;
   }
 
   if (args[0] === '-v' || args[0] === '--version') {
     console.log(VERSION);
-    process.exit(0);
+    return 0;
   }
 
   const command = args[0];
@@ -255,14 +255,14 @@ async function main() {
         await ensureAdapterRegistry();
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
           console.log(generateHelpText(CLICKHOUSE_HELP));
-          process.exit(0);
         } else if (commandArgs[0] === 'export') {
           const { clickhouseExport } = await import('./commands/clickhouse.js');
           await clickhouseExport(commandArgs.slice(1));
         } else {
-          console.error(`Unknown clickhouse subcommand: ${commandArgs[0]}`);
-          console.log('Available: ice clickhouse export');
-          process.exit(1);
+          throw new Error(
+            `Unknown clickhouse subcommand: ${commandArgs[0]}\n` +
+            'Available: ice clickhouse export'
+          );
         }
         break;
 
@@ -270,14 +270,14 @@ async function main() {
         await ensureAdapterRegistry();
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
           console.log(generateHelpText(DUCKDB_HELP));
-          process.exit(0);
         } else if (commandArgs[0] === 'export') {
           const { duckdbExport } = await import('./commands/duckdb.js');
           await duckdbExport(commandArgs.slice(1));
         } else {
-          console.error(`Unknown duckdb subcommand: ${commandArgs[0]}`);
-          console.log('Available: ice duckdb export');
-          process.exit(1);
+          throw new Error(
+            `Unknown duckdb subcommand: ${commandArgs[0]}\n` +
+            'Available: ice duckdb export'
+          );
         }
         break;
 
@@ -285,14 +285,14 @@ async function main() {
         await ensureAdapterRegistry();
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
           console.log(generateHelpText(ICEBERG_HELP));
-          process.exit(0);
         } else if (commandArgs[0] === 'export') {
           const { icebergExport } = await import('./commands/iceberg.js');
           await icebergExport(commandArgs.slice(1));
         } else {
-          console.error(`Unknown iceberg subcommand: ${commandArgs[0]}`);
-          console.log('Available: ice iceberg export');
-          process.exit(1);
+          throw new Error(
+            `Unknown iceberg subcommand: ${commandArgs[0]}\n` +
+            'Available: ice iceberg export'
+          );
         }
         break;
 
@@ -300,14 +300,14 @@ async function main() {
         await ensureAdapterRegistry();
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'export') {
           console.log(generateHelpText(POSTGRES_HELP));
-          process.exit(0);
         } else if (commandArgs[0] === 'export') {
           const { postgresExport } = await import('./commands/postgres.js');
           await postgresExport(commandArgs.slice(1));
         } else {
-          console.error(`Unknown postgres subcommand: ${commandArgs[0]}`);
-          console.log('Available: ice postgres export');
-          process.exit(1);
+          throw new Error(
+            `Unknown postgres subcommand: ${commandArgs[0]}\n` +
+            'Available: ice postgres export'
+          );
         }
         break;
 
@@ -319,7 +319,6 @@ async function main() {
           commandArgs[0] !== 'import'
         ) {
           console.log(generateHelpText(PRISMA_HELP));
-          process.exit(0);
         } else if (commandArgs[0] === 'export') {
           const { prismaExport } = await import('./commands/prisma.js');
           await prismaExport(commandArgs.slice(1));
@@ -327,9 +326,10 @@ async function main() {
           const { prismaImport } = await import('./commands/prisma-import.js');
           await prismaImport(commandArgs.slice(1));
         } else {
-          console.error(`Unknown prisma subcommand: ${commandArgs[0]}`);
-          console.log('Available: ice prisma export, ice prisma import');
-          process.exit(1);
+          throw new Error(
+            `Unknown prisma subcommand: ${commandArgs[0]}\n` +
+            'Available: ice prisma export, ice prisma import'
+          );
         }
         break;
 
@@ -337,14 +337,14 @@ async function main() {
         await ensureAdapterRegistry();
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'import') {
           console.log(generateHelpText(DRIZZLE_HELP));
-          process.exit(0);
         } else if (commandArgs[0] === 'import') {
           const { drizzleImport } = await import('./commands/drizzle-import.js');
           await drizzleImport(commandArgs.slice(1));
         } else {
-          console.error(`Unknown drizzle subcommand: ${commandArgs[0]}`);
-          console.log('Available: ice drizzle import');
-          process.exit(1);
+          throw new Error(
+            `Unknown drizzle subcommand: ${commandArgs[0]}\n` +
+            'Available: ice drizzle import'
+          );
         }
         break;
 
@@ -358,7 +358,6 @@ async function main() {
           commandArgs[0] !== 'plan'
         ) {
           console.log(generateHelpText(MIGRATE_HELP));
-          process.exit(0);
         } else {
           const { migrate } = await import('./commands/migrate.js');
           await migrate(commandArgs);
@@ -369,7 +368,6 @@ async function main() {
       case 'project': {
         if (hasHelpFlag(commandArgs) && commandArgs[0] !== 'generate') {
           console.log(generateHelpText(PROJECT_HELP));
-          process.exit(0);
         } else {
           const { project } = await import('./commands/project.js');
           await project(commandArgs);
@@ -380,14 +378,30 @@ async function main() {
       default:
         console.error(`Unknown command: ${command}`);
         console.log(HELP);
-        process.exit(1);
+        return 1;
     }
   } catch (error) {
-    // Use centralized error formatting for all error types
+    // Handle CliExitError specially - it has an exit code
+    if (error instanceof CliExitError) {
+      // CliExitError is used for non-error exits (like doctor finding issues)
+      // The message has already been displayed by the command
+      return error.exitCode;
+    }
+    // Use centralized error formatting for all other error types
     // This ensures consistent formatting across all commands
     console.error(formatCliError(error));
-    process.exit(1);
+    return 1;
   }
+
+  return 0;
 }
 
-main();
+// Run main and handle process exit in one place
+main().then((exitCode) => {
+  process.exit(exitCode);
+}).catch((error) => {
+  // This should never happen since main() catches all errors,
+  // but just in case, handle unexpected errors
+  console.error('Unexpected error:', error);
+  process.exit(1);
+});

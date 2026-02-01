@@ -15,6 +15,7 @@ import * as fs from 'node:fs';
 import * as childProcess from 'node:child_process';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
+import { CliExitError } from '../utils/cli-error.js';
 
 // Symbols for status indicators
 const CHECKMARK = '\u2713';
@@ -715,7 +716,7 @@ Examples:
   ice doctor --fix        Automatically fix simple issues (install packages, update tsconfig)
   ice doctor --json       Output machine-readable JSON for CI/CD pipelines
 `);
-    process.exit(0);
+    return;
   }
 
   const verbose = values.verbose === true;
@@ -758,7 +759,7 @@ Examples:
       printResult(updatedResult, { verbose, quiet, json, fix });
 
       if (updatedResult.criticalIssues) {
-        process.exit(1);
+        throw new CliExitError('Critical issues found after fixes', 1);
       }
       return;
     } else {
@@ -768,8 +769,8 @@ Examples:
 
   printResult(result, { verbose, quiet, json, fix });
 
-  // Exit with code 1 if critical issues found
+  // Throw exit error if critical issues found (top-level CLI will handle process.exit)
   if (result.criticalIssues) {
-    process.exit(1);
+    throw new CliExitError('Critical issues found', 1);
   }
 }

@@ -206,7 +206,7 @@ export async function drizzleImport(args: string[]): Promise<void> {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(DRIZZLE_IMPORT_HELP));
-    process.exit(0);
+    return;
   }
 
   const { values } = parseArgs({

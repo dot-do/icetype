@@ -122,8 +122,7 @@ export async function init(args: string[]) {
       console.log(`Created directory: ${dir}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error(`Error: Failed to create directory '${dir}': ${message}`);
-      process.exit(1);
+      throw new Error(`Failed to create directory '${dir}': ${message}`);
     }
   }
 
@@ -138,9 +137,10 @@ export async function init(args: string[]) {
       console.log(`Created schema file: ${schemaPath}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error(`Error: Failed to write schema file '${schemaPath}': ${message}`);
-      console.error('Check that the directory exists and you have write permissions.');
-      process.exit(1);
+      throw new Error(
+        `Failed to write schema file '${schemaPath}': ${message}\n` +
+        'Check that the directory exists and you have write permissions.'
+      );
     }
   }
 

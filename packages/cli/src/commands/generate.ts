@@ -110,7 +110,7 @@ export async function generate(args: string[]) {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(GENERATE_HELP));
-    process.exit(0);
+    return;
   }
 
   let values: ReturnType<typeof parseArgs>['values'];

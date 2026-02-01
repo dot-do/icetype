@@ -175,7 +175,7 @@ export async function mysqlExport(args: string[]): Promise<void> {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(MYSQL_EXPORT_HELP));
-    process.exit(0);
+    return;
   }
 
   const options = parseArgs(args);

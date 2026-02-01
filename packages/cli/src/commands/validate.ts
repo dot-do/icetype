@@ -47,7 +47,7 @@ export async function validate(args: string[]) {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(VALIDATE_HELP));
-    process.exit(0);
+    return;
   }
 
   const { values } = parseArgs({

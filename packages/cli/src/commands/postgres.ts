@@ -159,7 +159,7 @@ export async function postgresExport(args: string[]): Promise<void> {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(POSTGRES_EXPORT_HELP));
-    process.exit(0);
+    return;
   }
 
   const { values } = parseArgs({

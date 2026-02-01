@@ -72,7 +72,7 @@ export async function prismaExport(args: string[]): Promise<void> {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(PRISMA_EXPORT_HELP));
-    process.exit(0);
+    return;
   }
 
   const { values } = parseArgs({

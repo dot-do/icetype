@@ -173,7 +173,7 @@ export async function sqliteExport(args: string[]): Promise<void> {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(SQLITE_EXPORT_HELP));
-    process.exit(0);
+    return;
   }
 
   const options = parseArgs(args);

@@ -162,7 +162,7 @@ export async function duckdbExport(args: string[]): Promise<void> {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(DUCKDB_EXPORT_HELP));
-    process.exit(0);
+    return;
   }
 
   const options = parseArgs(args);

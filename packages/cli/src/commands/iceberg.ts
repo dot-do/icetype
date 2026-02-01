@@ -35,7 +35,7 @@ export async function icebergExport(args: string[]) {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(ICEBERG_EXPORT_HELP));
-    process.exit(0);
+    return;
   }
 
   const { values } = parseArgs({

@@ -98,20 +98,36 @@ export function formatCliError(error: unknown): string {
 }
 
 /**
+ * Custom error class to indicate that a command displayed critical information
+ * and should exit with a failure code (e.g., validation failures, critical issues found).
+ */
+export class CliExitError extends Error {
+  public readonly exitCode: number;
+
+  constructor(message: string, exitCode: number = 1) {
+    super(message);
+    this.name = 'CliExitError';
+    this.exitCode = exitCode;
+    Object.setPrototypeOf(this, CliExitError.prototype);
+  }
+}
+
+/**
  * Handle a CLI error consistently.
  *
  * - Formats the error using formatCliError()
  * - Outputs to stderr
- * - Exits with code 1
+ *
+ * Note: This function no longer calls process.exit(). The caller (top-level CLI)
+ * is responsible for calling process.exit() based on the returned/thrown error.
  *
  * @param error - The error to handle
  * @param logger - Optional logger to use (defaults to error-only logger)
  */
-export function handleCliError(error: unknown, logger?: Logger): never {
+export function handleCliError(error: unknown, logger?: Logger): void {
   const log = logger ?? createLogger({ level: LogLevel.ERROR });
   const message = formatCliError(error);
   log.error(message);
-  process.exit(1);
 }
 
 /**

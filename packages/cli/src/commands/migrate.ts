@@ -945,7 +945,7 @@ export async function migrateGenerate(args: string[]): Promise<void> {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(MIGRATE_GENERATE_HELP));
-    process.exit(0);
+    return;
   }
 
   const { values } = parseArgs({
@@ -1097,7 +1097,7 @@ export async function migrateDiff(args: string[]): Promise<void> {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(MIGRATE_DIFF_HELP));
-    process.exit(0);
+    return;
   }
 
   const { values } = parseArgs({
@@ -1354,7 +1354,7 @@ export async function migratePlan(args: string[]): Promise<void> {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(MIGRATE_PLAN_HELP));
-    process.exit(0);
+    return;
   }
 
   const { values } = parseArgs({
@@ -1525,7 +1525,7 @@ export async function migrateDev(args: string[]): Promise<void> {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(MIGRATE_DEV_HELP));
-    process.exit(0);
+    return;
   }
 
   const { values } = parseArgs({
@@ -1821,7 +1821,7 @@ export async function migrateUp(args: string[]): Promise<void> {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(MIGRATE_UP_HELP));
-    process.exit(0);
+    return;
   }
 
   const { values } = parseArgs({
@@ -2071,7 +2071,7 @@ export async function migrateDown(args: string[]): Promise<void> {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(MIGRATE_DOWN_HELP));
-    process.exit(0);
+    return;
   }
 
   const { values } = parseArgs({
@@ -2376,7 +2376,7 @@ export async function migrateStatus(args: string[]): Promise<void> {
   // Check for help flag first
   if (hasHelpFlag(args)) {
     console.log(generateHelpText(MIGRATE_STATUS_HELP));
-    process.exit(0);
+    return;
   }
 
   const { values } = parseArgs({
@@ -2551,7 +2551,7 @@ export async function migrate(args: string[]): Promise<void> {
   if (args.length === 0 || hasHelpFlag(args)) {
     if (args.length === 0 || (args[0] !== 'dev' && args[0] !== 'generate' && args[0] !== 'diff' && args[0] !== 'plan' && args[0] !== 'status' && args[0] !== 'up' && args[0] !== 'down')) {
       console.log(generateHelpText(MIGRATE_HELP));
-      process.exit(0);
+      return;
     }
   }
 
@@ -2588,8 +2588,9 @@ export async function migrate(args: string[]): Promise<void> {
       break;
 
     default:
-      console.error(`Unknown migrate subcommand: ${subcommand}`);
-      console.log('Available: ice migrate dev, ice migrate generate, ice migrate diff, ice migrate plan, ice migrate status, ice migrate up, ice migrate down');
-      process.exit(1);
+      throw new Error(
+        `Unknown migrate subcommand: ${subcommand}\n` +
+        'Available: ice migrate dev, ice migrate generate, ice migrate diff, ice migrate plan, ice migrate status, ice migrate up, ice migrate down'
+      );
   }
 }
