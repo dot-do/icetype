@@ -53,7 +53,7 @@
     "@icetype/postgres": "workspace:*",
     "@icetype/prisma": "workspace:*",
     "@icetype/sqlite": "workspace:*",
-    "better-sqlite3": "^11.0.0",
+    "better-sqlite3": "^12.6.2",
     "glob": "^11.0.0",
     "jiti": "^2.6.1",
     "mysql2": "^3.11.0",

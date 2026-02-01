@@ -41,7 +41,7 @@
     "@testcontainers/mysql": "^10.18.0",
     "@types/better-sqlite3": "^7.6.0",
     "@types/pg": "^8.11.0",
-    "better-sqlite3": "^11.0.0",
+    "better-sqlite3": "^12.6.2",
     "pg": "^8.13.0",
     "mysql2": "^3.11.0",
     "typescript": "^5.7.0",
