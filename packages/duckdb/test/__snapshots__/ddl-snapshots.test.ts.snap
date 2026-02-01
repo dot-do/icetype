@@ -1,0 +1,372 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DuckDB DDL Snapshots > All field types DDL output > should match snapshot for all types schema 1`] = `
+"CREATE TABLE AllTypes (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  stringField VARCHAR NOT NULL,
+  textField VARCHAR NOT NULL,
+  intField INTEGER NOT NULL,
+  longField BIGINT NOT NULL,
+  bigintField BIGINT NOT NULL,
+  floatField REAL NOT NULL,
+  doubleField DOUBLE NOT NULL,
+  boolField BOOLEAN NOT NULL,
+  booleanField BOOLEAN NOT NULL,
+  uuidField UUID NOT NULL,
+  timestampField TIMESTAMP NOT NULL,
+  timestamptzField TIMESTAMPTZ NOT NULL,
+  dateField DATE NOT NULL,
+  timeField TIME NOT NULL,
+  jsonField JSON NOT NULL,
+  binaryField BLOB NOT NULL,
+  decimalField DECIMAL(38, 9) NOT NULL,
+  stringArray VARCHAR[] NOT NULL,
+  intArray INTEGER[] NOT NULL,
+  uuidArray UUID[] NOT NULL,
+  PRIMARY KEY ("$id")
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > All field types DDL output > should match snapshot for all types schema with options 1`] = `
+"CREATE TABLE IF NOT EXISTS types_test.AllTypes (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  stringField VARCHAR NOT NULL,
+  textField VARCHAR NOT NULL,
+  intField INTEGER NOT NULL,
+  longField BIGINT NOT NULL,
+  bigintField BIGINT NOT NULL,
+  floatField REAL NOT NULL,
+  doubleField DOUBLE NOT NULL,
+  boolField BOOLEAN NOT NULL,
+  booleanField BOOLEAN NOT NULL,
+  uuidField UUID NOT NULL,
+  timestampField TIMESTAMP NOT NULL,
+  timestamptzField TIMESTAMPTZ NOT NULL,
+  dateField DATE NOT NULL,
+  timeField TIME NOT NULL,
+  jsonField JSON NOT NULL,
+  binaryField BLOB NOT NULL,
+  decimalField DECIMAL(38, 9) NOT NULL,
+  stringArray VARCHAR[] NOT NULL,
+  intArray INTEGER[] NOT NULL,
+  uuidArray UUID[] NOT NULL,
+  PRIMARY KEY ("$id")
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > Complex schema with relations DDL output > should match snapshot for complex schema 1`] = `
+"CREATE TABLE Post (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  title VARCHAR NOT NULL UNIQUE,
+  content VARCHAR NOT NULL,
+  authorId VARCHAR NOT NULL UNIQUE,
+  categoryId VARCHAR,
+  publishedAt TIMESTAMP,
+  viewCount INTEGER NOT NULL,
+  isPublished BOOLEAN NOT NULL,
+  metadata JSON NOT NULL,
+  tags VARCHAR[] NOT NULL,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (title),
+  UNIQUE (authorId)
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > Complex schema with relations DDL output > should match snapshot for complex schema with all options 1`] = `
+"CREATE TABLE IF NOT EXISTS blog.Post (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  title VARCHAR NOT NULL UNIQUE,
+  content VARCHAR NOT NULL,
+  authorId VARCHAR NOT NULL UNIQUE,
+  categoryId VARCHAR,
+  publishedAt TIMESTAMP,
+  viewCount INTEGER NOT NULL,
+  isPublished BOOLEAN NOT NULL,
+  metadata JSON NOT NULL,
+  tags VARCHAR[] NOT NULL,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (title),
+  UNIQUE (authorId)
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > DuckDB-specific features DDL output > should match snapshot for schema with all numeric types 1`] = `
+"CREATE TABLE NumericTypes (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  intVal INTEGER NOT NULL,
+  longVal BIGINT NOT NULL,
+  bigintVal BIGINT NOT NULL,
+  floatVal REAL NOT NULL,
+  doubleVal DOUBLE NOT NULL,
+  decimalVal DECIMAL(38, 9) NOT NULL,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id)
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > DuckDB-specific features DDL output > should match snapshot for schema with array fields 1`] = `
+"CREATE TABLE ArrayTest (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  tags VARCHAR[] NOT NULL,
+  scores INTEGER[] NOT NULL,
+  uuids UUID[] NOT NULL,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id)
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > DuckDB-specific features DDL output > should match snapshot for temporary table 1`] = `
+"CREATE TEMPORARY TABLE "User" (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  email VARCHAR NOT NULL UNIQUE,
+  name VARCHAR NOT NULL,
+  age INTEGER,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (email)
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > Edge case DDL output > should match snapshot for empty schema (only system fields) 1`] = `
+"CREATE TABLE EmptyEntity (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  PRIMARY KEY ("$id")
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > Edge case DDL output > should match snapshot for schema with all modifiers 1`] = `
+"CREATE TABLE Modifiers (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  requiredField VARCHAR NOT NULL UNIQUE,
+  optionalField VARCHAR,
+  uniqueField VARCHAR NOT NULL UNIQUE,
+  requiredUnique VARCHAR NOT NULL UNIQUE,
+  arrayField VARCHAR[] NOT NULL,
+  PRIMARY KEY ("$id"),
+  UNIQUE (requiredField),
+  UNIQUE (uniqueField),
+  UNIQUE (requiredUnique)
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > Edge case DDL output > should match snapshot for schema with reserved words 1`] = `
+"CREATE TABLE Reserved (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  "select" VARCHAR NOT NULL,
+  "from" VARCHAR NOT NULL,
+  "where" VARCHAR NOT NULL,
+  "order" VARCHAR NOT NULL,
+  "group" VARCHAR NOT NULL,
+  PRIMARY KEY ("$id")
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > Edge case DDL output > should match snapshot for schema with special characters in name 1`] = `
+"CREATE TABLE "My-Special_Entity" (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  name VARCHAR NOT NULL,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id)
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > Indexes and constraints DDL output > should match snapshot for indexed schema 1`] = `
+"CREATE TABLE Product (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  sku VARCHAR NOT NULL UNIQUE,
+  name VARCHAR NOT NULL UNIQUE,
+  price DECIMAL(38, 9) NOT NULL UNIQUE,
+  quantity INTEGER NOT NULL,
+  isActive BOOLEAN NOT NULL,
+  createdAt TIMESTAMP NOT NULL,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (sku),
+  UNIQUE (name),
+  UNIQUE (price)
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > Indexes and constraints DDL output > should match snapshot for indexed schema with indexes 1`] = `
+"CREATE TABLE Product (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  sku VARCHAR NOT NULL UNIQUE,
+  name VARCHAR NOT NULL UNIQUE,
+  price DECIMAL(38, 9) NOT NULL UNIQUE,
+  quantity INTEGER NOT NULL,
+  isActive BOOLEAN NOT NULL,
+  createdAt TIMESTAMP NOT NULL,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (sku),
+  UNIQUE (name),
+  UNIQUE (price)
+);
+
+CREATE INDEX IF NOT EXISTS idx_Product_id ON Product (id);
+CREATE INDEX IF NOT EXISTS idx_Product_sku ON Product (sku);
+CREATE INDEX IF NOT EXISTS idx_Product_name ON Product (name);
+CREATE INDEX IF NOT EXISTS idx_Product_price ON Product (price);"
+`;
+
+exports[`DuckDB DDL Snapshots > Indexes and constraints DDL output > should match snapshot for indexed schema without system fields 1`] = `
+"CREATE TABLE Product (
+  id UUID NOT NULL UNIQUE,
+  sku VARCHAR NOT NULL UNIQUE,
+  name VARCHAR NOT NULL UNIQUE,
+  price DECIMAL(38, 9) NOT NULL UNIQUE,
+  quantity INTEGER NOT NULL,
+  isActive BOOLEAN NOT NULL,
+  createdAt TIMESTAMP NOT NULL,
+  UNIQUE (id),
+  UNIQUE (sku),
+  UNIQUE (name),
+  UNIQUE (price)
+);
+
+CREATE INDEX IF NOT EXISTS idx_Product_id ON Product (id);
+CREATE INDEX IF NOT EXISTS idx_Product_sku ON Product (sku);
+CREATE INDEX IF NOT EXISTS idx_Product_name ON Product (name);
+CREATE INDEX IF NOT EXISTS idx_Product_price ON Product (price);"
+`;
+
+exports[`DuckDB DDL Snapshots > Simple schema DDL output > should match snapshot for simple schema 1`] = `
+"CREATE TABLE "User" (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  email VARCHAR NOT NULL UNIQUE,
+  name VARCHAR NOT NULL,
+  age INTEGER,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (email)
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > Simple schema DDL output > should match snapshot for simple schema with IF NOT EXISTS 1`] = `
+"CREATE TABLE IF NOT EXISTS "User" (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  email VARCHAR NOT NULL UNIQUE,
+  name VARCHAR NOT NULL,
+  age INTEGER,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (email)
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > Simple schema DDL output > should match snapshot for simple schema with custom table name 1`] = `
+"CREATE TABLE users_table (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  email VARCHAR NOT NULL UNIQUE,
+  name VARCHAR NOT NULL,
+  age INTEGER,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (email)
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > Simple schema DDL output > should match snapshot for simple schema with schema name 1`] = `
+"CREATE TABLE main."User" (
+  "$id" VARCHAR NOT NULL,
+  "$type" VARCHAR NOT NULL,
+  "$version" INTEGER NOT NULL DEFAULT 1,
+  "$createdAt" BIGINT NOT NULL,
+  "$updatedAt" BIGINT NOT NULL,
+  id UUID NOT NULL UNIQUE,
+  email VARCHAR NOT NULL UNIQUE,
+  name VARCHAR NOT NULL,
+  age INTEGER,
+  PRIMARY KEY ("$id"),
+  UNIQUE (id),
+  UNIQUE (email)
+);"
+`;
+
+exports[`DuckDB DDL Snapshots > Simple schema DDL output > should match snapshot for simple schema without system fields 1`] = `
+"CREATE TABLE "User" (
+  id UUID NOT NULL UNIQUE,
+  email VARCHAR NOT NULL UNIQUE,
+  name VARCHAR NOT NULL,
+  age INTEGER,
+  UNIQUE (id),
+  UNIQUE (email)
+);"
+`;
