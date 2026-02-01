@@ -169,18 +169,45 @@ export function extractForeignKeys(
       constraintName: generateConstraintName(schema.name, fieldName, targetType),
     };
 
-    // Add referential actions if specified
+    // Add referential actions if specified (validated to prevent SQL injection)
     if (onDelete) {
-      fk.onDelete = onDelete as ReferentialAction;
+      fk.onDelete = validateReferentialAction(onDelete);
     }
     if (onUpdate) {
-      fk.onUpdate = onUpdate as ReferentialAction;
+      fk.onUpdate = validateReferentialAction(onUpdate);
     }
 
     foreignKeys.push(fk);
   }
 
   return foreignKeys;
+}
+
+// =============================================================================
+// Validation Helpers
+// =============================================================================
+
+/** Valid referential actions for ON DELETE / ON UPDATE clauses. */
+const VALID_REFERENTIAL_ACTIONS: ReadonlySet<string> = new Set([
+  'CASCADE',
+  'SET NULL',
+  'SET DEFAULT',
+  'RESTRICT',
+  'NO ACTION',
+]);
+
+/**
+ * Validate that a string is a known referential action.
+ * Throws if the value is not in the allowed set, preventing SQL injection.
+ */
+function validateReferentialAction(action: string): ReferentialAction {
+  const normalized = action.toUpperCase().trim();
+  if (!VALID_REFERENTIAL_ACTIONS.has(normalized)) {
+    throw new Error(
+      `Invalid referential action: "${action}". Must be one of: ${[...VALID_REFERENTIAL_ACTIONS].join(', ')}`
+    );
+  }
+  return normalized as ReferentialAction;
 }
 
 // =============================================================================
@@ -222,14 +249,14 @@ export function serializeForeignKey(fk: ForeignKeyDefinition, dialect: SqlDialec
   parts.push(`FOREIGN KEY (${sourceColumns})`);
   parts.push(`REFERENCES ${escapeIdentifier(fk.referencedTable, dialect)} (${refColumns})`);
 
-  // Add ON DELETE clause
+  // Add ON DELETE clause (validated to prevent SQL injection)
   if (fk.onDelete) {
-    parts.push(`ON DELETE ${fk.onDelete}`);
+    parts.push(`ON DELETE ${validateReferentialAction(fk.onDelete)}`);
   }
 
-  // Add ON UPDATE clause
+  // Add ON UPDATE clause (validated to prevent SQL injection)
   if (fk.onUpdate) {
-    parts.push(`ON UPDATE ${fk.onUpdate}`);
+    parts.push(`ON UPDATE ${validateReferentialAction(fk.onUpdate)}`);
   }
 
   return parts.join(' ');
