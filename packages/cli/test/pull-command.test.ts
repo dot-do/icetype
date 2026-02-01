@@ -970,3 +970,425 @@ describe('ice pull integration (mocked)', () => {
     ).rejects.toThrow(); // Expected to fail until implementation
   });
 });
+
+// =============================================================================
+// Schema Diffing Integration Tests
+// =============================================================================
+
+describe('introspection schema diffing', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('introspectedTableToIceTypeSchema', () => {
+    it('should convert IntrospectedTable to IceTypeSchema', async () => {
+      const {
+        introspectedTableToIceTypeSchema,
+      } = await import('../src/commands/pull.js');
+
+      const table: IntrospectedTable = {
+        name: 'users',
+        columns: [
+          {
+            name: 'id',
+            type: 'uuid',
+            nullable: false,
+            isPrimaryKey: true,
+            isUnique: true,
+          },
+          {
+            name: 'email',
+            type: 'varchar(255)',
+            nullable: false,
+            isPrimaryKey: false,
+            isUnique: true,
+          },
+          {
+            name: 'name',
+            type: 'varchar(255)',
+            nullable: true,
+            isPrimaryKey: false,
+            isUnique: false,
+          },
+        ],
+        primaryKey: ['id'],
+        indexes: [
+          { name: 'idx_email', columns: ['email'], unique: true },
+        ],
+        foreignKeys: [],
+      };
+
+      const schema = introspectedTableToIceTypeSchema(table);
+
+      expect(schema.name).toBe('users');
+      expect(schema.fields.has('id')).toBe(true);
+      expect(schema.fields.has('email')).toBe(true);
+      expect(schema.fields.has('name')).toBe(true);
+      expect(schema.fields.get('id')?.type).toBe('uuid');
+      expect(schema.fields.get('email')?.type).toBe('string');
+      expect(schema.version).toBe(1);
+    });
+
+    it('should preserve field modifiers correctly', async () => {
+      const {
+        introspectedTableToIceTypeSchema,
+      } = await import('../src/commands/pull.js');
+
+      const table: IntrospectedTable = {
+        name: 'posts',
+        columns: [
+          {
+            name: 'id',
+            type: 'uuid',
+            nullable: false,
+            isPrimaryKey: true,
+            isUnique: true,
+          },
+          {
+            name: 'title',
+            type: 'varchar(255)',
+            nullable: false,
+            isPrimaryKey: false,
+            isUnique: false,
+          },
+          {
+            name: 'content',
+            type: 'text',
+            nullable: true,
+            isPrimaryKey: false,
+            isUnique: false,
+          },
+        ],
+        primaryKey: ['id'],
+        indexes: [],
+        foreignKeys: [],
+      };
+
+      const schema = introspectedTableToIceTypeSchema(table);
+
+      expect(schema.fields.get('id')?.modifier).toBe('!');
+      expect(schema.fields.get('content')?.isOptional).toBe(true);
+    });
+  });
+
+  describe('diffIntrospectedAgainstSchema', () => {
+    it('should detect added fields in database', async () => {
+      const {
+        diffIntrospectedAgainstSchema,
+      } = await import('../src/commands/pull.js');
+      const { parseSchema } = await import('@icetype/core');
+
+      const introspectedTable: IntrospectedTable = {
+        name: 'users',
+        columns: [
+          { name: 'id', type: 'uuid', nullable: false, isPrimaryKey: true, isUnique: true },
+          { name: 'email', type: 'varchar', nullable: false, isPrimaryKey: false, isUnique: false },
+          { name: 'phone', type: 'varchar', nullable: true, isPrimaryKey: false, isUnique: false },
+        ],
+        primaryKey: ['id'],
+        indexes: [],
+        foreignKeys: [],
+      };
+
+      const targetSchema = parseSchema({
+        $type: 'users',
+        id: 'uuid!',
+        email: 'string',
+      });
+
+      const diff = diffIntrospectedAgainstSchema(introspectedTable, targetSchema);
+
+      // The diff shows changes from introspected (source) to target
+      // If phone is in introspected but not in target, it's a "remove_field" from target's perspective
+      const phoneChange = diff.changes.find(c =>
+        (c.type === 'remove_field' && c.field === 'phone') ||
+        (c.type === 'add_field' && c.field === 'phone')
+      );
+      expect(phoneChange).toBeDefined();
+    });
+
+    it('should detect removed fields in database', async () => {
+      const {
+        diffIntrospectedAgainstSchema,
+      } = await import('../src/commands/pull.js');
+      const { parseSchema } = await import('@icetype/core');
+
+      const introspectedTable: IntrospectedTable = {
+        name: 'users',
+        columns: [
+          { name: 'id', type: 'uuid', nullable: false, isPrimaryKey: true, isUnique: true },
+        ],
+        primaryKey: ['id'],
+        indexes: [],
+        foreignKeys: [],
+      };
+
+      const targetSchema = parseSchema({
+        $type: 'users',
+        id: 'uuid!',
+        email: 'string',
+        name: 'string',
+      });
+
+      const diff = diffIntrospectedAgainstSchema(introspectedTable, targetSchema);
+
+      // From introspected to target: email and name would be additions to target
+      const hasEmailOrNameChange = diff.changes.some(c =>
+        (c.type === 'add_field' && (c.field === 'email' || c.field === 'name')) ||
+        (c.type === 'remove_field' && (c.field === 'email' || c.field === 'name'))
+      );
+      expect(hasEmailOrNameChange).toBe(true);
+    });
+
+    it('should detect type changes', async () => {
+      const {
+        diffIntrospectedAgainstSchema,
+      } = await import('../src/commands/pull.js');
+      const { parseSchema } = await import('@icetype/core');
+
+      const introspectedTable: IntrospectedTable = {
+        name: 'products',
+        columns: [
+          { name: 'id', type: 'uuid', nullable: false, isPrimaryKey: true, isUnique: true },
+          { name: 'price', type: 'integer', nullable: false, isPrimaryKey: false, isUnique: false },
+        ],
+        primaryKey: ['id'],
+        indexes: [],
+        foreignKeys: [],
+      };
+
+      const targetSchema = parseSchema({
+        $type: 'products',
+        id: 'uuid!',
+        price: 'decimal', // Different type than database
+      });
+
+      const diff = diffIntrospectedAgainstSchema(introspectedTable, targetSchema);
+
+      const typeChange = diff.changes.find(c =>
+        c.type === 'change_type' && c.field === 'price'
+      );
+      expect(typeChange).toBeDefined();
+      if (typeChange?.type === 'change_type') {
+        expect(typeChange.oldType).toBe('int');
+        expect(typeChange.newType).toBe('decimal');
+      }
+    });
+  });
+
+  describe('diffIntrospectedTables', () => {
+    it('should identify tables only in database', async () => {
+      const {
+        diffIntrospectedTables,
+        introspectedTableToIceTypeSchema,
+      } = await import('../src/commands/pull.js');
+      const { parseSchema } = await import('@icetype/core');
+
+      const introspectedTables: IntrospectedTable[] = [
+        {
+          name: 'users',
+          columns: [
+            { name: 'id', type: 'uuid', nullable: false, isPrimaryKey: true, isUnique: true },
+          ],
+          primaryKey: ['id'],
+          indexes: [],
+          foreignKeys: [],
+        },
+        {
+          name: 'audit_logs', // Only in database
+          columns: [
+            { name: 'id', type: 'uuid', nullable: false, isPrimaryKey: true, isUnique: true },
+          ],
+          primaryKey: ['id'],
+          indexes: [],
+          foreignKeys: [],
+        },
+      ];
+
+      const targetSchemas = new Map([
+        ['users', parseSchema({ $type: 'users', id: 'uuid!' })],
+      ]);
+
+      const results = diffIntrospectedTables(introspectedTables, targetSchemas);
+
+      const auditLogResult = results.find(r => r.tableName === 'audit_logs');
+      expect(auditLogResult).toBeDefined();
+      expect(auditLogResult?.onlyInDatabase).toBe(true);
+      expect(auditLogResult?.onlyInSchemaFile).toBe(false);
+    });
+
+    it('should identify tables only in schema file', async () => {
+      const {
+        diffIntrospectedTables,
+      } = await import('../src/commands/pull.js');
+      const { parseSchema } = await import('@icetype/core');
+
+      const introspectedTables: IntrospectedTable[] = [
+        {
+          name: 'users',
+          columns: [
+            { name: 'id', type: 'uuid', nullable: false, isPrimaryKey: true, isUnique: true },
+          ],
+          primaryKey: ['id'],
+          indexes: [],
+          foreignKeys: [],
+        },
+      ];
+
+      const targetSchemas = new Map([
+        ['users', parseSchema({ $type: 'users', id: 'uuid!' })],
+        ['products', parseSchema({ $type: 'products', id: 'uuid!' })], // Only in schema
+      ]);
+
+      const results = diffIntrospectedTables(introspectedTables, targetSchemas);
+
+      const productResult = results.find(r => r.tableName === 'products');
+      expect(productResult).toBeDefined();
+      expect(productResult?.onlyInDatabase).toBe(false);
+      expect(productResult?.onlyInSchemaFile).toBe(true);
+    });
+
+    it('should identify tables that exist in both with differences', async () => {
+      const {
+        diffIntrospectedTables,
+      } = await import('../src/commands/pull.js');
+      const { parseSchema } = await import('@icetype/core');
+
+      const introspectedTables: IntrospectedTable[] = [
+        {
+          name: 'users',
+          columns: [
+            { name: 'id', type: 'uuid', nullable: false, isPrimaryKey: true, isUnique: true },
+            { name: 'email', type: 'varchar', nullable: false, isPrimaryKey: false, isUnique: false },
+          ],
+          primaryKey: ['id'],
+          indexes: [],
+          foreignKeys: [],
+        },
+      ];
+
+      const targetSchemas = new Map([
+        ['users', parseSchema({
+          $type: 'users',
+          id: 'uuid!',
+          email: 'string',
+          name: 'string', // Additional field in schema
+        })],
+      ]);
+
+      const results = diffIntrospectedTables(introspectedTables, targetSchemas);
+
+      const userResult = results.find(r => r.tableName === 'users');
+      expect(userResult).toBeDefined();
+      expect(userResult?.onlyInDatabase).toBe(false);
+      expect(userResult?.onlyInSchemaFile).toBe(false);
+      expect(userResult?.diff.changes.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('formatDiffResults', () => {
+    it('should format diff results for display', async () => {
+      const {
+        diffIntrospectedTables,
+        formatDiffResults,
+      } = await import('../src/commands/pull.js');
+      const { parseSchema } = await import('@icetype/core');
+
+      const introspectedTables: IntrospectedTable[] = [
+        {
+          name: 'users',
+          columns: [
+            { name: 'id', type: 'uuid', nullable: false, isPrimaryKey: true, isUnique: true },
+          ],
+          primaryKey: ['id'],
+          indexes: [],
+          foreignKeys: [],
+        },
+        {
+          name: 'new_table',
+          columns: [
+            { name: 'id', type: 'uuid', nullable: false, isPrimaryKey: true, isUnique: true },
+          ],
+          primaryKey: ['id'],
+          indexes: [],
+          foreignKeys: [],
+        },
+      ];
+
+      const targetSchemas = new Map([
+        ['users', parseSchema({ $type: 'users', id: 'uuid!' })],
+        ['missing_table', parseSchema({ $type: 'missing_table', id: 'uuid!' })],
+      ]);
+
+      const results = diffIntrospectedTables(introspectedTables, targetSchemas);
+      const formatted = formatDiffResults(results);
+
+      expect(formatted).toContain('Schema Diff');
+      expect(formatted).toContain('new_table');
+      expect(formatted).toContain('missing_table');
+      expect(formatted).toContain('[NEW IN DB]');
+      expect(formatted).toContain('[MISSING IN DB]');
+    });
+
+    it('should indicate when no differences exist', async () => {
+      const {
+        diffIntrospectedTables,
+        formatDiffResults,
+      } = await import('../src/commands/pull.js');
+      const { parseSchema } = await import('@icetype/core');
+
+      const introspectedTables: IntrospectedTable[] = [
+        {
+          name: 'users',
+          columns: [
+            { name: 'id', type: 'uuid', nullable: false, isPrimaryKey: true, isUnique: true },
+          ],
+          primaryKey: ['id'],
+          indexes: [],
+          foreignKeys: [],
+        },
+      ];
+
+      const targetSchemas = new Map([
+        ['users', parseSchema({ $type: 'users', id: 'uuid!' })],
+      ]);
+
+      const results = diffIntrospectedTables(introspectedTables, targetSchemas);
+      const formatted = formatDiffResults(results);
+
+      // When schemas match perfectly
+      expect(formatted).toContain('[OK]');
+    });
+  });
+
+  describe('--diff option parsing', () => {
+    it('should parse --diff option', async () => {
+      const { _testHelpers } = await import('../src/commands/pull.js');
+
+      const args = ['postgres://localhost:5432/mydb', '--diff', './schema.ts'];
+      const parsed = _testHelpers.parseArgs(args);
+
+      expect(parsed.diff).toBe('./schema.ts');
+    });
+
+    it('should allow combining --diff with other options', async () => {
+      const { _testHelpers } = await import('../src/commands/pull.js');
+
+      const args = [
+        'postgres://localhost:5432/mydb',
+        '--diff', './schema.ts',
+        '--tables', 'users,posts',
+        '--verbose',
+      ];
+      const parsed = _testHelpers.parseArgs(args);
+
+      expect(parsed.diff).toBe('./schema.ts');
+      expect(parsed.tables).toEqual(['users', 'posts']);
+      expect(parsed.verbose).toBe(true);
+    });
+  });
+});
