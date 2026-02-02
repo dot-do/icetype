@@ -42,7 +42,7 @@
     "@icetype/postgres": "workspace:*",
     "@icetype/mysql": "workspace:*",
     "@icetype/sqlite": "workspace:*",
-    "preact": "^10.19.0"
+    "preact": "^10.28.3"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.8.0",
