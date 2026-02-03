@@ -1,6 +1,6 @@
 {
   "name": "@icetype/iceberg",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "IceType to Apache Iceberg metadata and Parquet schema generation",
   "type": "module",
   "main": "./dist/index.js",

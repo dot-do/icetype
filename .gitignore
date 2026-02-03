@@ -32,3 +32,4 @@ examples/*/generated/
 # Docs build output
 apps/docs/.next/
 apps/docs/out/
+apps/playground/.next/trace

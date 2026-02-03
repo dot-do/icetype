@@ -161,7 +161,7 @@ validateSchemaName('catalog.schema');  // OK (qualified name)
 
 // These throw errors
 try {
-  validateSchemaName("schema'; DROP TABLE users;--");
+  validateSchemaName("invalid schema name!");
 } catch (error) {
   if (error instanceof InvalidSchemaNameError) {
     console.log('Invalid schema name detected');
