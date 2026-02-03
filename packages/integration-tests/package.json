@@ -38,7 +38,7 @@
   },
   "devDependencies": {
     "@testcontainers/postgresql": "^10.18.0",
-    "@testcontainers/mysql": "^10.18.0",
+    "@testcontainers/mysql": "^11.11.0",
     "@types/better-sqlite3": "^7.6.0",
     "@types/pg": "^8.11.0",
     "better-sqlite3": "^11.0.0",
